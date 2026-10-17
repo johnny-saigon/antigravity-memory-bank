@@ -49,6 +49,8 @@ function parseCliArgs(argv) {
       options.command = 'export';
     } else if (a === 'uninstall' || a === 'remove' || a === 'deinstall') {
       options.command = 'uninstall';
+    } else if (a === 'upgrade' || a === 'update') {
+      options.command = 'upgrade';
     } else if (a === '--as-plugin') {
       options.asPlugin = true;
     } else if (a === '-y' || a === '--yes' || a === '--non-interactive') {
@@ -94,6 +96,7 @@ function printHelp() {
 
 Commands:
   init [options]         Bootstrap Memory Bank into project on the fly (default)
+  upgrade [options]      Safely upgrade existing Memory Bank to v1.2 (preserves all domain data)
   export [options]       Export project memory & context to markdown and archive
   uninstall [options]    Cleanly uninstall Memory Bank (automatically exports context first)
 
@@ -640,6 +643,164 @@ async function initMemory(targetDir, opts, detected) {
   console.log('   you can type /start right now in this Antigravity window with ZERO restart!\n');
 }
 
+/**
+ * In-place upgrade for existing projects (preserves custom memory-bank documents)
+ */
+async function upgradeMemory(targetDir, opts, detected) {
+  console.log('\n🔄 Antigravity Memory Bank — In-Place Upgrade Workflow');
+  console.log(`📍 Target Directory: ${targetDir}`);
+  console.log('🛡️  Existing Memory Bank detected: Domain files in memory-bank/ will be PRESERVED.');
+
+  // 1. Detect Project Title from AGENTS.md or package.json
+  let projectTitle = detected.name;
+  const agentsPath = path.join(targetDir, 'AGENTS.md');
+  let agentsContent = '';
+  try {
+    agentsContent = await fs.readFile(agentsPath, 'utf8');
+    const titleMatch = agentsContent.match(/^#\s+Antigravity Agent Directives\s+[—-]\s+([^\n]+)/m);
+    if (titleMatch) projectTitle = titleMatch[1].trim();
+  } catch {}
+
+  // 2. Detect Health Probe from .agents/skills/start/SKILL.md
+  let healthProbe = `curl -s http://localhost:${detected.port}/health || true`;
+  const startSkillPath = path.join(targetDir, '.agents/skills/start/SKILL.md');
+  try {
+    const startContent = await fs.readFile(startSkillPath, 'utf8');
+    const curlMatch = startContent.match(/curl\s+[^\n]+/);
+    if (curlMatch) {
+      healthProbe = curlMatch[0].trim();
+    }
+  } catch {}
+
+  console.log(`  ✓ Detected project title: "${projectTitle}"`);
+  console.log(`  ✓ Detected health probe: \`${healthProbe}\``);
+
+  // 3. Upgrade .agents/skills/update-memory/SKILL.md
+  const upgradedSkill = `---
+name: update-memory
+description: Memory synchronization workflow triggered via /update-memory or after major milestones.
+---
+
+# ${projectTitle} Memory Synchronization & Continuous Cycle (\`/update-memory\`)
+
+When \`/update-memory\` is triggered or a major milestone/task completes:
+
+### Phase 1: Close & Synchronize Current Session
+1. Review all changes made in the working branch (\`git status -s\` and \`git diff --stat\`) and any production deployments on Vast.ai (\`85.10.218.46:44016\`).
+2. Update \`memory-bank/progress.md\` by marking finished acceptance criteria as complete (\`[x]\`).
+3. Update \`memory-bank/activeContext.md\` with:
+   - Technical decisions made during this session.
+   - Any modifications to endpoints, database schemas, or client screens.
+   - Resolved bugs (cross-referenced with \`docs/BUG_FIX_RECORDS.md\` if present).
+   - Closed sprint items.
+4. Verify that every file in \`memory-bank/*.md\` remains strictly **under 150 lines** (per Operational Best Practice #3). If any file approaches 150 lines, split deeper domain sections into a dedicated \`memory-bank/<topic>.md\` file and link via \`@[Topic](memory-bank/<topic>.md)\`.
+5. Verify that no Tier 2 infrastructure invariants (\`.agents/rules/infra.md\` and \`memory-bank/infrastructureInvariants.md\`) were violated or modified without cross-cluster alignment.
+6. Commit and push memory updates to Git with a conventional commit message (e.g. \`docs(memory-bank): sync session state and close milestone\`).
+
+### Phase 2: Explicit Auto-Start & New Session Initialization
+Immediately after closing the previous session, initialize the new working cycle without requiring the user to invoke \`/start\` manually:
+7. Re-anchor context by re-reading \`memory-bank/activeContext.md\` and \`memory-bank/progress.md\` to identify the next priority tasks.
+8. Check working tree cleanliness (\`git status -s\`) and head commit (\`git log -n 1 --oneline\`).
+9. Run a live non-invasive health check against the production backend:
+   \`\`\`bash
+   ${healthProbe}
+   \`\`\`
+10. Explicitly output the new active session status banner to the user:
+    - 🟢 **New Session Cycle Initialized**
+    - **Current Phase**: [Current project phase from activeContext.md]
+    - **Immediate Focus**: [Top pending task / feature / bug in progress]
+    - **Proposed Next Action**: [Concrete first step ready for execution]
+`;
+  const updateSkillDest = path.join(targetDir, '.agents/skills/update-memory/SKILL.md');
+  await fs.mkdir(path.dirname(updateSkillDest), { recursive: true });
+  await fs.writeFile(updateSkillDest, upgradedSkill, 'utf8');
+  console.log('  ✓ Upgraded .agents/skills/update-memory/SKILL.md (2-phase continuous lifecycle)');
+
+  // 4. Upgrade Operational Mandate in AGENTS.md
+  if (agentsContent) {
+    let modifiedAgents = agentsContent;
+    const oldMandatePattern = /\d+\.\s+\*\*Session State Updates & Line Budget\*\*:[^\n]+/g;
+    const newMandateText = `4. **Session State Updates & Continuous Cycling**: Keep every \`memory-bank/*.md\` file strictly **under 150 lines** (split deep domains into linked sub-files using \`@\`). When a major milestone is completed or upon \`/update-memory\`, synchronize and close the completed cycle, commit to Git, and immediately auto-bootstrap the new session state with a fresh status banner without requiring manual \`/start\`.`;
+    if (oldMandatePattern.test(modifiedAgents)) {
+      modifiedAgents = modifiedAgents.replace(oldMandatePattern, newMandateText);
+      await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
+      console.log('  ✓ Upgraded AGENTS.md operational mandate #4 (continuous session cycle)');
+    } else {
+      console.log('  ↷ AGENTS.md already contains updated continuous cycling directives');
+    }
+  }
+
+  // 5. Install scripts/lint-memory.mjs
+  const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
+  const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
+  await fs.mkdir(path.dirname(linterDest), { recursive: true });
+  await fs.copyFile(linterSrc, linterDest);
+  await fs.chmod(linterDest, 0o755);
+  console.log('  ✓ Installed scripts/lint-memory.mjs (token budget linter)');
+
+  // 6. Update package.json scripts with lint, export, and uninstall commands
+  const pkgPath = path.join(targetDir, 'package.json');
+  try {
+    const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+    pkg.scripts = pkg.scripts || {};
+    let pkgUpdated = false;
+
+    if (!pkg.scripts['lint:memory']) {
+      pkg.scripts['lint:memory'] = 'node scripts/lint-memory.mjs';
+      pkgUpdated = true;
+      console.log('  ✓ Added "lint:memory" script to package.json');
+    }
+    if (!pkg.scripts['memory:export']) {
+      pkg.scripts['memory:export'] = 'npx github:johnny-saigon/antigravity-memory-bank export';
+      pkgUpdated = true;
+      console.log('  ✓ Added "memory:export" script to package.json');
+    }
+    if (!pkg.scripts['memory:uninstall']) {
+      pkg.scripts['memory:uninstall'] = 'npx github:johnny-saigon/antigravity-memory-bank uninstall';
+      pkgUpdated = true;
+      console.log('  ✓ Added "memory:uninstall" script to package.json');
+    }
+
+    if (pkgUpdated) {
+      await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+    }
+  } catch {}
+
+  // 7. Audit line budget on existing files
+  console.log('\n🧪 Auditing existing Memory Bank line budget (<150 lines per document)...');
+  try {
+    execSync('node scripts/lint-memory.mjs', { cwd: targetDir, stdio: 'inherit' });
+  } catch (e) {
+    console.warn('⚠️ Linter notice:', e.message);
+  }
+
+  // 8. Commit upgrade to Git if requested
+  if (opts.commit && detected.hasGit) {
+    console.log('\n🔧 Committing memory upgrade to Git...');
+    try {
+      execSync('git add .agents/skills/update-memory/SKILL.md AGENTS.md scripts/lint-memory.mjs package.json', {
+        cwd: targetDir,
+        stdio: 'pipe',
+      });
+      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank to v1.2 (continuous lifecycle, linter, export/uninstall tooling)"', {
+        cwd: targetDir,
+        stdio: 'inherit',
+      });
+      console.log('  ✓ Memory Bank upgrade committed to Git.');
+    } catch {
+      console.log('  ℹ️ Working tree clean or changes already committed.');
+    }
+  }
+
+  console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');
+  console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
+  console.log('📦 New capabilities active in this project:');
+  console.log('   - 🔄 Continuous 2-Phase Cycle: /update-memory auto-boots the next session');
+  console.log('   - 📏 Token Budget Linter: npm run lint:memory (<150 lines/file)');
+  console.log('   - 📤 Context Export: npm run memory:export (or npx ... export)');
+  console.log('   - 🧹 Safe Deinstallation: npm run memory:uninstall (or npx ... uninstall)\n');
+}
+
 async function main() {
   const opts = parseCliArgs(process.argv);
   const targetDir = process.cwd();
@@ -649,6 +810,8 @@ async function main() {
     await exportMemory(targetDir, opts.exportDir);
   } else if (opts.command === 'uninstall') {
     await uninstallMemory(targetDir, opts, detected);
+  } else if (opts.command === 'upgrade' || (opts.command === 'init' && detected.memoryBankExists && !opts.force)) {
+    await upgradeMemory(targetDir, opts, detected);
   } else {
     await initMemory(targetDir, opts, detected);
   }

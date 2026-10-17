@@ -101,6 +101,31 @@ Antigravity automatically loads the bundled plugin assets:
 
 ---
 
+### D. Upgrading Earlier Implementations (BinaryDay, RemoveBackGround, SnapCal)
+
+If a project already has an earlier implementation of the Memory Bank (without the 2-phase lifecycle, linter, export, or deinstall tools), run the **in-place, non-destructive upgrade**:
+
+```bash
+# Inside BinaryDay, RemoveBackGround, or SnapCal root:
+npx github:johnny-saigon/antigravity-memory-bank upgrade --commit
+
+# Or via universal one-liner:
+curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-bank/main/install.sh | bash -s -- upgrade --commit
+```
+
+#### What the Upgrade Does:
+1. **100% Domain Context Preservation**: All existing markdown documents in `memory-bank/` (`projectbrief.md`, `systemPatterns.md`, `psychometrics.md`, etc.) and Tier 2 cluster invariants (`.agents/rules/infra.md`) remain untouched.
+2. **Upgrades to Continuous 2-Phase Cycle**: Auto-detects the project's title and live health probe (e.g. `https://binaryday.app/api/health` or `http://85.10.218.46:44190/api/health`), upgrading `.agents/skills/update-memory/SKILL.md` so `/update-memory` automatically starts the next session cycle.
+3. **Upgrades `AGENTS.md`**: Updates operational mandate #4 to reference continuous cycling.
+4. **Installs the Line-Budget Linter**: Adds `scripts/lint-memory.mjs` and verifies that all existing documents comply with the `< 150 lines` rule.
+5. **Adds Lifecycle Scripts to `package.json`**:
+   - `npm run lint:memory`: Audits token line counts.
+   - `npm run memory:export`: Exports context to markdown & tarball anytime.
+   - `npm run memory:uninstall`: Safely uninstalls the brick if ever desired.
+6. **Git Synchronization**: When `--commit` is passed, commits the upgrade cleanly into version control.
+
+---
+
 ## 📦 4. Context Export & Clean Deinstallation
 
 ### A. Exporting Project Memory & Context
