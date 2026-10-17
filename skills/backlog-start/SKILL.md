@@ -17,14 +17,14 @@ Execute the following 3 phases autonomously:
    - Extract the ticket ID(s) from the command argument (e.g. `FEAT-101`, `BUG-102`).
    - If no ticket ID is provided, read `docs/backlog.json`, list the top pending `todo` tickets, and prompt the user to choose.
 2. **Ingest Specification**:
-   - Read [`docs/backlog.json`](file:///Users/jbb/Documents/SnapCal/docs/backlog.json) to retrieve the task title, description, technical specification, target components, and acceptance criteria.
+   - Read `docs/backlog.json` to retrieve the task title, description, technical specification, target components, and acceptance criteria.
    - Do **NOT** ask the user to explain or re-describe the task; trust the specification in `docs/backlog.json`.
 3. **Activate Task Locally**:
    - Mark the ticket(s) as `in_progress` in the local data store:
      ```bash
      npm run backlog status <TICKET_ID> in_progress
      ```
-   - This automatically refreshes the Antigravity Review pane Kanban board ([`backlog.html`](file:///Users/jbb/Documents/SnapCal/docs/backlog.json)).
+   - This automatically refreshes the Antigravity Review pane Kanban board (`backlog.html`).
 4. **Output Activation Banner**:
    - Output a brief 2-line acknowledgment:
      - 🚀 **Backlog Sprint Active**: `[TICKET_ID]: Title`

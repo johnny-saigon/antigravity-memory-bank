@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * SnapCal Zero-Token Local Backlog Engine
+ * Antigravity Zero-Token Local Backlog Engine
  * 
  * Allows capturing, prioritizing, and updating backlog tasks offline with ZERO AI token
  * consumption and ZERO quota drain. Works hand-in-hand with the Antigravity Memory Bank
@@ -25,6 +25,13 @@ try {
   const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   if (pkg.name) projectName = pkg.name;
 } catch {}
+
+function getDisplayProjectName(data) {
+  if (data && data.project) {
+    return data.project.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+  return projectName.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
 
 // Find active Antigravity brain conversation directory
 function findActiveBrainDir() {
@@ -59,7 +66,7 @@ function findActiveBrainDir() {
             score += 200;
           } else if (fullText.includes(REPO_ROOT)) {
             score += 100;
-          } else if (headText.includes(repoBaseName) || tailText.includes(repoBaseName)) {
+          } else if (headText.includes(projectName) || tailText.includes(projectName) || headText.includes(repoBaseName) || tailText.includes(repoBaseName)) {
             score += 50;
           }
         } catch {}
@@ -83,7 +90,7 @@ function loadBacklog() {
     return {
       version: '1.0.0',
       lastUpdated: new Date().toISOString(),
-      project: projectName,
+      project: projectName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
       tasks: [],
       milestones: []
     };
@@ -104,10 +111,16 @@ function saveBacklog(data) {
 
 // Render docs/MIGRATION_BOARD.md or docs/BACKLOG.md from backlog data
 function renderMigrationBoard(data) {
+  const displayProject = getDisplayProjectName(data);
+  const bugFixPath = path.join(REPO_ROOT, 'docs', 'BUG_FIX_RECORDS.md');
+  const bugFixNotice = fs.existsSync(bugFixPath)
+    ? ` For historical bug fixes and root-cause analyses, refer to [\`docs/BUG_FIX_RECORDS.md\`](file://${bugFixPath}).`
+    : '';
+
   const lines = [
-    `# ${projectName} — Development & Backlog Board`,
+    `# ${displayProject} — Development & Backlog Board`,
     '',
-    `This board tracks active development tickets, feature backlogs, architecture initiatives, and sprint milestones for ${projectName}.`,
+    `This board tracks active development tickets, feature backlogs, architecture initiatives, and sprint milestones for ${displayProject}.${bugFixNotice}`,
     '',
     '---',
     '',
@@ -189,13 +202,14 @@ function renderMigrationBoard(data) {
 
 // Generate the interactive HTML artifact for Antigravity's Review pane
 function generateReviewArtifactHtml(data) {
+  const displayProject = getDisplayProjectName(data);
   const jsonString = JSON.stringify(data).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${projectName} Backlog & Sprint Board</title>
+  <title>${displayProject} Backlog & Sprint Board</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     /* Antigravity design tokens styling */
@@ -216,8 +230,8 @@ function generateReviewArtifactHtml(data) {
   <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-4 border-b border-[var(--border,#334155)] gap-3">
     <div>
       <div class="flex items-center gap-2">
-        <span class="text-xl">📋</span>
-        <h1 class="text-xl font-bold tracking-tight text-[var(--foreground,#f8fafc)]">${projectName} Local Backlog</h1>
+        <span class="text-xl">📅</span>
+        <h1 class="text-xl font-bold tracking-tight text-[var(--foreground,#f8fafc)]">${displayProject} Local Backlog</h1>
         <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2 py-0.5 rounded-full font-medium">0 Tokens • Frugal Mode</span>
       </div>
       <p class="text-xs text-[var(--muted-foreground,#94a3b8)] mt-1">
@@ -542,8 +556,9 @@ function generateReviewArtifactHtml(data) {
 
 // Generate the markdown review artifact
 function generateReviewArtifactMd(data) {
+  const displayProject = getDisplayProjectName(data);
   const lines = [
-    `# ${projectName} — Local Backlog & Review Board`,
+    `# ${displayProject} — Local Backlog & Review Board`,
     '',
     '> [!TIP]',
     '> **0 Token Decoupled Task Management**: Maintain your backlog offline without draining AI credits or quota. When ready, kick off any ticket with a single-line frugal prompt.',
@@ -554,7 +569,8 @@ function generateReviewArtifactMd(data) {
 
   const todoTasks = data.tasks.filter(t => t.status === 'todo');
   for (const task of todoTasks) {
-    lines.push(`### [${task.id}](file://${MIGRATION_BOARD_MD_PATH}#${task.id.toLowerCase()}): ${task.title}`);
+    const linkPath = `file://${MIGRATION_BOARD_MD_PATH}#${task.id.toLowerCase()}`;
+    lines.push(`### [${task.id}](${linkPath}): ${task.title}`);
     lines.push(`- **Priority:** \`${task.priority || 'medium'}\` | **Type:** \`${task.type || 'feature'}\``);
     if (task.description) lines.push(`- **Overview:** ${task.description}`);
     if (task.components && task.components.length > 0) {
@@ -602,6 +618,7 @@ function writeReviewPaneArtifacts(data) {
     return;
   }
 
+  const displayProject = getDisplayProjectName(data);
   const htmlPath = path.join(brainDir, 'backlog.html');
   const htmlMetaPath = path.join(brainDir, 'backlog.html.metadata.json');
   const mdPath = path.join(brainDir, 'backlog-board.md');
@@ -609,7 +626,7 @@ function writeReviewPaneArtifacts(data) {
 
   fs.writeFileSync(htmlPath, htmlContent, 'utf8');
   fs.writeFileSync(htmlMetaPath, JSON.stringify({
-    summary: `Interactive ${projectName} Backlog & Sprint Board for zero-token task capture and frugal agent execution.`,
+    summary: `Interactive ${displayProject} Backlog & Sprint Board for zero-token task capture and frugal agent execution.`,
     userFacing: true,
     requestFeedback: false,
     updatedAt: new Date().toISOString()
@@ -617,7 +634,7 @@ function writeReviewPaneArtifacts(data) {
 
   fs.writeFileSync(mdPath, mdContent, 'utf8');
   fs.writeFileSync(mdMetaPath, JSON.stringify({
-    summary: `Markdown Backlog and Sprint Status board for ${projectName} linking to docs/backlog.json and docs/BACKLOG.md.`,
+    summary: `Markdown Backlog and Sprint Status board for ${displayProject} linking to docs/backlog.json and ${path.relative(REPO_ROOT, MIGRATION_BOARD_MD_PATH)}.`,
     userFacing: true,
     requestFeedback: true,
     updatedAt: new Date().toISOString()
@@ -630,9 +647,10 @@ function writeReviewPaneArtifacts(data) {
 }
 
 // CLI commands
-function printUsage() {
+function printUsage(data) {
+  const displayProject = getDisplayProjectName(data);
   console.log(`
-${projectName} Zero-Token Local Backlog Engine
+${displayProject} Zero-Token Local Backlog Engine
 
 Usage:
   npm run backlog list [todo|in_progress|done|high|all]
@@ -653,7 +671,8 @@ function main() {
 
   if (command === 'list') {
     const filter = args[1] || 'all';
-    console.log(`\n📋 ${projectName} Local Backlog (${data.tasks.length} total tasks):`);
+    const displayProject = getDisplayProjectName(data);
+    console.log(`\n📋 ${displayProject} Local Backlog (${data.tasks.length} total tasks):`);
     console.log('='.repeat(70));
 
     const filtered = data.tasks.filter(t => {
@@ -842,7 +861,7 @@ function main() {
     return;
   }
 
-  printUsage();
+  printUsage(data);
 }
 
 main();

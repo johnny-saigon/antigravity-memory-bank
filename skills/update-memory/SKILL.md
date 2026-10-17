@@ -13,17 +13,21 @@ When `/update-memory` is triggered or a major milestone/task completes:
    node scripts/sync-memory-context.mjs
    ```
 2. Review all working branch changes (`git status -s` and `git diff --stat`).
-3. Update `memory-bank/progress.md` and `memory-bank/activeContext.md` as a **passive observer**:
+3. Refresh the Review pane backlog artifacts:
+   ```bash
+   node scripts/backlog.mjs render
+   ```
+4. Update `memory-bank/progress.md` and `memory-bank/activeContext.md` as a **passive observer**:
    - Record high-level completed milestones and technical decisions made during this session.
-   - Cross-reference active tickets in `docs/` (`docs/MIGRATION_BOARD.md`, `docs/BACKLOG.md`, `docs/BUG_FIX_RECORDS.md`).
+   - Cross-reference active tickets in `docs/backlog.json` and resolved bugs in `docs/BUG_FIX_RECORDS.md` (or `docs/MIGRATION_BOARD.md` / `docs/BACKLOG.md`).
    - **Do NOT** conduct active ticket management or task tracking inside `memory-bank/*.md`.
-4. Verify that every file in `memory-bank/*.md` remains strictly **under 150 lines**:
+5. Verify that every file in `memory-bank/*.md` remains strictly **under 150 lines**:
    ```bash
    node scripts/lint-memory.mjs
    ```
    If any file approaches 150 lines, split deeper domain sections into a dedicated `memory-bank/<topic>.md` file and link via `@[Topic](memory-bank/<topic>.md)`.
-5. Verify that no Tier 2 infrastructure invariants (`.agents/rules/infra.md`) were violated.
-6. Commit and push memory updates to Git with a conventional commit message (e.g. `docs(memory-bank): sync session state and close milestone`).
+6. Verify that no Tier 2 infrastructure invariants (`.agents/rules/infra.md`) were violated.
+7. Commit and push memory updates to Git with a conventional commit message (e.g. `docs(memory-bank): sync session state and close milestone`).
 
 ### Phase 2: Explicit Auto-Start & New Session Initialization
 Immediately after closing the previous session, initialize the new working cycle without requiring the user to invoke `/start` manually:
