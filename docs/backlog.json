@@ -1,52 +1,335 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-17T21:56:55.269Z",
+  "lastUpdated": "2026-10-18T00:06:00.000Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
       "id": "FEAT-101",
       "type": "feature",
-      "title": "Decoupled Zero-Token Backlog Engine & Review Pane Kanban",
+      "title": "Three-Tier Memory Bank Brick, 2-Phase Continuous Cycle & <150-Line Linter",
       "status": "done",
       "priority": "high",
       "components": [
-        "scripts/backlog.mjs",
-        "lib/backlog-adapter.mjs",
-        "skills/backlog-start/SKILL.md"
+        "templates/memory-bank/",
+        "skills/start/SKILL.md",
+        "skills/update-memory/SKILL.md",
+        "scripts/lint-memory.mjs",
+        "plugin.json"
       ],
-      "description": "Provide a local zero-token task store (docs/backlog.json) with automated migration of existing boards and interactive Kanban rendering (backlog.html) in the Antigravity Review pane.",
-      "spec": "Implement CRUD CLI commands, interactive dark-mode HTML Kanban board with live local save bridge, and /backlog-start autonomous sprint skill.",
+      "description": "Core Three-Tier Memory Hierarchy (Tier 1 Global, Tier 2 Cluster Invariants, Tier 3 Domain Memory Bank) extracted from production multi-project usage with <150-line budget enforcement and 2-phase continuous session cycling.",
+      "spec": "Provide 6 modular memory templates, /start and /update-memory skills, and automated line-budget linter.",
       "acceptanceCriteria": [
-        "Zero-token offline task capture and prioritization.",
-        "Automatic migration of existing markdown boards during init/upgrade.",
-        "Interactive backlog.html rendered to both active brain directory and docs/backlog.html."
+        "Enforces <150 lines across all memory-bank/*.md files.",
+        "2-Phase /update-memory closes current milestone and auto-starts next session banner."
       ],
-      "completedAt": "2026-10-17T12:48:00.000Z"
+      "completedAt": "2026-10-17T11:28:00.000Z"
     },
     {
       "id": "FEAT-102",
       "type": "feature",
-      "title": "Automated E2E CLI Test Suite for init / upgrade / export / uninstall",
-      "status": "todo",
+      "title": "On-the-Fly CLI Initializer & Universal One-Line Shell Installer",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "bin/cli.mjs",
+        "install.sh"
+      ],
+      "description": "Zero-restart CLI initializer (npx github:johnny-saigon/antigravity-memory-bank init) and curl | bash installer that auto-detects stack, git remotes, and ports.",
+      "spec": "Support interactive and headless (-y --commit) initialization and plugin mode (--as-plugin).",
+      "acceptanceCriteria": [
+        "Activates skills and rules in an open Antigravity IDE window with zero restart.",
+        "Auto-detects frontend, backend, database, and port from package.json and .env."
+      ],
+      "completedAt": "2026-10-17T11:54:00.000Z"
+    },
+    {
+      "id": "FEAT-103",
+      "type": "feature",
+      "title": "Consolidated Context Export & Zero-Loss Clean Deinstallation",
+      "status": "done",
       "priority": "medium",
+      "components": [
+        "bin/cli.mjs"
+      ],
+      "description": "Export project memory to a single consolidated markdown file and tar.gz archive, and run automatic backup before uninstalling Memory Bank files.",
+      "spec": "Implement export and uninstall commands in bin/cli.mjs with ./memory-backups/ archival.",
+      "acceptanceCriteria": [
+        "Generates consolidated markdown and .tar.gz archive in ./memory-backups/.",
+        "Cleanly removes memory-bank artifacts while preserving custom skills/rules."
+      ],
+      "completedAt": "2026-10-17T12:05:00.000Z"
+    },
+    {
+      "id": "FEAT-104",
+      "type": "feature",
+      "title": "Non-Destructive In-Place Upgrade Workflow for Existing Installations",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "bin/cli.mjs"
+      ],
+      "description": "Trickled up from upgrading BinaryDay, RemoveBackGround, and SnapCal: upgrade skills, linters, and hooks in-place while preserving 100% of custom memory-bank/*.md domain documents.",
+      "spec": "Implement upgrade command in bin/cli.mjs that detects existing project title and health probes without overwriting memory-bank/*.md.",
+      "acceptanceCriteria": [
+        "100% preservation of existing memory-bank/*.md files.",
+        "Upgrades AGENTS.md, skills, and package.json lifecycle scripts."
+      ],
+      "completedAt": "2026-10-17T12:15:00.000Z"
+    },
+    {
+      "id": "FEAT-105",
+      "type": "feature",
+      "title": "Automated Historical Context Scraper (Git, Docs & Antigravity Transcripts)",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "lib/context-scraper.mjs",
+        "bin/cli.mjs"
+      ],
+      "description": "Trickled up from downstream init runs: automatically scrape git commit history, markdown documentation, and ~/.gemini/antigravity/brain/*/transcript.jsonl logs during init.",
+      "spec": "Extract recent accomplishments, completed milestones, and pending tasks from git, docs, and brain transcripts to populate initial memory-bank/*.md files.",
+      "acceptanceCriteria": [
+        "Scrapes git commits, docs/*.md, and Antigravity conversation transcripts.",
+        "Populates activeContext.md and progress.md with real project history on day one."
+      ],
+      "completedAt": "2026-10-17T12:30:00.000Z"
+    },
+    {
+      "id": "FEAT-106",
+      "type": "feature",
+      "title": "Incremental Context Auto-Synchronizer, Git Post-Commit Hook & CI Workflow",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/sync-memory-context.mjs",
+        "templates/git/hooks/post-commit.tpl",
+        "templates/github/workflows/memory-bank-sync.yml.tpl"
+      ],
+      "description": "Keep memory-bank/activeContext.md and progress.md synchronized automatically on every feat:/fix: git commit and main branch push with zero LLM token usage.",
+      "spec": "Install post-commit git hook, incremental sync script, and GitHub Actions workflow.",
+      "acceptanceCriteria": [
+        "Automatically updates last synchronized commit hash and accomplishments on commit.",
+        "CI workflow verifies <150-line budget on every push and PR."
+      ],
+      "completedAt": "2026-10-17T12:45:00.000Z"
+    },
+    {
+      "id": "FEAT-107",
+      "type": "refactor",
+      "title": "Passive Observer Invariant & Operational Board Separation into docs/",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "templates/AGENTS.md.tpl",
+        "rules/AGENTS.md",
+        "skills/update-memory/SKILL.md"
+      ],
+      "description": "Trickled up from downstream project usage: codify that memory-bank/*.md is strictly a passive observer baseline (<150 lines) while operational boards live in docs/.",
+      "spec": "Update agent directives and skills to prohibit active ticket management inside memory-bank/*.md.",
+      "acceptanceCriteria": [
+        "Memory Bank stays <150 lines (~1.5k tokens) as a read-only context baseline.",
+        "Operational tickets and bug logs are separated into docs/."
+      ],
+      "completedAt": "2026-10-17T13:15:00.000Z"
+    },
+    {
+      "id": "FEAT-108",
+      "type": "feature",
+      "title": "Decoupled Zero-Token Backlog Engine, /backlog-start Skill & Review Pane Kanban",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "skills/backlog-start/SKILL.md",
+        "templates/docs/BACKLOG_GUIDE.md"
+      ],
+      "description": "Eliminate the 15k-35k token cost of chat-based task capture via an offline zero-token backlog store (docs/backlog.json), interactive Kanban board (backlog.html), and frugal /backlog-start execution skill.",
+      "spec": "Implement CRUD CLI commands, interactive dark-mode HTML Kanban board with live local HTTP save bridge, and 3-phase /backlog-start skill.",
+      "acceptanceCriteria": [
+        "Zero-token offline task capture via npm run backlog or Review pane UI.",
+        "1-click /backlog-start <ID> prompt copy and automated sprint closure + work recap."
+      ],
+      "completedAt": "2026-10-17T13:35:00.000Z"
+    },
+    {
+      "id": "FEAT-109",
+      "type": "feature",
+      "title": "Automated Board & Bug Record Adapter During init / upgrade",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "lib/backlog-adapter.mjs",
+        "bin/cli.mjs"
+      ],
+      "description": "Trickled up from upgrading downstream projects with pre-existing markdown boards: automatically discover and migrate MIGRATION_BOARD.md, BACKLOG.md, ROADMAP.md, and BUG_FIX_RECORDS.md into docs/backlog.json.",
+      "spec": "Parse markdown task headers, checklists, and milestones into structured docs/backlog.json entries without duplicates.",
+      "acceptanceCriteria": [
+        "Automatically migrates existing markdown boards and bug records on init/upgrade.",
+        "Renders synchronized docs/BACKLOG.md and backlog.html Kanban immediately."
+      ],
+      "completedAt": "2026-10-17T13:50:00.000Z"
+    },
+    {
+      "id": "FEAT-110",
+      "type": "feature",
+      "title": "Dogfooding & Strict Upstream Package Isolation Architecture",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "package.json",
+        "bin/cli.mjs",
+        ".gitignore",
+        "README.md"
+      ],
+      "description": "Dogfood the Three-Tier Memory Bank and Backlog Kanban directly inside antigravity-memory-bank while isolating downstream npx installs via package.json files whitelist and isSelfRepo guards.",
+      "spec": "Add files whitelist to package.json, detect isSelfRepo in bin/cli.mjs, and git-ignore ephemeral docs/backlog.html.",
+      "acceptanceCriteria": [
+        "npm pack --dry-run includes only the 29 distributable engine files.",
+        "isSelfRepo prevents self-overwriting or deleting upstream scripts/."
+      ],
+      "completedAt": "2026-10-17T21:57:00.000Z"
+    },
+    {
+      "id": "BUG-101",
+      "type": "bug",
+      "title": "Preserve Existing Curated Notes Non-Destructively in sync-memory-context.mjs",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/sync-memory-context.mjs"
+      ],
+      "description": "Trickled up from downstream commit sync: sync-memory-context.mjs previously overwrote manually curated accomplishments in activeContext.md and progress.md.",
+      "spec": "Prepend newly detected git commits above existing bullets and deduplicate by short commit hash.",
+      "acceptanceCriteria": [
+        "Existing manual notes in activeContext.md and progress.md are preserved.",
+        "Commits are deduplicated by hash."
+      ],
+      "completedAt": "2026-10-17T12:55:00.000Z"
+    },
+    {
+      "id": "BUG-102",
+      "type": "bug",
+      "title": "Bypass post-commit Hook During Git Rebase, Cherry-Pick & Merge",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "templates/git/hooks/post-commit.tpl"
+      ],
+      "description": "Trickled up during branch rebasing: post-commit hook triggered sync-memory-context.mjs mid-rebase, dirtying the working tree and interrupting git rebase.",
+      "spec": "Check for rebase-merge, rebase-apply, MERGE_HEAD, and CHERRY_PICK_HEAD in .git/ before executing post-commit memory sync.",
+      "acceptanceCriteria": [
+        "post-commit hook exits cleanly as a no-op during rebase, merge, or cherry-pick."
+      ],
+      "completedAt": "2026-10-17T13:05:00.000Z"
+    },
+    {
+      "id": "BUG-103",
+      "type": "bug",
+      "title": "Fix Active Brain Directory Discovery & Always Render docs/backlog.html",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs"
+      ],
+      "description": "Trickled up when backlog.html was not created in the active session after npm run memory:upgrade: findActiveBrainDir() relied on directory stat.mtimeMs (which does not update when transcript.jsonl is appended) and required backlog.html/task.md to already exist.",
+      "spec": "Score brain directories by workspace path references inside .system_generated/logs/transcript.jsonl, use transcript.jsonl mtimeMs for recency, and always write docs/backlog.html alongside <brainDir>/backlog.html.",
+      "acceptanceCriteria": [
+        "Accurately targets the active conversation brain directory even in brand-new sessions.",
+        "Always writes docs/backlog.html in the project workspace."
+      ],
+      "completedAt": "2026-10-17T14:40:00.000Z"
+    },
+    {
+      "id": "BUG-104",
+      "type": "bug",
+      "title": "Remove Downstream Project Names & Private Host IPs from Upstream Templates",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "skills/backlog-start/SKILL.md",
+        "skills/update-memory/SKILL.md",
+        "rules/AGENTS.md",
+        "bin/cli.mjs"
+      ],
+      "description": "Trickled up after upstreaming the backlog engine from a downstream repo: hardcoded SnapCal references and Vast.ai host IPs leaked into upstream templates and skills.",
+      "spec": "Resolve project title dynamically from docs/backlog.json or path.basename(ROOT) and codify generic upstream template rules in rules/AGENTS.md.",
+      "acceptanceCriteria": [
+        "Zero downstream project names or private host IPs in bin/, skills/, rules/, or templates/.",
+        "scripts/backlog.mjs and templates/scripts/backlog.mjs remain byte-identical."
+      ],
+      "completedAt": "2026-10-17T14:48:00.000Z"
+    },
+    {
+      "id": "BUG-105",
+      "type": "bug",
+      "title": "Prevent MILESTONE-* Items from Being Re-Imported as Duplicate Feature Tasks",
+      "status": "done",
+      "priority": "medium",
+      "components": [
+        "lib/backlog-adapter.mjs"
+      ],
+      "description": "Discovered while dogfooding upgrade inside antigravity-memory-bank: checklistItemRegex in lib/backlog-adapter.mjs matched - [x] **MILESTONE-1** in docs/BACKLOG.md and imported it into tasks.",
+      "spec": "Filter out MILESTONE-* IDs and existingMilestoneIds in sectionRegex and checklistItemRegex loops in lib/backlog-adapter.mjs.",
+      "acceptanceCriteria": [
+        "Repeated upgrade runs are 100% idempotent (0 duplicate tasks imported from MILESTONE-* bullets)."
+      ],
+      "completedAt": "2026-10-17T21:56:00.000Z"
+    },
+    {
+      "id": "FEAT-111",
+      "type": "qa",
+      "title": "Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)",
+      "status": "todo",
+      "priority": "high",
       "components": [
         "bin/cli.mjs",
         "scripts/lint-memory.mjs"
       ],
-      "description": "Add an automated smoke test script that runs init, upgrade, sync, export, and uninstall inside a temporary directory and asserts file integrity.",
-      "spec": "Create a zero-dependency Node test script using node:test and node:assert that exercises all CLI subcommands against an isolated temp folder.",
+      "description": "Add an automated smoke test script using node:test and node:assert that exercises init, upgrade, sync, export, and uninstall inside an isolated temporary directory.",
+      "spec": "Verify full CLI lifecycle and assert 100% preservation of custom memory-bank/*.md files across upgrade.",
       "acceptanceCriteria": [
         "Tests init, upgrade, sync, export, and uninstall in an isolated temp directory.",
         "Verifies custom memory-bank/*.md domain files are 100% preserved across upgrade.",
         "Passes via npm test."
+      ]
+    },
+    {
+      "id": "FEAT-112",
+      "type": "qa",
+      "title": "Automated Byte-Parity Check Between scripts/backlog.mjs and templates/scripts/backlog.mjs",
+      "status": "todo",
+      "priority": "medium",
+      "components": [
+        "scripts/lint-memory.mjs",
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs"
+      ],
+      "description": "Ensure upstream bug fixes to scripts/backlog.mjs never drift from templates/scripts/backlog.mjs distributed to downstream projects.",
+      "spec": "Add a byte-identity assertion between scripts/backlog.mjs and templates/scripts/backlog.mjs during npm test.",
+      "acceptanceCriteria": [
+        "npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge."
       ]
     }
   ],
   "milestones": [
     {
       "id": "MILESTONE-1",
-      "title": "v1.4 Zero-Token Backlog Engine & Dogfooding",
+      "title": "v1.0–v1.3 Three-Tier Memory Bank, Auto-Scraper, Git Hooks & In-Place Upgrade",
       "status": "done"
+    },
+    {
+      "id": "MILESTONE-2",
+      "title": "v1.4 Zero-Token Backlog Engine, Review Pane Kanban & Isolated Dogfooding",
+      "status": "done"
+    },
+    {
+      "id": "MILESTONE-3",
+      "title": "v1.5 Automated E2E CLI Verification & Template Parity Suite",
+      "status": "todo"
     }
   ]
 }
