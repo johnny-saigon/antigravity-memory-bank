@@ -30,42 +30,74 @@ flowchart TD
 
 ---
 
-## ⚡ Quick Start
+## ⚡ 3. How to Use the Installer
 
-### Option 1: Scaffold into any Project via `npx`
-Run the interactive initializer inside your target project root:
+### A. On-the-Fly Installation in Existing Projects (Active Antigravity Window)
+
+If you are already working inside an active Antigravity session on an existing project (e.g. **`BinaryDay`**, **`RemoveBackGround`**, or any local repository connected to GitHub), you can activate the Memory Bank instantly with **zero IDE restart**:
 
 ```bash
-npx https://github.com/johnny-saigon/antigravity-memory-bank init
+# Automated on-the-fly execution (auto-detects project stack, git remotes, and ports):
+npx github:johnny-saigon/antigravity-memory-bank init -y --commit
+
+# Or via universal one-line shell installer:
+curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-bank/main/install.sh | bash -s -- -y --commit
 ```
 
-Or with standard npm:
-```bash
-npx antigravity-memory-bank init
-```
-
-This automatically scaffolds:
-- `memory-bank/*.md` (8 specialized context files)
-- `AGENTS.md` (Top-level agent directives)
-- `.agents/rules/` (Tier 2 cluster & negative constraints)
-- `.agents/skills/` (`/start` and `/update-memory`)
-- `scripts/lint-memory.mjs` (Automated line-budget enforcer)
+#### Why It Works on the Fly:
+Antigravity dynamically ingests workspace rules (`AGENTS.md`, `.agents/rules/`) and workspace skills (`.agents/skills/start`, `.agents/skills/update-memory`) as soon as they appear in the project root.
+- **Immediate in-chat activation**: Run the command in your terminal or prompt the agent to execute it, and you can invoke `/start` immediately in the same conversation!
+- **Non-destructive**: Preserves any existing custom `AGENTS.md` guidelines while injecting the Memory Bank links and rules.
+- **Git synchronization**: When `--commit` is passed, automatically stages and commits the memory baseline to Git, ready to `git push origin main` to GitHub.
 
 ---
 
-### Option 2: Install as an Antigravity Plugin
+### B. Interactive Scaffolding for New or Custom Projects
 
-Clone or install directly into your workspace's `.agents/plugins/` or global `~/.gemini/config/plugins/`:
+Inside your target repository root, run the CLI interactively:
+
+```bash
+npx github:johnny-saigon/antigravity-memory-bank init
+```
+
+The CLI inspects `package.json`, `.git/config`, and environment files, presenting auto-detected values in brackets as defaults—simply press `ENTER` to accept:
+- **Project Name & Tagline**: Auto-extracted from `package.json` or git remote.
+- **Target Platforms**: Web, iOS, Android, CLI, Monorepo (auto-detects Expo, Next.js, etc.).
+- **Tech Stack**: Frontend, Backend, Database, Cache (auto-detects Fastify, React, Prisma, pg, etc.).
+- **Allocated Port & Health URL**: Internal port allocation and health probe endpoint for automated verification.
+
+It automatically scaffolds:
+- `memory-bank/*.md` (6 specialized context documents, all strictly `< 150 lines`)
+- `AGENTS.md` (Top-level agent directives and context bootstrap links)
+- `.agents/rules/` (Tier 2 infrastructure & negative constraint deny-lists)
+- `.agents/skills/` (`/start` and `/update-memory` continuous lifecycle skills)
+- `scripts/lint-memory.mjs` (Automated line-budget enforcer, added to `package.json` as `npm run lint:memory`)
+
+---
+
+### C. Installing as an Antigravity Plugin
+
+Clone directly into the project's `.agents/plugins/` directory:
 
 ```bash
 mkdir -p .agents/plugins
 git clone https://github.com/johnny-saigon/antigravity-memory-bank.git .agents/plugins/memory-bank
 ```
 
-Antigravity will automatically detect the plugin manifest:
-- **Manifest**: `plugin.json`
-- **Bundled Skills**: `/start`, `/update-memory`
-- **Bundled Directives**: `rules/AGENTS.md`
+Or install globally across all projects on your machine:
+
+```bash
+mkdir -p ~/.gemini/config/plugins
+git clone https://github.com/johnny-saigon/antigravity-memory-bank.git ~/.gemini/config/plugins/memory-bank
+```
+
+Antigravity automatically loads the bundled plugin assets:
+- **Manifest**: `plugin.json` (declares `/start`, `/update-memory`, and budget audits)
+- **Bundled Skills**: `skills/start/SKILL.md` and `skills/update-memory/SKILL.md`
+- **Bundled Directives**: `rules/AGENTS.md` (Three-Tier Memory Hierarchy rules)
+
+> [!TIP]
+> For active workspaces in ongoing pair-programming sessions, **Option A (Workspace Brick)** is recommended because its skills and rules activate **immediately on the fly** without restarting the IDE. **Option C (Plugin)** is ideal for machine-wide standardization across restarts.
 
 ---
 
