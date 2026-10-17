@@ -52,6 +52,10 @@ function parseCliArgs(argv) {
       options.command = 'uninstall';
     } else if (a === 'upgrade' || a === 'update') {
       options.command = 'upgrade';
+    } else if (a === 'sync') {
+      options.command = 'sync';
+    } else if (a === '--quiet' || a === '-q') {
+      options.quiet = true;
     } else if (a === '--as-plugin') {
       options.asPlugin = true;
     } else if (a === '-y' || a === '--yes' || a === '--non-interactive') {
@@ -97,6 +101,7 @@ function printHelp() {
 
 Commands:
   init [options]         Bootstrap Memory Bank into project on the fly (default)
+  sync [options]         Incrementally sync git history and accomplishments into context
   upgrade [options]      Safely upgrade existing Memory Bank to v1.2 (preserves all domain data)
   export [options]       Export project memory & context to markdown and archive
   uninstall [options]    Cleanly uninstall Memory Bank (automatically exports context first)
@@ -404,10 +409,11 @@ async function uninstallMemory(targetDir, opts, detected) {
     console.log('  ✓ Removed .agents/plugins/memory-bank/');
   } catch {}
 
-  // 6. Remove scripts/lint-memory.mjs
+  // 6. Remove scripts/lint-memory.mjs and scripts/sync-memory-context.mjs
   try {
     await fs.rm(path.join(targetDir, 'scripts/lint-memory.mjs'), { force: true });
-    console.log('  ✓ Removed scripts/lint-memory.mjs');
+    await fs.rm(path.join(targetDir, 'scripts/sync-memory-context.mjs'), { force: true });
+    console.log('  ✓ Removed scripts/lint-memory.mjs and scripts/sync-memory-context.mjs');
     const remainingScripts = await fs.readdir(path.join(targetDir, 'scripts'));
     if (remainingScripts.length === 0) {
       await fs.rm(path.join(targetDir, 'scripts'), { recursive: true, force: true });
@@ -418,11 +424,37 @@ async function uninstallMemory(targetDir, opts, detected) {
   const pkgPath = path.join(targetDir, 'package.json');
   try {
     const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
-    if (pkg.scripts && pkg.scripts['lint:memory']) {
-      delete pkg.scripts['lint:memory'];
-      await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
-      console.log('  ✓ Cleaned "lint:memory" from package.json scripts');
+    if (pkg.scripts) {
+      const keys = ['lint:memory', 'memory:sync', 'memory:upgrade', 'memory:export', 'memory:uninstall'];
+      let cleaned = false;
+      for (const k of keys) {
+        if (pkg.scripts[k]) {
+          delete pkg.scripts[k];
+          cleaned = true;
+        }
+      }
+      if (cleaned) {
+        await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+        console.log('  ✓ Cleaned memory scripts from package.json');
+      }
     }
+  } catch {}
+
+  // 7b. Remove git hook if ours
+  const postCommitHookPath = path.join(targetDir, '.git/hooks/post-commit');
+  try {
+    const hookContent = await fs.readFile(postCommitHookPath, 'utf8');
+    if (hookContent.includes('sync-memory-context.mjs')) {
+      await fs.rm(postCommitHookPath, { force: true });
+      console.log('  ✓ Removed .git/hooks/post-commit');
+    }
+  } catch {}
+
+  // 7c. Remove CI workflow if ours
+  const ciWorkflowPath = path.join(targetDir, '.github/workflows/memory-bank-sync.yml');
+  try {
+    await fs.rm(ciWorkflowPath, { force: true });
+    console.log('  ✓ Removed .github/workflows/memory-bank-sync.yml');
   } catch {}
 
   // 8. Handle AGENTS.md
@@ -460,6 +492,123 @@ async function uninstallMemory(targetDir, opts, detected) {
   if (!opts.noExport) {
     console.log(`📦 Your context remains safely preserved in: ${opts.exportDir || path.join(targetDir, 'memory-backups')}\n`);
   }
+}
+
+/**
+ * Incrementally syncs git commits and feats into memory-bank
+ */
+async function syncMemory(targetDir, opts) {
+  const syncScript = path.join(targetDir, 'scripts/sync-memory-context.mjs');
+  try {
+    await fs.access(syncScript);
+  } catch {
+    console.error('❌ scripts/sync-memory-context.mjs not found. Run `npx antigravity-memory-bank upgrade` to install it.');
+    process.exit(1);
+  }
+  const cmd = `node scripts/sync-memory-context.mjs${opts.commit ? ' --commit' : ''}${opts.quiet ? ' --quiet' : ''}`;
+  try {
+    execSync(cmd, { cwd: targetDir, stdio: opts.quiet ? 'ignore' : 'inherit' });
+  } catch (err) {
+    console.error('⚠️ Sync failed:', err.message);
+    process.exit(1);
+  }
+}
+
+/**
+ * Installs incremental synchronizer, automated git hooks, and package scripts
+ */
+async function installSyncAndHooks(targetDir, detected) {
+  // 1. Install scripts/sync-memory-context.mjs
+  const syncSrc = path.join(pkgRoot, 'scripts/sync-memory-context.mjs');
+  const syncDest = path.join(targetDir, 'scripts/sync-memory-context.mjs');
+  await fs.mkdir(path.dirname(syncDest), { recursive: true });
+  await fs.copyFile(syncSrc, syncDest);
+  await fs.chmod(syncDest, 0o755);
+  console.log('  ✓ Installed scripts/sync-memory-context.mjs (incremental auto-synchronizer)');
+
+  // 2. Install Git post-commit hook if .git/hooks exists
+  const gitHooksDir = path.join(targetDir, '.git/hooks');
+  try {
+    await fs.access(gitHooksDir);
+    const postCommitHookPath = path.join(gitHooksDir, 'post-commit');
+    const hookTemplate = path.join(pkgRoot, 'templates/git/hooks/post-commit.tpl');
+    const hookContent = await fs.readFile(hookTemplate, 'utf8');
+
+    let shouldWriteHook = true;
+    try {
+      const existing = await fs.readFile(postCommitHookPath, 'utf8');
+      if (existing.includes('sync-memory-context.mjs')) {
+        shouldWriteHook = false;
+        console.log('  ↷ Existing .git/hooks/post-commit already configured for memory sync');
+      } else {
+        await fs.appendFile(postCommitHookPath, `\n\n${hookContent}`, 'utf8');
+        await fs.chmod(postCommitHookPath, 0o755);
+        console.log('  ✓ Appended memory sync hook to existing .git/hooks/post-commit');
+        shouldWriteHook = false;
+      }
+    } catch {}
+
+    if (shouldWriteHook) {
+      await fs.writeFile(postCommitHookPath, hookContent, 'utf8');
+      await fs.chmod(postCommitHookPath, 0o755);
+      console.log('  ✓ Configured automated .git/hooks/post-commit hook (auto-syncs on every commit)');
+    }
+  } catch {}
+
+  // 3. Update package.json scripts with lint, sync, upgrade, export, and uninstall commands
+  const pkgPath = path.join(targetDir, 'package.json');
+  try {
+    const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
+    pkg.scripts = pkg.scripts || {};
+    let pkgUpdated = false;
+
+    if (!pkg.scripts['lint:memory']) {
+      pkg.scripts['lint:memory'] = 'node scripts/lint-memory.mjs';
+      pkgUpdated = true;
+      console.log('  ✓ Added "lint:memory" script to package.json');
+    }
+    if (!pkg.scripts['memory:sync']) {
+      pkg.scripts['memory:sync'] = 'node scripts/sync-memory-context.mjs';
+      pkgUpdated = true;
+      console.log('  ✓ Added "memory:sync" script to package.json');
+    }
+    if (!pkg.scripts['memory:upgrade']) {
+      pkg.scripts['memory:upgrade'] = 'npx github:johnny-saigon/antigravity-memory-bank upgrade';
+      pkgUpdated = true;
+      console.log('  ✓ Added "memory:upgrade" script to package.json');
+    }
+    if (!pkg.scripts['memory:export']) {
+      pkg.scripts['memory:export'] = 'npx github:johnny-saigon/antigravity-memory-bank export';
+      pkgUpdated = true;
+      console.log('  ✓ Added "memory:export" script to package.json');
+    }
+    if (!pkg.scripts['memory:uninstall']) {
+      pkg.scripts['memory:uninstall'] = 'npx github:johnny-saigon/antigravity-memory-bank uninstall';
+      pkgUpdated = true;
+      console.log('  ✓ Added "memory:uninstall" script to package.json');
+    }
+
+    if (pkgUpdated) {
+      await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+    }
+  } catch {}
+
+  // 4. Install CI workflow if .github directory exists
+  const githubDir = path.join(targetDir, '.github');
+  try {
+    await fs.access(githubDir);
+    const workflowsDir = path.join(githubDir, 'workflows');
+    await fs.mkdir(workflowsDir, { recursive: true });
+    const ciSrc = path.join(pkgRoot, 'templates/github/workflows/memory-bank-sync.yml.tpl');
+    const ciDest = path.join(workflowsDir, 'memory-bank-sync.yml');
+    try {
+      await fs.access(ciDest);
+      console.log('  ↷ Existing .github/workflows/memory-bank-sync.yml preserved');
+    } catch {
+      await fs.copyFile(ciSrc, ciDest);
+      console.log('  ✓ Installed CI workflow: .github/workflows/memory-bank-sync.yml');
+    }
+  } catch {}
 }
 
 /**
@@ -632,17 +781,7 @@ async function initMemory(targetDir, opts, detected) {
     await fs.chmod(linterDest, 0o755);
     console.log('  ✓ Installed scripts/lint-memory.mjs');
 
-    if (detected.hasPackageJson) {
-      try {
-        const pkgData = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
-        pkgData.scripts = pkgData.scripts || {};
-        if (!pkgData.scripts['lint:memory']) {
-          pkgData.scripts['lint:memory'] = 'node scripts/lint-memory.mjs';
-          await fs.writeFile(pkgPath, JSON.stringify(pkgData, null, 2) + '\n', 'utf8');
-          console.log('  ✓ Added "lint:memory" script to package.json');
-        }
-      } catch {}
-    }
+    await installSyncAndHooks(targetDir, detected);
   }
 
   console.log('\n🧪 Auditing Memory Bank line budget (<150 lines per document)...');
@@ -655,11 +794,11 @@ async function initMemory(targetDir, opts, detected) {
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Recording Memory Bank baseline into Git...');
     try {
-      execSync('git add AGENTS.md .agents/ memory-bank/ scripts/lint-memory.mjs package.json 2>/dev/null || true', {
+      execSync('git add AGENTS.md .agents/ memory-bank/ scripts/ package.json .github/ 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'inherit',
       });
-      execSync('git commit -m "chore(memory): bootstrap Three-Tier Memory Bank with continuous lifecycle"', {
+      execSync('git commit -m "chore(memory): bootstrap Three-Tier Memory Bank with continuous lifecycle and auto-sync"', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -718,26 +857,30 @@ description: Memory synchronization workflow triggered via /update-memory or aft
 When \`/update-memory\` is triggered or a major milestone/task completes:
 
 ### Phase 1: Close & Synchronize Current Session
-1. Review all changes made in the working branch (\`git status -s\` and \`git diff --stat\`) and any production deployments on Vast.ai (\`85.10.218.46:44016\`).
-2. Update \`memory-bank/progress.md\` by marking finished acceptance criteria as complete (\`[x]\`).
-3. Update \`memory-bank/activeContext.md\` with:
+1. Auto-sync recent git commit history into context drafts:
+   \`\`\`bash
+   node scripts/sync-memory-context.mjs
+   \`\`\`
+2. Review all changes made in the working branch (\`git status -s\` and \`git diff --stat\`) and any production deployments on Vast.ai (\`85.10.218.46:44016\`).
+3. Update \`memory-bank/progress.md\` by marking finished acceptance criteria as complete (\`[x]\`).
+4. Update \`memory-bank/activeContext.md\` with:
    - Technical decisions made during this session.
    - Any modifications to endpoints, database schemas, or client screens.
    - Resolved bugs (cross-referenced with \`docs/BUG_FIX_RECORDS.md\` if present).
    - Closed sprint items.
-4. Verify that every file in \`memory-bank/*.md\` remains strictly **under 150 lines** (per Operational Best Practice #3). If any file approaches 150 lines, split deeper domain sections into a dedicated \`memory-bank/<topic>.md\` file and link via \`@[Topic](memory-bank/<topic>.md)\`.
-5. Verify that no Tier 2 infrastructure invariants (\`.agents/rules/infra.md\` and \`memory-bank/infrastructureInvariants.md\`) were violated or modified without cross-cluster alignment.
-6. Commit and push memory updates to Git with a conventional commit message (e.g. \`docs(memory-bank): sync session state and close milestone\`).
+5. Verify that every file in \`memory-bank/*.md\` remains strictly **under 150 lines** (per Operational Best Practice #3). If any file approaches 150 lines, split deeper domain sections into a dedicated \`memory-bank/<topic>.md\` file and link via \`@[Topic](memory-bank/<topic>.md)\`.
+6. Verify that no Tier 2 infrastructure invariants (\`.agents/rules/infra.md\` and \`memory-bank/infrastructureInvariants.md\`) were violated or modified without cross-cluster alignment.
+7. Commit and push memory updates to Git with a conventional commit message (e.g. \`docs(memory-bank): sync session state and close milestone\`).
 
 ### Phase 2: Explicit Auto-Start & New Session Initialization
 Immediately after closing the previous session, initialize the new working cycle without requiring the user to invoke \`/start\` manually:
-7. Re-anchor context by re-reading \`memory-bank/activeContext.md\` and \`memory-bank/progress.md\` to identify the next priority tasks.
-8. Check working tree cleanliness (\`git status -s\`) and head commit (\`git log -n 1 --oneline\`).
-9. Run a live non-invasive health check against the production backend:
+8. Re-anchor context by re-reading \`memory-bank/activeContext.md\` and \`memory-bank/progress.md\` to identify the next priority tasks.
+9. Check working tree cleanliness (\`git status -s\`) and head commit (\`git log -n 1 --oneline\`).
+10. Run a live non-invasive health check against the production backend:
    \`\`\`bash
    ${healthProbe}
    \`\`\`
-10. Explicitly output the new active session status banner to the user:
+11. Explicitly output the new active session status banner to the user:
     - 🟢 **New Session Cycle Initialized**
     - **Current Phase**: [Current project phase from activeContext.md]
     - **Immediate Focus**: [Top pending task / feature / bug in progress]
@@ -770,33 +913,8 @@ Immediately after closing the previous session, initialize the new working cycle
   await fs.chmod(linterDest, 0o755);
   console.log('  ✓ Installed scripts/lint-memory.mjs (token budget linter)');
 
-  // 6. Update package.json scripts with lint, export, and uninstall commands
-  const pkgPath = path.join(targetDir, 'package.json');
-  try {
-    const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
-    pkg.scripts = pkg.scripts || {};
-    let pkgUpdated = false;
-
-    if (!pkg.scripts['lint:memory']) {
-      pkg.scripts['lint:memory'] = 'node scripts/lint-memory.mjs';
-      pkgUpdated = true;
-      console.log('  ✓ Added "lint:memory" script to package.json');
-    }
-    if (!pkg.scripts['memory:export']) {
-      pkg.scripts['memory:export'] = 'npx github:johnny-saigon/antigravity-memory-bank export';
-      pkgUpdated = true;
-      console.log('  ✓ Added "memory:export" script to package.json');
-    }
-    if (!pkg.scripts['memory:uninstall']) {
-      pkg.scripts['memory:uninstall'] = 'npx github:johnny-saigon/antigravity-memory-bank uninstall';
-      pkgUpdated = true;
-      console.log('  ✓ Added "memory:uninstall" script to package.json');
-    }
-
-    if (pkgUpdated) {
-      await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
-    }
-  } catch {}
+  // 6. Install sync script, git hooks, package scripts, and CI workflows
+  await installSyncAndHooks(targetDir, detected);
 
   // 7. Audit line budget on existing files
   console.log('\n🧪 Auditing existing Memory Bank line budget (<150 lines per document)...');
@@ -810,11 +928,11 @@ Immediately after closing the previous session, initialize the new working cycle
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Committing memory upgrade to Git...');
     try {
-      execSync('git add .agents/skills/update-memory/SKILL.md AGENTS.md scripts/lint-memory.mjs package.json', {
+      execSync('git add .agents/skills/update-memory/SKILL.md AGENTS.md scripts/ package.json .github/ 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'pipe',
       });
-      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank to v1.2 (continuous lifecycle, linter, export/uninstall tooling)"', {
+      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank to v1.3 (continuous lifecycle, auto-sync hook, CI workflows)"', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -828,6 +946,7 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
   console.log('📦 New capabilities active in this project:');
   console.log('   - 🔄 Continuous 2-Phase Cycle: /update-memory auto-boots the next session');
+  console.log('   - ⚡ Incremental Auto-Sync: .git/hooks/post-commit automatically syncs commits');
   console.log('   - 📏 Token Budget Linter: npm run lint:memory (<150 lines/file)');
   console.log('   - 📤 Context Export: npm run memory:export (or npx ... export)');
   console.log('   - 🧹 Safe Deinstallation: npm run memory:uninstall (or npx ... uninstall)\n');
@@ -842,6 +961,8 @@ async function main() {
     await exportMemory(targetDir, opts.exportDir);
   } else if (opts.command === 'uninstall') {
     await uninstallMemory(targetDir, opts, detected);
+  } else if (opts.command === 'sync') {
+    await syncMemory(targetDir, opts);
   } else if (opts.command === 'upgrade' || (opts.command === 'init' && detected.memoryBankExists && !opts.force)) {
     await upgradeMemory(targetDir, opts, detected);
   } else {

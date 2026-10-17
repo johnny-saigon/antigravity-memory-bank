@@ -243,13 +243,41 @@ When a topic expands, split it into a linked sub-file:
 
 ---
 
+## ⚡ Automated Self-Updating Architecture
+
+Once installed, the system keeps itself continuously up-to-date across **two distinct dimensions**:
+
+### 1. Context Auto-Updating (Codebase & Commit Synchronization)
+- **Git `post-commit` Hook**: Installed into `.git/hooks/post-commit`. Every `git commit` that introduces new features (`feat:`) or bug fixes (`fix:`) automatically triggers `scripts/sync-memory-context.mjs` in the background. It updates `progress.md` accomplishments and `activeContext.md` sprint state with zero manual typing.
+- **Agent Continuous Cycle (`/update-memory`)**: When pair-programming with Antigravity, the agent executes the 2-phase lifecycle upon task completion—synchronizing diffs, verifying line budgets (< 150 lines), committing to Git, and auto-bootstrapping the next cycle.
+- **CI Context Verification (GitHub Actions)**: `.github/workflows/memory-bank-sync.yml` runs on every PR and push to `main`, validating line budgets (`npm run lint:memory`) and ensuring master branch context is in lockstep with releases.
+
+```bash
+# Manually trigger an incremental context sync anytime:
+npm run memory:sync
+
+# Or commit automatically with context updates:
+npx github:johnny-saigon/antigravity-memory-bank sync --commit
+```
+
+### 2. Tooling & System Auto-Updating (Upstream Brick Upgrades)
+- **Non-Destructive In-Place Upgrade**: Upstream enhancements, new skills, and prompt optimizations in `antigravity-memory-bank` can be pulled non-destructively:
+  ```bash
+  npm run memory:upgrade
+  ```
+  This updates `.agents/skills/`, `scripts/lint-memory.mjs`, and `.git/hooks/post-commit` while keeping all project-specific domain documents in `memory-bank/*.md` 100% intact.
+
+---
+
 ## 🛠️ Repository Scripts
 
 | Script | Command | Description |
 | :--- | :--- | :--- |
 | **Lint Memory** | `npm run lint:memory` | Verifies all memory files adhere to the 150-line rule |
-| **Test** | `npm test` | Runs validation on templates and manifests |
-| **CLI Init** | `node bin/cli.mjs init` | Interactive project setup wizard |
+| **Sync Context** | `npm run memory:sync` | Incrementally syncs latest git commits and fixes into memory |
+| **Upgrade Tooling** | `npm run memory:upgrade` | Non-destructively upgrades skills and linters from upstream |
+| **Export Context** | `npm run memory:export` | Consolidates context into markdown and tar.gz backup |
+| **Uninstall** | `npm run memory:uninstall` | Exports context safely and cleans all memory files |
 
 ---
 
