@@ -938,12 +938,14 @@ When \`/update-memory\` is triggered or a major milestone/task completes:
    node scripts/sync-memory-context.mjs
    \`\`\`
 2. Review all changes made in the working branch (\`git status -s\` and \`git diff --stat\`) and any production deployments on Vast.ai (\`85.10.218.46:44016\`).
-3. Update \`memory-bank/progress.md\` by marking finished acceptance criteria as complete (\`[x]\`).
-4. Update \`memory-bank/activeContext.md\` with:
-   - Technical decisions made during this session.
-   - Any modifications to endpoints, database schemas, or client screens.
-   - Resolved bugs (cross-referenced with \`docs/BUG_FIX_RECORDS.md\` if present).
-   - Closed sprint items.
+3. Refresh the Review pane backlog artifacts:
+   \`\`\`bash
+   node scripts/backlog.mjs render
+   \`\`\`
+4. Update \`memory-bank/progress.md\` and \`memory-bank/activeContext.md\` as a **passive observer**:
+   - Record high-level completed milestones and technical decisions made during this session.
+   - Cross-reference active tickets in \`docs/backlog.json\` and resolved bugs in \`docs/BUG_FIX_RECORDS.md\`.
+   - **Do NOT** conduct active ticket management or task tracking inside \`memory-bank/*.md\`.
 5. Verify that every file in \`memory-bank/*.md\` remains strictly **under 150 lines** (per Operational Best Practice #3). If any file approaches 150 lines, split deeper domain sections into a dedicated \`memory-bank/<topic>.md\` file and link via \`@[Topic](memory-bank/<topic>.md)\`.
 6. Verify that no Tier 2 infrastructure invariants (\`.agents/rules/infra.md\` and \`memory-bank/infrastructureInvariants.md\`) were violated or modified without cross-cluster alignment.
 7. Commit and push memory updates to Git with a conventional commit message (e.g. \`docs(memory-bank): sync session state and close milestone\`).
