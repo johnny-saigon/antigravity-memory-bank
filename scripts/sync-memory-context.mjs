@@ -94,19 +94,16 @@ async function runSync() {
       const syncStamp = `- **Last Synchronized Commit**: \`${lastCommitHash}\` — "${lastCommitMsg}" (${new Date().toISOString().split('T')[0]})`;
       if (content.includes('**Last Synchronized Commit**:')) {
         content = content.replace(/- \*\*Last Synchronized Commit\*\*:[^\n]+/g, syncStamp);
+      } else if (content.includes('## 1. Current Phase & Sprint Objective')) {
+        content = content.replace('## 1. Current Phase & Sprint Objective', `## 1. Current Phase & Sprint Objective\n${syncStamp}`);
       }
 
-      // If ## 2. Recent Technical Decisions & Accomplishments exists, update items
+      // If ## 2. Recent Technical Decisions & Accomplishments exists, prepend if new
       const recentHeader = '## 2. Recent Technical Decisions & Accomplishments';
-      if (content.includes(recentHeader) && recentCommits.length > 0) {
-        const top5 = recentCommits.slice(0, 5).join('\n');
-        const nextSectionMatch = content.slice(content.indexOf(recentHeader)).search(/\n##\s/);
-        
-        if (nextSectionMatch !== -1) {
-          const before = content.slice(0, content.indexOf(recentHeader) + recentHeader.length);
-          const after = content.slice(content.indexOf(recentHeader) + nextSectionMatch);
-          content = `${before}\n${top5}\n${after}`;
-        }
+      const alreadyHasCommitInActive = content.includes(lastCommitHash);
+      if (!alreadyHasCommitInActive && content.includes(recentHeader) && lastCommitMsg) {
+        const newBullet = `- **${lastCommitMsg}** (\`${lastCommitHash}\`)`;
+        content = content.replace(recentHeader, `${recentHeader}\n${newBullet}`);
       }
 
       await fs.writeFile(activeContextPath, content, 'utf8');
@@ -118,19 +115,21 @@ async function runSync() {
     try {
       let content = await fs.readFile(progressPath, 'utf8');
 
-      // If ## 1. Milestone Tracking or Checklist exists, ensure latest accomplishments are logged
-      const featCommits = recentCommits.filter((c) =>
-        c.includes('feat') || c.includes('fix') || c.includes('add') || c.includes('implement')
-      );
-
-      if (content.includes('## 1. Milestone Tracking') && featCommits.length > 0) {
-        const header = '## 1. Milestone Tracking';
-        const topItems = featCommits.slice(0, 6).join('\n');
-        const nextMatch = content.slice(content.indexOf(header)).search(/\n##\s/);
-        if (nextMatch !== -1) {
-          const before = content.slice(0, content.indexOf(header) + header.length);
-          const after = content.slice(content.indexOf(header) + nextMatch);
-          content = `${before}\n${topItems}\n${after}`;
+      // Prepend if new milestone/feature
+      const alreadyHasCommitInProgress = content.includes(lastCommitHash);
+      const isFeatureOrFix = lastCommitMsg.startsWith('feat') || lastCommitMsg.startsWith('fix') || lastCommitMsg.includes('BUG-');
+      if (!alreadyHasCommitInProgress && isFeatureOrFix) {
+        const newMilestone = `- [x] **${lastCommitMsg}** (\`${lastCommitHash}\`)`;
+        const possibleHeaders = [
+          '## 1. Milestone Tracking',
+          '## 1. Feature Implementation & Readiness Checklist',
+          '## 1. Feature Implementation',
+        ];
+        for (const h of possibleHeaders) {
+          if (content.includes(h)) {
+            content = content.replace(h, `${h}\n${newMilestone}`);
+            break;
+          }
         }
       }
 
