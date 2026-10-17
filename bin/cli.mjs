@@ -239,10 +239,15 @@ async function exportMemory(targetDir, exportDir) {
     '.agents/rules/negative-constraints.md',
     '.agents/skills/start/SKILL.md',
     '.agents/skills/update-memory/SKILL.md',
+    '.agents/skills/backlog-start/SKILL.md',
     '.agents/plugins/memory-bank/plugin.json',
     '.agents/plugins/memory-bank/rules/AGENTS.md',
     '.agents/plugins/memory-bank/skills/start/SKILL.md',
     '.agents/plugins/memory-bank/skills/update-memory/SKILL.md',
+    '.agents/plugins/memory-bank/skills/backlog-start/SKILL.md',
+    'scripts/backlog.mjs',
+    'docs/backlog.json',
+    'docs/BACKLOG_GUIDE.md',
   ];
 
   for (const rel of candidatePaths) {
@@ -362,8 +367,8 @@ async function uninstallMemory(targetDir, opts, detected) {
     console.log('  ✓ Removed memory-bank/');
   } catch {}
 
-  // 3. Remove skills: start and update-memory
-  const skillsToRemove = ['start', 'update-memory'];
+  // 3. Remove skills: start, update-memory, and backlog-start
+  const skillsToRemove = ['start', 'update-memory', 'backlog-start'];
   for (const s of skillsToRemove) {
     try {
       await fs.rm(path.join(targetDir, '.agents/skills', s), { recursive: true, force: true });
@@ -555,7 +560,44 @@ async function installSyncAndHooks(targetDir, detected) {
     }
   } catch {}
 
-  // 3. Update package.json scripts with lint, sync, upgrade, export, and uninstall commands
+  // 3. Install scripts/backlog.mjs
+  const backlogSrc = path.join(pkgRoot, 'templates/scripts/backlog.mjs');
+  const backlogDest = path.join(targetDir, 'scripts/backlog.mjs');
+  await fs.mkdir(path.dirname(backlogDest), { recursive: true });
+  await fs.copyFile(backlogSrc, backlogDest);
+  await fs.chmod(backlogDest, 0o755);
+  console.log('  ✓ Installed scripts/backlog.mjs (zero-token local backlog engine)');
+
+  // 4. Install docs/BACKLOG_GUIDE.md
+  const guideSrc = path.join(pkgRoot, 'templates/docs/BACKLOG_GUIDE.md');
+  const guideDest = path.join(targetDir, 'docs/BACKLOG_GUIDE.md');
+  await fs.mkdir(path.dirname(guideDest), { recursive: true });
+  await fs.copyFile(guideSrc, guideDest);
+  console.log('  ✓ Installed docs/BACKLOG_GUIDE.md (decoupled backlog guide)');
+
+  // 5. Install docs/backlog.json if not present
+  const backlogJsonDest = path.join(targetDir, 'docs/backlog.json');
+  try {
+    await fs.access(backlogJsonDest);
+    console.log('  ↷ Preserved existing docs/backlog.json');
+  } catch {
+    const backlogTpl = path.join(pkgRoot, 'templates/docs/backlog.json.tpl');
+    let tplContent = await fs.readFile(backlogTpl, 'utf8');
+    tplContent = tplContent
+      .replaceAll('{{PROJECT_NAME}}', detected.name || 'project')
+      .replaceAll('{{CURRENT_TIMESTAMP}}', new Date().toISOString());
+    await fs.writeFile(backlogJsonDest, tplContent, 'utf8');
+    console.log('  ✓ Created docs/backlog.json (local task store)');
+  }
+
+  // 6. Install .agents/skills/backlog-start/SKILL.md
+  const backlogSkillSrc = path.join(pkgRoot, 'skills/backlog-start/SKILL.md');
+  const backlogSkillDest = path.join(targetDir, '.agents/skills/backlog-start/SKILL.md');
+  await fs.mkdir(path.dirname(backlogSkillDest), { recursive: true });
+  await fs.copyFile(backlogSkillSrc, backlogSkillDest);
+  console.log('  ✓ Installed skill: backlog-start (/backlog-start)');
+
+  // 7. Update package.json scripts with lint, sync, upgrade, export, uninstall, and backlog commands
   const pkgPath = path.join(targetDir, 'package.json');
   try {
     const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
@@ -586,6 +628,31 @@ async function installSyncAndHooks(targetDir, detected) {
       pkg.scripts['memory:uninstall'] = 'npx github:johnny-saigon/antigravity-memory-bank uninstall';
       pkgUpdated = true;
       console.log('  ✓ Added "memory:uninstall" script to package.json');
+    }
+    if (!pkg.scripts['backlog']) {
+      pkg.scripts['backlog'] = 'node scripts/backlog.mjs';
+      pkgUpdated = true;
+      console.log('  ✓ Added "backlog" script to package.json');
+    }
+    if (!pkg.scripts['backlog:list']) {
+      pkg.scripts['backlog:list'] = 'node scripts/backlog.mjs list';
+      pkgUpdated = true;
+    }
+    if (!pkg.scripts['backlog:add']) {
+      pkg.scripts['backlog:add'] = 'node scripts/backlog.mjs add';
+      pkgUpdated = true;
+    }
+    if (!pkg.scripts['backlog:start']) {
+      pkg.scripts['backlog:start'] = 'node scripts/backlog.mjs start';
+      pkgUpdated = true;
+    }
+    if (!pkg.scripts['backlog:done']) {
+      pkg.scripts['backlog:done'] = 'node scripts/backlog.mjs done';
+      pkgUpdated = true;
+    }
+    if (!pkg.scripts['backlog:render']) {
+      pkg.scripts['backlog:render'] = 'node scripts/backlog.mjs render';
+      pkgUpdated = true;
     }
 
     if (pkgUpdated) {
@@ -760,6 +827,7 @@ async function initMemory(targetDir, opts, detected) {
 
     await copySkill('start');
     await copySkill('update-memory');
+    await copySkill('backlog-start');
   } else {
     await processTemplate('AGENTS.md.tpl', 'AGENTS.md');
     await processTemplate('rules/infra.md.tpl', '.agents/rules/infra.md');
@@ -773,6 +841,7 @@ async function initMemory(targetDir, opts, detected) {
 
     await copySkill('start');
     await copySkill('update-memory');
+    await copySkill('backlog-start');
 
     const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
     const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
@@ -928,11 +997,11 @@ Immediately after closing the previous session, initialize the new working cycle
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Committing memory upgrade to Git...');
     try {
-      execSync('git add .agents/skills/update-memory/SKILL.md AGENTS.md scripts/ package.json .github/ 2>/dev/null || true', {
+      execSync('git add .agents/skills/ AGENTS.md scripts/ docs/ package.json .github/ 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'pipe',
       });
-      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank to v1.3 (continuous lifecycle, auto-sync hook, CI workflows)"', {
+      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank to v1.4 (zero-token backlog engine, /backlog-start, continuous lifecycle)"', {
         cwd: targetDir,
         stdio: 'inherit',
       });

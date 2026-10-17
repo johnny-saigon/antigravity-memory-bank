@@ -1,6 +1,6 @@
 {
   "name": "antigravity-memory-bank",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "Three-Tier Memory Bank brick and Antigravity plugin for autonomous agentic pair programming",
   "type": "module",
   "main": "./bin/cli.mjs",

@@ -5,7 +5,7 @@
   "description": "Three-Tier Memory Bank system with continuous session lifecycle, line budget enforcement (<150 lines), and cluster invariant guardrails.",
   "suggestedPrompts": [
     "/start",
-    "/update-memory",
-    "Audit memory bank line budget"
+    "/backlog-start",
+    "/update-memory"
   ]
 }

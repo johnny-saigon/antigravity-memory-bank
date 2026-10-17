@@ -280,10 +280,102 @@ npx github:johnny-saigon/antigravity-memory-bank sync --commit
 
 ---
 
+## 📋 4. Decoupled Zero-Token Backlog Engine & Review Pane Integration
+
+Capturing backlog ideas, organizing sprints, or updating task statuses through conversational LLM prompts consumes **15,000 to 35,000 prompt tokens** per interaction (due to system instructions, memory files, tool definitions, and chat history).
+
+The **Antigravity Memory Bank** decouples **task capture** from **agent execution**, saving up to **90% of AI credits**:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        1. OFFLINE CAPTURE (0 TOKENS)                   │
+│                                                                        │
+│   • Local CLI: npm run backlog add "..."                               │
+│   • Direct Edit: docs/backlog.json                                     │
+│   • In-Pane Form: Click "➕ Quick Capture Task" in Review pane         │
+│                                                                        │
+│   ──► Updates docs/backlog.json & docs/MIGRATION_BOARD.md              │
+│   ──► Automatically refreshes Review Pane HTML & MD artifacts          │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                  2. ANTIGRAVITY REVIEW PANE VIEW                       │
+│                                                                        │
+│   • Interactive Kanban Board (backlog.html) in the auxiliary pane      │
+│   • Live keyword search, priority filters, component tags              │
+│   • 1-Click "🤖 Kickoff Prompt" copies frugal trigger to clipboard     │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                 3. FRUGAL AGENT EXECUTION (MINIMAL TOKENS)             │
+│                                                                        │
+│   • Slash Command: /backlog-start <TICKET_IDS>                         │
+│   • Agent reads spec from docs/backlog.json without chat iteration     │
+│   • Memory bank stays < 150 lines (passive observer, ~1.5k tokens)     │
+│   • Deterministic unit tests verify code without LLM hallucination     │
+│   • Automated closure, git commit, push & work recap                   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Clean Separation, Tight Integration
+1. **Clean Separation**: The Memory Bank (`memory-bank/*.md`) remains strictly a passive architectural context baseline (< 150 lines per file). Active operational tasks and sprint state live in `docs/backlog.json` and `docs/MIGRATION_BOARD.md`.
+2. **Tight Integration**: The agent uses `docs/backlog.json` as its direct execution contract, and upon task completion automatically updates both the local backlog (`DONE`) and the passive memory bank (`progress.md` accomplishments).
+
+### Local Backlog CLI (0 Tokens / 0 Credits)
+```bash
+# View all backlog tasks (or filter: todo, in_progress, high, done)
+npm run backlog:list
+
+# Fast offline task capture:
+npm run backlog:add "Implement Apple HealthKit Sleep Sync"
+
+# Detailed task capture with priority and component targeting:
+npm run backlog add "Push Notification Quick Actions" \
+  --type feature \
+  --priority high \
+  --desc "Allow snoozing or completing reminders directly from banner" \
+  --components "src/notifications.ts,src/services/push.ts"
+
+# Update task status:
+npm run backlog:status FEAT-101 in_progress
+npm run backlog:done FEAT-101
+```
+
+### The `/backlog-start` Slash Command & Automated Work Recap
+In Antigravity chat, trigger autonomous, credit-frugal sprint execution with a single slash command:
+
+```text
+/backlog-start FEAT-101
+# Or multiple tickets in a single sprint:
+/backlog-start FEAT-101, BUG-102
+```
+
+The agent autonomously executes a 3-phase cycle:
+1. **Phase 1 (Task Activation)**: Ingests the specification directly from `docs/backlog.json`, sets status to `in_progress`, and refreshes the Review pane.
+2. **Phase 2 (Targeted Execution)**: Modifies only the target components, obeys Tier 2 cluster invariants, and runs unit tests for deterministic verification.
+3. **Phase 3 (Automated Closure & Recap)**:
+   - Marks the ticket `done` in `docs/backlog.json` and migration boards.
+   - Updates `memory-bank/progress.md` accomplishments and verifies the `< 150 lines` limit.
+   - Refreshes the Review pane Kanban board (`backlog.html`).
+   - Commits changes with Conventional Commits and pushes to `origin/main`.
+   - Displays a comprehensive, human-readable **Work Recap Banner** with changed files, test results, and next available tickets.
+
+Full documentation is available in [`docs/BACKLOG_GUIDE.md`](templates/docs/BACKLOG_GUIDE.md).
+
+---
+
 ## 🛠️ Repository Scripts
 
 | Script | Command | Description |
 | :--- | :--- | :--- |
+| **Backlog Board** | `npm run backlog` | Lists tasks and provides zero-token backlog CLI controls |
+| **List Backlog** | `npm run backlog:list` | Displays backlog with status icons and priority tags |
+| **Add Task** | `npm run backlog:add "<title>"` | Captures a task offline into docs/backlog.json (0 tokens) |
+| **Start Task** | `npm run backlog:start <id>` | Marks task in-progress and outputs 1-line kickoff prompt |
+| **Complete Task** | `npm run backlog:done <id>` | Marks task completed and refreshes Review pane board |
+| **Render Board** | `npm run backlog:render` | Refreshes interactive Review pane HTML & MD artifacts |
 | **Lint Memory** | `npm run lint:memory` | Verifies all memory files adhere to the 150-line rule |
 | **Sync Context** | `npm run memory:sync` | Incrementally syncs latest git commits and fixes into memory |
 | **Upgrade Tooling** | `npm run memory:upgrade` | Non-destructively upgrades skills and linters from upstream |
