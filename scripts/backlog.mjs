@@ -34,6 +34,7 @@ function findActiveBrainDir() {
 
   try {
     const entries = fs.readdirSync(brainBase, { withFileTypes: true });
+    const repoBaseName = path.basename(REPO_ROOT);
     const candidates = [];
 
     for (const entry of entries) {
@@ -44,23 +45,32 @@ function findActiveBrainDir() {
       let score = 0;
       let mtime = 0;
       try {
-        const stat = fs.statSync(dirPath);
+        const stat = fs.statSync(fs.existsSync(transcriptPath) ? transcriptPath : dirPath);
         mtime = stat.mtimeMs;
       } catch {}
 
       if (fs.existsSync(transcriptPath)) {
         score += 10;
         try {
-          const sample = fs.readFileSync(transcriptPath, 'utf8').slice(0, 10000);
-          if (sample.includes('SnapCal') || sample.includes(REPO_ROOT)) {
+          const fullText = fs.readFileSync(transcriptPath, 'utf8');
+          const headText = fullText.slice(0, 15000);
+          const tailText = fullText.slice(-30000);
+          if (headText.includes(REPO_ROOT) || tailText.includes(REPO_ROOT)) {
+            score += 200;
+          } else if (fullText.includes(REPO_ROOT)) {
             score += 100;
+          } else if (headText.includes(repoBaseName) || tailText.includes(repoBaseName)) {
+            score += 50;
           }
         } catch {}
       }
       candidates.push({ dirPath, score, mtime });
     }
 
-    candidates.sort((a, b) => (b.score * 1e12 + b.mtime) - (a.score * 1e12 + a.mtime));
+    candidates.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.mtime - a.mtime;
+    });
     return candidates.length > 0 ? candidates[0].dirPath : null;
   } catch (err) {
     return null;
@@ -73,7 +83,7 @@ function loadBacklog() {
     return {
       version: '1.0.0',
       lastUpdated: new Date().toISOString(),
-      project: 'snapcal',
+      project: projectName,
       tasks: [],
       milestones: []
     };
@@ -92,12 +102,12 @@ function saveBacklog(data) {
   fs.writeFileSync(BACKLOG_JSON_PATH, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
-// Render docs/MIGRATION_BOARD.md from backlog data
+// Render docs/MIGRATION_BOARD.md or docs/BACKLOG.md from backlog data
 function renderMigrationBoard(data) {
   const lines = [
-    '# SnapCal — Development & Migration Board',
+    `# ${projectName} — Development & Backlog Board`,
     '',
-    'This board tracks active development tickets, feature backlogs, architecture initiatives, and migration milestones for SnapCal. For historical bug fixes and root-cause analyses, refer to [`docs/BUG_FIX_RECORDS.md`](file:///Users/jbb/Documents/SnapCal/docs/BUG_FIX_RECORDS.md).',
+    `This board tracks active development tickets, feature backlogs, architecture initiatives, and sprint milestones for ${projectName}.`,
     '',
     '---',
     '',
@@ -185,7 +195,7 @@ function generateReviewArtifactHtml(data) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>SnapCal Backlog & Sprint Board</title>
+  <title>${projectName} Backlog & Sprint Board</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     /* Antigravity design tokens styling */
@@ -206,8 +216,8 @@ function generateReviewArtifactHtml(data) {
   <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-4 border-b border-[var(--border,#334155)] gap-3">
     <div>
       <div class="flex items-center gap-2">
-        <span class="text-xl">📅</span>
-        <h1 class="text-xl font-bold tracking-tight text-[var(--foreground,#f8fafc)]">SnapCal Local Backlog</h1>
+        <span class="text-xl">📋</span>
+        <h1 class="text-xl font-bold tracking-tight text-[var(--foreground,#f8fafc)]">${projectName} Local Backlog</h1>
         <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2 py-0.5 rounded-full font-medium">0 Tokens • Frugal Mode</span>
       </div>
       <p class="text-xs text-[var(--muted-foreground,#94a3b8)] mt-1">
@@ -533,7 +543,7 @@ function generateReviewArtifactHtml(data) {
 // Generate the markdown review artifact
 function generateReviewArtifactMd(data) {
   const lines = [
-    '# SnapCal — Local Backlog & Review Board',
+    `# ${projectName} — Local Backlog & Review Board`,
     '',
     '> [!TIP]',
     '> **0 Token Decoupled Task Management**: Maintain your backlog offline without draining AI credits or quota. When ready, kick off any ticket with a single-line frugal prompt.',
@@ -544,7 +554,7 @@ function generateReviewArtifactMd(data) {
 
   const todoTasks = data.tasks.filter(t => t.status === 'todo');
   for (const task of todoTasks) {
-    lines.push(`### [${task.id}](file:///Users/jbb/Documents/SnapCal/docs/MIGRATION_BOARD.md#${task.id.toLowerCase()}): ${task.title}`);
+    lines.push(`### [${task.id}](file://${MIGRATION_BOARD_MD_PATH}#${task.id.toLowerCase()}): ${task.title}`);
     lines.push(`- **Priority:** \`${task.priority || 'medium'}\` | **Type:** \`${task.type || 'feature'}\``);
     if (task.description) lines.push(`- **Overview:** ${task.description}`);
     if (task.components && task.components.length > 0) {
@@ -576,11 +586,19 @@ function generateReviewArtifactMd(data) {
   return lines.join('\n');
 }
 
-// Write the Review Pane artifacts to the active conversation brain folder
+// Write the Review Pane artifacts to docs/backlog.html and the active conversation brain folder
 function writeReviewPaneArtifacts(data) {
+  const htmlContent = generateReviewArtifactHtml(data);
+  const mdContent = generateReviewArtifactMd(data);
+
+  // Always write docs/backlog.html in the repository
+  const localHtmlPath = path.join(REPO_ROOT, 'docs', 'backlog.html');
+  fs.mkdirSync(path.dirname(localHtmlPath), { recursive: true });
+  fs.writeFileSync(localHtmlPath, htmlContent, 'utf8');
+
   const brainDir = findActiveBrainDir();
   if (!brainDir) {
-    console.log('ℹ️  No active Antigravity brain directory detected. Saved to docs/ only.');
+    console.log(`ℹ️  No active Antigravity brain directory detected. Saved to ${localHtmlPath} only.`);
     return;
   }
 
@@ -589,12 +607,9 @@ function writeReviewPaneArtifacts(data) {
   const mdPath = path.join(brainDir, 'backlog-board.md');
   const mdMetaPath = path.join(brainDir, 'backlog-board.md.metadata.json');
 
-  const htmlContent = generateReviewArtifactHtml(data);
-  const mdContent = generateReviewArtifactMd(data);
-
   fs.writeFileSync(htmlPath, htmlContent, 'utf8');
   fs.writeFileSync(htmlMetaPath, JSON.stringify({
-    summary: 'Interactive SnapCal Backlog & Sprint Board for zero-token task capture and frugal agent execution.',
+    summary: `Interactive ${projectName} Backlog & Sprint Board for zero-token task capture and frugal agent execution.`,
     userFacing: true,
     requestFeedback: false,
     updatedAt: new Date().toISOString()
@@ -602,7 +617,7 @@ function writeReviewPaneArtifacts(data) {
 
   fs.writeFileSync(mdPath, mdContent, 'utf8');
   fs.writeFileSync(mdMetaPath, JSON.stringify({
-    summary: 'Markdown Backlog and Sprint Status board linking to docs/backlog.json and docs/MIGRATION_BOARD.md.',
+    summary: `Markdown Backlog and Sprint Status board for ${projectName} linking to docs/backlog.json and docs/BACKLOG.md.`,
     userFacing: true,
     requestFeedback: true,
     updatedAt: new Date().toISOString()
@@ -611,12 +626,13 @@ function writeReviewPaneArtifacts(data) {
   console.log(`✨ Review pane artifacts refreshed in ${path.basename(brainDir)}:`);
   console.log(`   - file://${htmlPath}`);
   console.log(`   - file://${mdPath}`);
+  console.log(`   - file://${localHtmlPath}`);
 }
 
 // CLI commands
 function printUsage() {
   console.log(`
-SnapCal Zero-Token Local Backlog Engine
+${projectName} Zero-Token Local Backlog Engine
 
 Usage:
   npm run backlog list [todo|in_progress|done|high|all]
@@ -637,7 +653,7 @@ function main() {
 
   if (command === 'list') {
     const filter = args[1] || 'all';
-    console.log(`\n📋 SnapCal Local Backlog (${data.tasks.length} total tasks):`);
+    console.log(`\n📋 ${projectName} Local Backlog (${data.tasks.length} total tasks):`);
     console.log('='.repeat(70));
 
     const filtered = data.tasks.filter(t => {
