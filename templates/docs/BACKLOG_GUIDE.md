@@ -114,17 +114,21 @@ Whenever you run any `npm run backlog` command or click **"Save Task Offline"** 
 
 ---
 
-## 4. Frugal Execution Protocol with Memory Bank
+## 4. Context-Frugal, Uncompromising-Quality Execution Protocol
 
-When you are ready to have Antigravity implement a feature:
+> **Core Principle — Frugal on Context Re-Ingestion, Uncompromising on Engineering Quality**:
+> Frugality applies strictly to eliminating redundant context re-ingestion, chat-based ticket management, and bloated memory files (`< 150 lines`). It **NEVER** sacrifices engineering rigor, root-cause analysis, edge-case coverage, or test verification during implementation.
+
+When you are ready to have Antigravity implement a feature or fix a bug:
 
 1. **Call the Slash Command**:
    ```text
    /backlog-start FEAT-101
    ```
-2. **Why this saves 90% of credits**:
-   - The agent reads `docs/backlog.json` directly from the local filesystem instead of requiring you to explain the ticket.
-   - The agent targets the exact component files listed in the ticket, eliminating exploratory search loops.
-   - The Memory Bank (`memory-bank/*.md`) remains strictly a passive observer under 150 lines, keeping context size small (~1,500 tokens).
+2. **How this saves 90% of context overhead without compromising quality**:
+   - The agent reads `docs/backlog.json` directly from the local filesystem instead of requiring multi-turn chat repetition.
+   - The agent enters directly at the `components` listed in the ticket (avoiding blind full-repo sweeps) while thoroughly inspecting all connected callers, shared contracts, and edge cases.
+   - The Memory Bank (`memory-bank/*.md`) remains strictly a passive observer under 150 lines, keeping baseline context lean (~1,500 tokens) so token budget is spent on deep reasoning and high-quality code.
 3. **Closing the Cycle Automatically**:
-   - The agent completes implementation, verifies tests, marks the ticket `done` in the local backlog, updates `memory-bank/progress.md`, audits line limits, commits to Git, pushes to origin, and prints a comprehensive Work Recap banner.
+   - The agent completes implementation, runs full verification and test suites, marks the ticket `done` in the local backlog, updates `memory-bank/progress.md`, audits line limits, commits to Git, pushes to origin, and prints a comprehensive Work Recap banner.
+

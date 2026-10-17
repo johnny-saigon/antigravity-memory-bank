@@ -319,9 +319,10 @@ The **Antigravity Memory Bank** decouples **task capture** from **agent executio
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Clean Separation, Tight Integration
+### Clean Separation, Tight Integration & Uncompromising Execution Quality
 1. **Clean Separation**: The Memory Bank (`memory-bank/*.md`) remains strictly a passive architectural context baseline (< 150 lines per file). Active operational tasks and sprint state live in `docs/backlog.json` and `docs/MIGRATION_BOARD.md`.
-2. **Tight Integration**: The agent uses `docs/backlog.json` as its direct execution contract, and upon task completion automatically updates both the local backlog (`DONE`) and the passive memory bank (`progress.md` accomplishments).
+2. **Frugal on Context Re-Ingestion, Uncompromising on Execution Quality**: Token frugality applies strictly to eliminating redundant context re-ingestion, chat-based ticket management, and bloated memory files—freeing the token budget for deep reasoning, thorough root-cause analysis, complete edge-case coverage, and rigorous test verification.
+3. **Tight Integration**: The agent uses `docs/backlog.json` as its direct execution contract, and upon task completion automatically updates both the local backlog (`DONE`) and the passive memory bank (`progress.md` accomplishments).
 
 ### Local Backlog CLI (0 Tokens / 0 Credits)
 ```bash
@@ -344,7 +345,7 @@ npm run backlog:done FEAT-101
 ```
 
 ### The `/backlog-start` Slash Command & Automated Work Recap
-In Antigravity chat, trigger autonomous, credit-frugal sprint execution with a single slash command:
+In Antigravity chat, trigger autonomous, context-frugal sprint execution with a single slash command:
 
 ```text
 /backlog-start FEAT-101
@@ -353,8 +354,8 @@ In Antigravity chat, trigger autonomous, credit-frugal sprint execution with a s
 ```
 
 The agent autonomously executes a 3-phase cycle:
-1. **Phase 1 (Task Activation)**: Ingests the specification directly from `docs/backlog.json`, sets status to `in_progress`, and refreshes the Review pane.
-2. **Phase 2 (Targeted Execution)**: Modifies only the target components, obeys Tier 2 cluster invariants, and runs unit tests for deterministic verification.
+1. **Phase 1 (Task Activation — 0 Context Waste)**: Ingests the specification directly from `docs/backlog.json`, sets status to `in_progress`, and refreshes the Review pane.
+2. **Phase 2 (Context-Frugal, Uncompromising-Quality Execution)**: Enters directly at the target components (avoiding blind repo sweeps), thoroughly inspects all connected callers and contracts, obeys Tier 2 cluster invariants, and runs full test suites for deterministic verification.
 3. **Phase 3 (Automated Closure & Recap)**:
    - Marks the ticket `done` in `docs/backlog.json` and migration boards.
    - Updates `memory-bank/progress.md` accomplishments and verifies the `< 150 lines` limit.

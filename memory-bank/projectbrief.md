@@ -10,6 +10,6 @@
 - **Primary Audience**: Developers and autonomous AI coding agents working across single or colocated multi-project repositories.
 
 ## 3. Key Success Metrics
-- **Token Frugalism**: 0 AI tokens spent on task capture/prioritization; `< 150 lines` strictly enforced per memory document.
+- **Context Frugalism, Uncompromising Execution Quality**: 0 AI tokens spent on task capture/prioritization and `< 150 lines` enforced per memory document to eliminate redundant context re-ingestion—while never sacrificing engineering rigor, root-cause depth, or test verification during implementation.
 - **Zero-Restart Activation**: Immediate in-window skill & directive ingestion upon `init` or `upgrade`.
 - **Non-Destructive Lifecycle**: 100% preservation of custom `memory-bank/*.md` domain files during `upgrade` and automatic archival prior to `uninstall`.
