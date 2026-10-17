@@ -15,6 +15,7 @@ import readline from 'node:readline/promises';
 import { execSync } from 'node:child_process';
 import { stdin as input, stdout as output } from 'node:process';
 import { scrapeHistoricalContext } from '../lib/context-scraper.mjs';
+import { adaptExistingBacklog } from '../lib/backlog-adapter.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,7 +103,7 @@ function printHelp() {
 Commands:
   init [options]         Bootstrap Memory Bank into project on the fly (default)
   sync [options]         Incrementally sync git history and accomplishments into context
-  upgrade [options]      Safely upgrade existing Memory Bank to v1.2 (preserves all domain data)
+  upgrade [options]      Upgrade Memory Bank to v1.4 (adds zero-token backlog, adapts boards/docs, /backlog-start)
   export [options]       Export project memory & context to markdown and archive
   uninstall [options]    Cleanly uninstall Memory Bank (automatically exports context first)
 
@@ -851,6 +852,12 @@ async function initMemory(targetDir, opts, detected) {
     console.log('  ✓ Installed scripts/lint-memory.mjs');
 
     await installSyncAndHooks(targetDir, detected);
+    await adaptExistingBacklog(targetDir, projectName);
+
+    try {
+      execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'pipe' });
+      console.log('  ✓ Rendered interactive Review pane Kanban board and artifacts');
+    } catch {}
   }
 
   console.log('\n🧪 Auditing Memory Bank line budget (<150 lines per document)...');
@@ -863,7 +870,7 @@ async function initMemory(targetDir, opts, detected) {
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Recording Memory Bank baseline into Git...');
     try {
-      execSync('git add AGENTS.md .agents/ memory-bank/ scripts/ package.json .github/ 2>/dev/null || true', {
+      execSync('git add AGENTS.md .agents/ memory-bank/ scripts/ docs/ package.json .github/ 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -967,11 +974,21 @@ Immediately after closing the previous session, initialize the new working cycle
     const newMandateText = `4. **Session State Updates & Continuous Cycling**: Keep every \`memory-bank/*.md\` file strictly **under 150 lines** (split deep domains into linked sub-files using \`@\`). When a major milestone is completed or upon \`/update-memory\`, synchronize and close the completed cycle, commit to Git, and immediately auto-bootstrap the new session state with a fresh status banner without requiring manual \`/start\`.`;
     if (oldMandatePattern.test(modifiedAgents)) {
       modifiedAgents = modifiedAgents.replace(oldMandatePattern, newMandateText);
-      await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
-      console.log('  ✓ Upgraded AGENTS.md operational mandate #4 (continuous session cycle)');
-    } else {
-      console.log('  ↷ AGENTS.md already contains updated continuous cycling directives');
     }
+
+    if (!modifiedAgents.includes('Decoupled Backlog & Frugal Execution')) {
+      const passiveMandate = `5. **Passive Observer Invariant**: The Memory Bank (\`memory-bank/*.md\`) is strictly a read-only context baseline and passive observer. All active feature tickets, development tasks, sprint boards, and bug fix records are maintained in \`docs/\` (\`docs/backlog.json\`, \`docs/MIGRATION_BOARD.md\` or \`docs/BACKLOG.md\`). Never conduct active operational ticket tracking inside \`memory-bank/*.md\`.\n6. **Decoupled Backlog & Frugal Execution**: Capture tasks offline via \`npm run backlog add\` or in the Review pane to consume 0 AI tokens. Execute tasks with \`@[/backlog-start](.agents/skills/backlog-start/SKILL.md)\` (e.g. \`/backlog-start FEAT-101\`), which ingests specs from \`docs/backlog.json\`, runs deterministic verification, and automatically updates the local backlog and Memory Bank with a full work recap.`;
+      if (modifiedAgents.includes('## Operational Mandates')) {
+        modifiedAgents = modifiedAgents.replace(/(## Operational Mandates\n(?:[^\n]+\n)+)/, `$1${passiveMandate}\n`);
+      }
+    }
+
+    if (!modifiedAgents.includes('/backlog-start')) {
+      modifiedAgents = modifiedAgents.replace(/`@\[\/update-memory\]\([^)]+\)`/, '`@[/backlog-start](.agents/skills/backlog-start/SKILL.md)` · `@[/update-memory](.agents/skills/update-memory/SKILL.md)`');
+    }
+
+    await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
+    console.log('  ✓ Upgraded AGENTS.md with continuous cycling and decoupled backlog directives');
   }
 
   // 5. Install scripts/lint-memory.mjs
@@ -984,6 +1001,15 @@ Immediately after closing the previous session, initialize the new working cycle
 
   // 6. Install sync script, git hooks, package scripts, and CI workflows
   await installSyncAndHooks(targetDir, detected);
+
+  // 6b. Discover, adapt, and migrate existing boards and bug records into the decoupled backlog
+  const backlogResult = await adaptExistingBacklog(targetDir, projectTitle);
+
+  // Render initial Review pane artifacts
+  try {
+    execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'pipe' });
+    console.log('  ✓ Rendered interactive Review pane Kanban board and artifacts');
+  } catch {}
 
   // 7. Audit line budget on existing files
   console.log('\n🧪 Auditing existing Memory Bank line budget (<150 lines per document)...');
@@ -1014,6 +1040,9 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
   console.log('📦 New capabilities active in this project:');
+  console.log('   - 📋 Decoupled Zero-Token Backlog: docs/backlog.json & npm run backlog');
+  console.log('   - 🚀 Autonomous Sprint Execution: /backlog-start <TICKET_ID>');
+  console.log('   - 🖥️  Review Pane Board: backlog.html auxiliary pane Kanban board');
   console.log('   - 🔄 Continuous 2-Phase Cycle: /update-memory auto-boots the next session');
   console.log('   - ⚡ Incremental Auto-Sync: .git/hooks/post-commit automatically syncs commits');
   console.log('   - 📏 Token Budget Linter: npm run lint:memory (<150 lines/file)');
