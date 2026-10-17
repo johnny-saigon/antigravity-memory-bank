@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `e312abc` — "feat(isolation): dogfood Memory Bank with strict upstream package isolation" (2026-10-17)
+- **Last Synchronized Commit**: `2d6d8eb` — "docs(backlog): record complete history of trickled-up features and bug fixes" (2026-10-17)
 - **Current Phase**: v1.4 Release Hardening & Dogfooding.
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank and Decoupled Zero-Token Backlog Engine directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 
