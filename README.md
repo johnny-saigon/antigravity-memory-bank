@@ -94,6 +94,26 @@ sequenceDiagram
   Agent->>Dev: 🟢 New Session Initialized (Current Phase, Focus, Next Step)
 ```
 
+### The Two-Phase Lifecycle Breakdown
+Whenever `/update-memory` is triggered (or when a major milestone completes):
+
+#### Phase 1: Milestone Closure & Git Synchronization
+1. **Git Diff & Status Review**: Inspects working tree changes (`git status -s` and `git diff --stat`) to verify what was modified.
+2. **Context & Progress Updates**: Marks finished acceptance criteria in `memory-bank/progress.md` (`[x]`) and records architectural decisions, schema migrations, and resolved bugs in `memory-bank/activeContext.md`.
+3. **Token Line Budget Audit**: Automatically verifies that every file in `memory-bank/*.md` remains strictly **`< 150 lines`** (via `scripts/lint-memory.mjs`). If a domain expands, it splits into a linked sub-file (`@[Topic](path.md)`).
+4. **Infrastructure Invariant Verification**: Checks that no Tier 2 cluster invariants (`.agents/rules/infra.md`), port allocations, or database boundaries were violated.
+5. **Git Commit & Push**: Stages and commits memory updates with Conventional Commits (e.g. `docs(memory-bank): sync session state and close milestone`) and pushes to the remote branch.
+
+#### Phase 2: Explicit Auto-Start & Cycle Bootstrap
+6. **Context Re-Anchoring**: Re-reads `memory-bank/activeContext.md` and `memory-bank/progress.md` to identify the next priority tasks.
+7. **Cleanliness & Head Check**: Confirms working tree cleanliness (`git status -s`) and head commit (`git log -n 1 --oneline`).
+8. **Live Service Health Probing**: Executes a non-invasive health check against the target API/service (e.g. `curl -s http://<host>:<port>/health`).
+9. **Active Session Status Banner**: Immediately outputs the fresh 3-bullet status summary without requiring the developer to manually type `/start`:
+   - 🟢 **New Session Cycle Initialized**
+   - **Current Phase**: [Current project phase from activeContext.md]
+   - **Immediate Focus**: [Top pending task / feature / bug in progress]
+   - **Proposed Next Action**: [Concrete first step ready for execution]
+
 ---
 
 ## 📏 Token Efficiency & The 150-Line Budget
