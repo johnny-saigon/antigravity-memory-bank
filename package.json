@@ -1,0 +1,37 @@
+{
+  "name": "antigravity-memory-bank",
+  "version": "1.0.0",
+  "description": "Three-Tier Memory Bank brick and Antigravity plugin for autonomous agentic pair programming",
+  "type": "module",
+  "main": "./bin/cli.mjs",
+  "bin": {
+    "antigravity-memory": "./bin/cli.mjs",
+    "agy-memory": "./bin/cli.mjs"
+  },
+  "scripts": {
+    "lint:memory": "node scripts/lint-memory.mjs",
+    "test": "node scripts/lint-memory.mjs && echo \"All memory templates pass line budget!\""
+  },
+  "keywords": [
+    "antigravity",
+    "memory-bank",
+    "agentic-coding",
+    "plugin",
+    "context-management",
+    "three-tier-memory",
+    "gemini"
+  ],
+  "author": "johnny-saigon <https://github.com/johnny-saigon>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnny-saigon/antigravity-memory-bank.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johnny-saigon/antigravity-memory-bank/issues"
+  },
+  "homepage": "https://github.com/johnny-saigon/antigravity-memory-bank#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

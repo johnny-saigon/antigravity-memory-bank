@@ -1,0 +1,30 @@
+name: Memory Bank CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate Plugin Manifest
+        run: |
+          node -e '
+            const manifest = JSON.parse(require("fs").readFileSync("plugin.json", "utf8"));
+            if (!manifest.name || !manifest.description) throw new Error("Invalid plugin.json manifest");
+            console.log("✓ plugin.json is valid:", manifest.name);
+          '
+
+      - name: Audit Memory Bank Line Budget (<150 lines)
+        run: node scripts/lint-memory.mjs

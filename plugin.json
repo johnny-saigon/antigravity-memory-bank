@@ -1,0 +1,11 @@
+{
+  "name": "memory-bank",
+  "displayName": "Antigravity Memory Bank",
+  "version": "1.0.0",
+  "description": "Three-Tier Memory Bank system with continuous session lifecycle, line budget enforcement (<150 lines), and cluster invariant guardrails.",
+  "suggestedPrompts": [
+    "/start",
+    "/update-memory",
+    "Audit memory bank line budget"
+  ]
+}
