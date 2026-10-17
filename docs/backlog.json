@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-10-17T21:56:55.269Z",
+  "project": "antigravity-memory-bank",
+  "tasks": [
+    {
+      "id": "FEAT-101",
+      "type": "feature",
+      "title": "Decoupled Zero-Token Backlog Engine & Review Pane Kanban",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "lib/backlog-adapter.mjs",
+        "skills/backlog-start/SKILL.md"
+      ],
+      "description": "Provide a local zero-token task store (docs/backlog.json) with automated migration of existing boards and interactive Kanban rendering (backlog.html) in the Antigravity Review pane.",
+      "spec": "Implement CRUD CLI commands, interactive dark-mode HTML Kanban board with live local save bridge, and /backlog-start autonomous sprint skill.",
+      "acceptanceCriteria": [
+        "Zero-token offline task capture and prioritization.",
+        "Automatic migration of existing markdown boards during init/upgrade.",
+        "Interactive backlog.html rendered to both active brain directory and docs/backlog.html."
+      ],
+      "completedAt": "2026-10-17T12:48:00.000Z"
+    },
+    {
+      "id": "FEAT-102",
+      "type": "feature",
+      "title": "Automated E2E CLI Test Suite for init / upgrade / export / uninstall",
+      "status": "todo",
+      "priority": "medium",
+      "components": [
+        "bin/cli.mjs",
+        "scripts/lint-memory.mjs"
+      ],
+      "description": "Add an automated smoke test script that runs init, upgrade, sync, export, and uninstall inside a temporary directory and asserts file integrity.",
+      "spec": "Create a zero-dependency Node test script using node:test and node:assert that exercises all CLI subcommands against an isolated temp folder.",
+      "acceptanceCriteria": [
+        "Tests init, upgrade, sync, export, and uninstall in an isolated temp directory.",
+        "Verifies custom memory-bank/*.md domain files are 100% preserved across upgrade.",
+        "Passes via npm test."
+      ]
+    }
+  ],
+  "milestones": [
+    {
+      "id": "MILESTONE-1",
+      "title": "v1.4 Zero-Token Backlog Engine & Dogfooding",
+      "status": "done"
+    }
+  ]
+}

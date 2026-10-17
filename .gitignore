@@ -9,3 +9,6 @@ build/
 .env
 .env.*
 !.env.example
+docs/backlog.html
+memory-backups/
+

@@ -8,9 +8,29 @@
     "antigravity-memory": "./bin/cli.mjs",
     "agy-memory": "./bin/cli.mjs"
   },
+  "files": [
+    "bin/",
+    "lib/",
+    "rules/",
+    "scripts/",
+    "skills/",
+    "templates/",
+    "plugin.json",
+    "install.sh"
+  ],
   "scripts": {
     "lint:memory": "node scripts/lint-memory.mjs",
-    "test": "node scripts/lint-memory.mjs && echo \"All memory templates pass line budget!\""
+    "test": "node scripts/lint-memory.mjs && echo \"All memory templates pass line budget!\"",
+    "memory:sync": "node scripts/sync-memory-context.mjs",
+    "memory:upgrade": "npx github:johnny-saigon/antigravity-memory-bank upgrade",
+    "memory:export": "npx github:johnny-saigon/antigravity-memory-bank export",
+    "memory:uninstall": "npx github:johnny-saigon/antigravity-memory-bank uninstall",
+    "backlog": "node scripts/backlog.mjs",
+    "backlog:list": "node scripts/backlog.mjs list",
+    "backlog:add": "node scripts/backlog.mjs add",
+    "backlog:start": "node scripts/backlog.mjs start",
+    "backlog:done": "node scripts/backlog.mjs done",
+    "backlog:render": "node scripts/backlog.mjs render"
   },
   "keywords": [
     "antigravity",

@@ -366,7 +366,24 @@ Full documentation is available in [`docs/BACKLOG_GUIDE.md`](templates/docs/BACK
 
 ---
 
-## 🛠️ Repository Scripts
+## 🔒 5. Dogfooding & Upstream Package Isolation Architecture
+
+`antigravity-memory-bank` dogfoods its own **Three-Tier Memory Bank** (`memory-bank/*.md`, `AGENTS.md`, `.agents/`) and **Decoupled Zero-Token Backlog Engine** (`docs/backlog.json`, `docs/BACKLOG.md`) directly inside this repository while guaranteeing **zero interference** with clean installations in downstream projects:
+
+1. **Strict `package.json` Distribution Whitelist (`"files"`)**:
+   - The `"files"` array in [`package.json`](package.json) explicitly whitelists only the distributable engine directories (`bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, `install.sh`).
+   - Internal dogfood state (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`, `.github/`) is excluded from packaged npm/`npx` tarballs.
+2. **Template-Only Downstream Generation**:
+   - [`bin/cli.mjs`](bin/cli.mjs) scaffolds downstream projects exclusively from `templates/`, `skills/`, `rules/`, `lib/`, and `scripts/`. It never reads from the repository's root `memory-bank/`, `docs/`, `AGENTS.md`, or `.agents/`.
+3. **Self-Repository Guard (`isSelfRepo`)**:
+   - `detectProjectContext()` in [`bin/cli.mjs`](bin/cli.mjs) detects when the CLI is invoked inside the upstream `antigravity-memory-bank` repository (`detected.isSelfRepo`).
+   - Prevents `init` and `upgrade` from copying `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`, or `scripts/backlog.mjs` onto themselves, and protects tracked upstream source scripts in `scripts/` if `uninstall` is ever invoked locally.
+4. **Ephemeral Artifact Ignore Policy (`.gitignore`)**:
+   - Canonical zero-token state (`docs/backlog.json` and `docs/BACKLOG.md`) is tracked in Git, while the rendered 40KB HTML view (`docs/backlog.html`) and local export archives (`memory-backups/`) are ignored in [`.gitignore`](.gitignore) and regenerated on the fly via `npm run backlog:render`.
+
+---
+
+## 🛠️ 6. Repository Scripts
 
 | Script | Command | Description |
 | :--- | :--- | :--- |
@@ -386,3 +403,4 @@ Full documentation is available in [`docs/BACKLOG_GUIDE.md`](templates/docs/BACK
 
 ## 📄 License
 MIT © [johnny-saigon](https://github.com/johnny-saigon)
+

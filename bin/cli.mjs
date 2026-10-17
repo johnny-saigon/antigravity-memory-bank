@@ -142,6 +142,7 @@ async function detectProjectContext(targetDir) {
     hasPackageJson: false,
     memoryBankExists: false,
     agentsMdExists: false,
+    isSelfRepo: path.resolve(targetDir) === path.resolve(pkgRoot),
   };
 
   const pkgPath = path.join(targetDir, 'package.json');
@@ -202,6 +203,13 @@ async function detectProjectContext(targetDir) {
     const agentsStat = await fs.stat(path.join(targetDir, 'AGENTS.md'));
     if (agentsStat.isFile()) detected.agentsMdExists = true;
   } catch {}
+
+  if (!detected.isSelfRepo && detected.name === 'antigravity-memory-bank') {
+    try {
+      const tplStat = await fs.stat(path.join(targetDir, 'templates', 'AGENTS.md.tpl'));
+      if (tplStat.isFile()) detected.isSelfRepo = true;
+    } catch {}
+  }
 
   for (const envFile of ['.env', '.env.local', '.env.example']) {
     try {
@@ -416,22 +424,28 @@ async function uninstallMemory(targetDir, opts, detected) {
   } catch {}
 
   // 6. Remove scripts/lint-memory.mjs and scripts/sync-memory-context.mjs
-  try {
-    await fs.rm(path.join(targetDir, 'scripts/lint-memory.mjs'), { force: true });
-    await fs.rm(path.join(targetDir, 'scripts/sync-memory-context.mjs'), { force: true });
-    console.log('  ✓ Removed scripts/lint-memory.mjs and scripts/sync-memory-context.mjs');
-    const remainingScripts = await fs.readdir(path.join(targetDir, 'scripts'));
-    if (remainingScripts.length === 0) {
-      await fs.rm(path.join(targetDir, 'scripts'), { recursive: true, force: true });
-    }
-  } catch {}
+  if (detected.isSelfRepo) {
+    console.log('  ↷ Preserved upstream source scripts in scripts/ (self-repository guard)');
+  } else {
+    try {
+      await fs.rm(path.join(targetDir, 'scripts/lint-memory.mjs'), { force: true });
+      await fs.rm(path.join(targetDir, 'scripts/sync-memory-context.mjs'), { force: true });
+      console.log('  ✓ Removed scripts/lint-memory.mjs and scripts/sync-memory-context.mjs');
+      const remainingScripts = await fs.readdir(path.join(targetDir, 'scripts'));
+      if (remainingScripts.length === 0) {
+        await fs.rm(path.join(targetDir, 'scripts'), { recursive: true, force: true });
+      }
+    } catch {}
+  }
 
   // 7. Clean package.json scripts
   const pkgPath = path.join(targetDir, 'package.json');
   try {
     const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
     if (pkg.scripts) {
-      const keys = ['lint:memory', 'memory:sync', 'memory:upgrade', 'memory:export', 'memory:uninstall'];
+      const keys = detected.isSelfRepo
+        ? ['memory:sync', 'memory:upgrade', 'memory:export', 'memory:uninstall']
+        : ['lint:memory', 'memory:sync', 'memory:upgrade', 'memory:export', 'memory:uninstall'];
       let cleaned = false;
       for (const k of keys) {
         if (pkg.scripts[k]) {
@@ -527,10 +541,14 @@ async function installSyncAndHooks(targetDir, detected) {
   // 1. Install scripts/sync-memory-context.mjs
   const syncSrc = path.join(pkgRoot, 'scripts/sync-memory-context.mjs');
   const syncDest = path.join(targetDir, 'scripts/sync-memory-context.mjs');
-  await fs.mkdir(path.dirname(syncDest), { recursive: true });
-  await fs.copyFile(syncSrc, syncDest);
-  await fs.chmod(syncDest, 0o755);
-  console.log('  ✓ Installed scripts/sync-memory-context.mjs (incremental auto-synchronizer)');
+  if (path.resolve(syncSrc) !== path.resolve(syncDest) && !detected.isSelfRepo) {
+    await fs.mkdir(path.dirname(syncDest), { recursive: true });
+    await fs.copyFile(syncSrc, syncDest);
+    await fs.chmod(syncDest, 0o755);
+    console.log('  ✓ Installed scripts/sync-memory-context.mjs (incremental auto-synchronizer)');
+  } else {
+    console.log('  ↷ Preserved upstream scripts/sync-memory-context.mjs (self-repository guard)');
+  }
 
   // 2. Install Git post-commit hook if .git/hooks exists
   const gitHooksDir = path.join(targetDir, '.git/hooks');
@@ -564,10 +582,14 @@ async function installSyncAndHooks(targetDir, detected) {
   // 3. Install scripts/backlog.mjs
   const backlogSrc = path.join(pkgRoot, 'templates/scripts/backlog.mjs');
   const backlogDest = path.join(targetDir, 'scripts/backlog.mjs');
-  await fs.mkdir(path.dirname(backlogDest), { recursive: true });
-  await fs.copyFile(backlogSrc, backlogDest);
-  await fs.chmod(backlogDest, 0o755);
-  console.log('  ✓ Installed scripts/backlog.mjs (zero-token local backlog engine)');
+  if (path.resolve(backlogSrc) !== path.resolve(backlogDest) && !detected.isSelfRepo) {
+    await fs.mkdir(path.dirname(backlogDest), { recursive: true });
+    await fs.copyFile(backlogSrc, backlogDest);
+    await fs.chmod(backlogDest, 0o755);
+    console.log('  ✓ Installed scripts/backlog.mjs (zero-token local backlog engine)');
+  } else {
+    console.log('  ↷ Preserved upstream scripts/backlog.mjs (self-repository guard)');
+  }
 
   // 4. Install docs/BACKLOG_GUIDE.md
   const guideSrc = path.join(pkgRoot, 'templates/docs/BACKLOG_GUIDE.md');
@@ -846,10 +868,14 @@ async function initMemory(targetDir, opts, detected) {
 
     const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
     const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
-    await fs.mkdir(path.dirname(linterDest), { recursive: true });
-    await fs.copyFile(linterSrc, linterDest);
-    await fs.chmod(linterDest, 0o755);
-    console.log('  ✓ Installed scripts/lint-memory.mjs');
+    if (path.resolve(linterSrc) !== path.resolve(linterDest) && !detected.isSelfRepo) {
+      await fs.mkdir(path.dirname(linterDest), { recursive: true });
+      await fs.copyFile(linterSrc, linterDest);
+      await fs.chmod(linterDest, 0o755);
+      console.log('  ✓ Installed scripts/lint-memory.mjs');
+    } else {
+      console.log('  ↷ Preserved upstream scripts/lint-memory.mjs (self-repository guard)');
+    }
 
     await installSyncAndHooks(targetDir, detected);
     await adaptExistingBacklog(targetDir, projectName);
@@ -937,7 +963,7 @@ When \`/update-memory\` is triggered or a major milestone/task completes:
    \`\`\`bash
    node scripts/sync-memory-context.mjs
    \`\`\`
-2. Review all changes made in the working branch (\`git status -s\` and \`git diff --stat\`) and any production deployments on Vast.ai (\`85.10.218.46:44016\`).
+2. Review all changes made in the working branch (\`git status -s\` and \`git diff --stat\`) and any active production or staging deployments.
 3. Refresh the Review pane backlog artifacts:
    \`\`\`bash
    node scripts/backlog.mjs render
@@ -996,10 +1022,14 @@ Immediately after closing the previous session, initialize the new working cycle
   // 5. Install scripts/lint-memory.mjs
   const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
   const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
-  await fs.mkdir(path.dirname(linterDest), { recursive: true });
-  await fs.copyFile(linterSrc, linterDest);
-  await fs.chmod(linterDest, 0o755);
-  console.log('  ✓ Installed scripts/lint-memory.mjs (token budget linter)');
+  if (path.resolve(linterSrc) !== path.resolve(linterDest) && !detected.isSelfRepo) {
+    await fs.mkdir(path.dirname(linterDest), { recursive: true });
+    await fs.copyFile(linterSrc, linterDest);
+    await fs.chmod(linterDest, 0o755);
+    console.log('  ✓ Installed scripts/lint-memory.mjs (token budget linter)');
+  } else {
+    console.log('  ↷ Preserved upstream scripts/lint-memory.mjs (self-repository guard)');
+  }
 
   // 6. Install sync script, git hooks, package scripts, and CI workflows
   await installSyncAndHooks(targetDir, detected);
