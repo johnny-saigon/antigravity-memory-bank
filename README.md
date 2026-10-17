@@ -73,6 +73,14 @@ It automatically scaffolds:
 - `.agents/skills/` (`/start` and `/update-memory` continuous lifecycle skills)
 - `scripts/lint-memory.mjs` (Automated line-budget enforcer, added to `package.json` as `npm run lint:memory`)
 
+#### 🔍 Automated Historical Context Scraping:
+During new project initialization (`init`), the installer **scrapes all prior build history, documentation, and Antigravity conversation transcripts** to construct an accurate baseline:
+1. **Antigravity Conversation Transcripts (`~/.gemini/antigravity/brain/`)**: Scans past agent transcripts for the project, extracting recent accomplishments, technical decisions, and pending backlog tasks.
+2. **Project Documentation**: Ingests `docs/**/*.md` (including `BUG_FIX_RECORDS.md`), `README.md`, `MIGRATION_BOARD.md`, and `DESIGN.md`.
+3. **Git Commit History**: Parses the commit log (`feat:`, `fix:`, releases) to populate completed milestones (`[x]`) and resolved bugs.
+
+This ensures that the initialized Memory Bank is **never an empty placeholder**, but rather a rich, fully populated reflection of your codebase's real state from day one.
+
 ---
 
 ### C. Installing as an Antigravity Plugin

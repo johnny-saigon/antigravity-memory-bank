@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
 import { execSync } from 'node:child_process';
 import { stdin as input, stdout as output } from 'node:process';
+import { scrapeHistoricalContext } from '../lib/context-scraper.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -482,6 +483,12 @@ async function initMemory(targetDir, opts, detected) {
   let port = opts.port || detected.port;
   let healthUrl = opts.health || (detected.port ? `http://localhost:${detected.port}/health` : detected.health);
 
+  // Scrape prior project history, docs, and conversation transcripts
+  const scraped = await scrapeHistoricalContext(targetDir, projectName);
+
+  if (!opts.tagline && scraped.tagline) tagline = scraped.tagline;
+  if (!opts.desc && scraped.summary) description = scraped.summary;
+
   if (!isHeadless) {
     const rl = readline.createInterface({ input, output });
     try {
@@ -509,6 +516,28 @@ async function initMemory(targetDir, opts, detected) {
     console.log(`⚙️ Running in automated on-the-fly mode for project: "${projectName}"`);
   }
 
+  // Format scraped context for template interpolation
+  let recentAccomplishmentsMd = '';
+  if (scraped.recentAccomplishments.length > 0) {
+    recentAccomplishmentsMd = scraped.recentAccomplishments.map((item, idx) => `${idx + 1}. **${item}**`).join('\n');
+  } else {
+    recentAccomplishmentsMd = `1. Initialized repository with Antigravity Three-Tier Memory Bank.\n2. Configured automated line-budget linter (< 150 lines per memory document).\n3. Established 2-phase continuous session cycle on \`/update-memory\`.`;
+  }
+
+  let pendingTasksMd = '';
+  if (scraped.pendingTasks.length > 0) {
+    pendingTasksMd = scraped.pendingTasks.map((t) => `- [ ] ${t}`).join('\n');
+  } else {
+    pendingTasksMd = `- [ ] Implement core domain models and database schemas.\n- [ ] Connect health check probe (\`${healthUrl}\`).\n- [ ] Run first test suite cycle.`;
+  }
+
+  let milestonesMd = '';
+  if (scraped.completedMilestones.length > 0) {
+    milestonesMd = scraped.completedMilestones.map((m) => `- [x] ${m}`).join('\n') + `\n- [ ] Current sprint milestone in progress`;
+  } else {
+    milestonesMd = `- [x] Memory Bank initialized and committed to version control.\n- [ ] Core API / service skeleton established.\n- [ ] Automated CI pipeline active and passing.\n- [ ] Production deployment and live health verification.`;
+  }
+
   const replacements = {
     '{{PROJECT_NAME}}': projectName,
     '{{PROJECT_TAGLINE}}': tagline,
@@ -525,6 +554,9 @@ async function initMemory(targetDir, opts, detected) {
     '{{PORT}}': port,
     '{{HEALTH_URL}}': healthUrl,
     '{{DAEMON_NAME}}': projectName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+    '{{RECENT_ACCOMPLISHMENTS}}': recentAccomplishmentsMd,
+    '{{PENDING_TASKS}}': pendingTasksMd,
+    '{{MILESTONES}}': milestonesMd,
   };
 
   const destRoot = opts.asPlugin
@@ -666,9 +698,9 @@ async function upgradeMemory(targetDir, opts, detected) {
   const startSkillPath = path.join(targetDir, '.agents/skills/start/SKILL.md');
   try {
     const startContent = await fs.readFile(startSkillPath, 'utf8');
-    const curlMatch = startContent.match(/curl\s+[^\n]+/);
+    const curlMatch = startContent.match(/curl\s+[^`)\n]+/);
     if (curlMatch) {
-      healthProbe = curlMatch[0].trim();
+      healthProbe = curlMatch[0].trim().replace(/[)\`]+$/, '');
     }
   } catch {}
 
