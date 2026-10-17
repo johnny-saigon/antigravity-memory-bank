@@ -30,6 +30,17 @@ flowchart TD
 
 ---
 
+## 🛡️ Core Invariant: Passive Observer & Listener Only
+
+A foundational separation of concerns governs the Three-Tier Memory Bank:
+> **The Memory Bank (`memory-bank/*.md`) is strictly a passive context baseline and observer. It is NOT an operational backlog, issue tracker, or work surface.**
+
+1. **Independent Reference Baseline**: The Memory Bank exists purely to provide immutable architectural ground truth, domain taxonomies, and high-level milestones when an Antigravity agent boots a session (`/start`).
+2. **Separation of Dev Operations**: Active engineering tasks, sprint boards, migration checklists, and bug fix logs belong in the project's documentation directory (`docs/MIGRATION_BOARD.md`, `docs/BUG_FIX_RECORDS.md`, `docs/BACKLOG.md`), **never** inside `memory-bank/`.
+3. **Passive Reflection**: When code is committed or `/update-memory` runs, the memory system passively observes Git commits and `docs/` records, reflecting high-level summaries and verification stamps into `memory-bank/*.md`. It never conducts active ticket operations.
+
+---
+
 ## ⚡ 3. How to Use the Installer
 
 ### A. On-the-Fly Installation in Existing Projects (Active Antigravity Window)

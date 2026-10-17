@@ -7,5 +7,7 @@
 ## 2. Recent Technical Decisions & Accomplishments
 {{RECENT_ACCOMPLISHMENTS}}
 
-## 3. Pending Items & Immediate Next Tasks
+## 3. Operational Context & Active Backlog
+- **Observer Status**: The Memory Bank acts as a passive context listener and reflector. Active ticket management and development execution are conducted in `docs/` (`docs/MIGRATION_BOARD.md` or `docs/BACKLOG.md`).
+- **Active Focus & Items**:
 {{PENDING_TASKS}}
