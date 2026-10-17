@@ -101,6 +101,52 @@ Antigravity automatically loads the bundled plugin assets:
 
 ---
 
+## 📦 4. Context Export & Clean Deinstallation
+
+### A. Exporting Project Memory & Context
+You can export the entire project memory bank at any time into a human-readable consolidated snapshot and a compressed raw backup archive:
+
+```bash
+# Standalone export command:
+npx github:johnny-saigon/antigravity-memory-bank export
+
+# Or via universal one-liner:
+curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-bank/main/install.sh | bash -s -- export
+```
+
+Outputs generated in `./memory-backups/`:
+1. **Consolidated Markdown** (`memory-bank-export-YYYYMMDD-HHmmss.md`): Single consolidated document containing a table of contents, timestamps, and full text of all memory-bank files, rules, and skills. Ideal for sharing with external models, code review, or pasting into team wikis.
+2. **Compressed Archive** (`memory-bank-backup-YYYYMMDD-HHmmss.tar.gz`): Bit-for-bit compressed tarball of `memory-bank/`, `AGENTS.md`, and `.agents/` for instant restoration anytime.
+
+---
+
+### B. Clean Deinstallation (Zero Context Loss)
+
+To completely remove the Memory Bank from a project while **guaranteeing that all project memory is preserved**:
+
+```bash
+# Interactive deinstallation (prompts for confirmation):
+npx github:johnny-saigon/antigravity-memory-bank uninstall
+
+# Automated on-the-fly deinstallation with Git commit:
+npx github:johnny-saigon/antigravity-memory-bank uninstall -y --commit
+```
+
+#### What the Deinstallation Workflow Does:
+1. **Automated Safety Export**: Automatically performs a full context export (`.md` and `.tar.gz`) into `./memory-backups/` *before* deleting any files (unless explicitly bypassed with `--no-export`).
+2. **Targeted Artifact Cleanup**:
+   - Deletes `memory-bank/`.
+   - Deletes `.agents/skills/start/` and `.agents/skills/update-memory/` (leaves unrelated custom skills intact).
+   - Deletes `.agents/rules/infra.md` and `.agents/rules/negative-constraints.md` (leaves other rules intact).
+   - Deletes `scripts/lint-memory.mjs`.
+   - Cleans `"lint:memory"` from `package.json` scripts.
+   - Cleans or removes `AGENTS.md` (preserves any custom project instructions).
+   - Cleans `.agents/plugins/memory-bank` if installed in plugin mode.
+3. **Git Commit**: When `--commit` is passed, records the deinstallation into Git:
+   `chore(memory): cleanly deinstall Antigravity Memory Bank (context archived)`.
+
+---
+
 ## 🔄 The Continuous Session Lifecycle
 
 Unlike legacy memory systems that require stopping and manually restarting, this brick uses a **2-Phase Continuous Loop**:
