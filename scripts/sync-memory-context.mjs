@@ -52,8 +52,8 @@ async function runSync() {
 
     // Prevent recursive loop on memory commits
     if (
-      lastCommitMsg.startsWith('docs(memory)') ||
-      lastCommitMsg.startsWith('chore(memory)') ||
+      lastCommitMsg.startsWith('docs(memory') ||
+      lastCommitMsg.startsWith('chore(memory') ||
       lastCommitMsg.startsWith('chore(sync)')
     ) {
       log('ℹ️ Last commit is already a memory sync commit. Skipping.');
@@ -75,8 +75,8 @@ async function runSync() {
         const [hash, msg] = line.split('|');
         if (!msg) continue;
         if (
-          msg.startsWith('docs(memory)') ||
-          msg.startsWith('chore(memory)') ||
+          msg.startsWith('docs(memory') ||
+          msg.startsWith('chore(memory') ||
           msg.startsWith('chore(sync)')
         ) {
           continue;
