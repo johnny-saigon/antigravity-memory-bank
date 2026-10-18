@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-18T13:25:34.184Z",
+  "lastUpdated": "2026-10-18T20:45:09.968Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -395,6 +395,29 @@
         "Automatic <24KB rule shard balancer ensures 100% of memory-bank/*.md files load into Antigravity rules without truncation."
       ],
       "completedAt": "2026-10-18T13:22:00.000Z"
+    },
+    {
+      "id": "FEAT-115",
+      "type": "feature",
+      "title": "Enforce Strict Live End-to-End Verification Before Ticket Closure Across AGENTS.md & /backlog-start",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "AGENTS.md",
+        "templates/AGENTS.md.tpl",
+        "rules/AGENTS.md",
+        "skills/backlog-start/SKILL.md",
+        "bin/cli.mjs",
+        "lib/ingestion-checklist.mjs"
+      ],
+      "description": "Upstreamed from SnapCal (commit 0f346ae): enforce non-negotiable Strict End-to-End Verification Before Closure in AGENTS.md and .agents/skills/backlog-start/SKILL.md (Rule 4 + Phase 3 guard) so tickets involving third-party integrations, OAuth providers, or external credentials can NEVER be marked done until live credentials are configured on the server and real provider HTTP requests pass.",
+      "spec": "Add Mandate 6 (Strict End-to-End Verification Before Closure) to AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, and bin/cli.mjs upgradeMemory; add Rule 4 and Phase 3 closure guard to skills/backlog-start/SKILL.md; verify in Check #6 of lib/ingestion-checklist.mjs; and trickle down to all 5 installed Memory Bank repositories.",
+      "acceptanceCriteria": [
+        "AGENTS.md and templates/AGENTS.md.tpl enforce Strict End-to-End Verification Before Closure.",
+        "skills/backlog-start/SKILL.md Rule 4 forbids running npm run backlog done on integration tickets without live server credentials and passing provider HTTP requests.",
+        "bin/cli.mjs upgradeMemory injects the mandate into all downstream AGENTS.md formats and passes 10/10 on the Mandatory Baseline Ingestion Checklist across all 5 repositories."
+      ],
+      "completedAt": "2026-10-18T20:45:00.000Z"
     }
   ],
   "milestones": [

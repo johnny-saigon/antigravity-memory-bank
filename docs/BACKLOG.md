@@ -250,6 +250,20 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-115: Enforce Strict Live End-to-End Verification Before Ticket Closure Across AGENTS.md & /backlog-start
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `AGENTS.md`, `templates/AGENTS.md.tpl`, `rules/AGENTS.md`, `skills/backlog-start/SKILL.md`, `bin/cli.mjs`, `lib/ingestion-checklist.mjs`
+- **Description:** Upstreamed from SnapCal (commit 0f346ae): enforce non-negotiable Strict End-to-End Verification Before Closure in AGENTS.md and .agents/skills/backlog-start/SKILL.md (Rule 4 + Phase 3 guard) so tickets involving third-party integrations, OAuth providers, or external credentials can NEVER be marked done until live credentials are configured on the server and real provider HTTP requests pass.
+- **Technical Specification:**
+  Add Mandate 6 (Strict End-to-End Verification Before Closure) to AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, and bin/cli.mjs upgradeMemory; add Rule 4 and Phase 3 closure guard to skills/backlog-start/SKILL.md; verify in Check #6 of lib/ingestion-checklist.mjs; and trickle down to all 5 installed Memory Bank repositories.
+- **Acceptance Criteria:**
+  - [x] AGENTS.md and templates/AGENTS.md.tpl enforce Strict End-to-End Verification Before Closure.
+  - [x] skills/backlog-start/SKILL.md Rule 4 forbids running npm run backlog done on integration tickets without live server credentials and passing provider HTTP requests.
+  - [x] bin/cli.mjs upgradeMemory injects the mandate into all downstream AGENTS.md formats and passes 10/10 on the Mandatory Baseline Ingestion Checklist across all 5 repositories.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

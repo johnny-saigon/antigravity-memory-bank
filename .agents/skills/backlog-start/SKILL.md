@@ -64,12 +64,18 @@ Execute the following 3 phases autonomously:
      npm test
      ```
    - Run live health probes against the target service if backend endpoints were touched.
+4. **Live End-to-End Verification Before Closure (Non-Negotiable)**:
+   - For ANY ticket involving external services, OAuth providers, APIs, or credentials (e.g. Apple, Google, Microsoft, Meta, Resend, Stripe, S3):
+     - **NEVER mark the ticket as `done` (`npm run backlog done`) if required credentials, API keys, or provider configurations are missing, unpopulated, or placeholder on the server.**
+     - The live end-to-end integration flow and provider HTTP requests must be tested and proven working (e.g. live OAuth authorization redirect reaches the provider with a registered client ID without an error page, and callback/API request executes successfully).
+     - If provider credentials or third-party portal setup are required, keep the ticket in `in_progress`, provide the user with the exact configuration specifications, and wait for working end-to-end verification before marking `done`.
 
 ---
 
 ## Phase 3: Automated Dual-Sync, Git Push & Work Recap
 
-1. **Complete Local Backlog**:
+1. **Complete Local Backlog (Only After Live Verification Passes)**:
+   - **Guard**: For integration/OAuth/credential tickets, verify Phase 2 Rule 4 is satisfied (live server credentials configured and provider HTTP requests passing) before running `backlog done`. If external credentials are still pending, keep the ticket in `in_progress` and skip `backlog done`.
    - Mark the ticket(s) as completed:
      ```bash
      npm run backlog done <TICKET_ID>

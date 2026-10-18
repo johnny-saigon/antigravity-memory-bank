@@ -15,6 +15,7 @@
 - [x] Implement `FEAT-113`: Automatic context attachment & UX/UI `.zip` bundle unpacking (`npm run backlog attach/unpack`, Review pane `📎` file upload, `/api/attach` bridge v1.2.0, and `/backlog-start` Phase 1 ingestion)
 - [x] Resolve `BUG-107`: Auto-scrape and synchronize API keys (`.env*`, `eas.json`, `.p8`), MCP server configs (`~/.gemini/config/mcp_config.json`), and Antigravity customizations (`.agents/rules/*`, `.agents/skills/*`, hooks) into `memory-bank/integrationsAndCustomizations.md`
 - [x] Implement `FEAT-114`: On-the-fly lifecycle hooks (`.agents/hooks.json` for `SessionStart`, `PostToolUse`, `Stop`), 10-Point Mandatory Baseline Ingestion Checklist (`lib/ingestion-checklist.mjs`), and `< 24 KB` rule shard balancer
+- [x] Implement `FEAT-115`: Upstream Strict Live End-to-End Verification Before Ticket Closure rule (`AGENTS.md`, `templates/AGENTS.md.tpl`, `skills/backlog-start/SKILL.md` Rule 4, `bin/cli.mjs` upgrade propagation, and Check #6 verification) across all 5 repositories
 
 ## 2. Test Matrix & Verification Status
 - **Test & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs`) — 14/14 files passing (`< 150 lines`), 10/10 Mandatory Baseline Ingestion Checklist passing across all 5 repositories.

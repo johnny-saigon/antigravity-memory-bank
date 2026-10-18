@@ -1054,20 +1054,39 @@ Immediately after closing the previous session, initialize the new working cycle
   await fs.writeFile(updateSkillDest, upgradedSkill, 'utf8');
   console.log('  ✓ Upgraded .agents/skills/update-memory/SKILL.md (2-phase continuous lifecycle)');
 
-  // 4. Upgrade Operational Mandate in AGENTS.md
+  // 4. Upgrade Operational Mandates in AGENTS.md
   if (agentsContent) {
     let modifiedAgents = agentsContent;
     const oldMandatePattern = /\d+\.\s+\*\*Session State Updates & (?:Line Budget|Continuous Cycling)\*\*:[^\n]+(?:\n\s+-\s+[^\n]+)*/g;
-    const onTheFlyMandate = `3. **On-the-Fly Pertinent Context Registration & Continuous Cycling (\`< 150 Lines\`)**:\n   - **Zero-Manual-Step On-the-Fly Registration**: Whenever the user provides pertinent architectural decisions, API keys/credentials, MCP configs, customizations, repo paths, or domain rules in a message—or whenever your ensuing work adds/modifies integrations, env keys, skills, rules, schemas, or endpoints—**immediately distill and register the pertinent structured facts** (never raw conversation logs) into the appropriate \`memory-bank/*.md\` file in the same turn without waiting for manual user commands.\n   - **Real-Time Lifecycle Hooks**: \`.agents/hooks.json\` (\`SessionStart\`, \`PostToolUse\`, \`Stop\`) and \`.git/hooks/post-commit\` automatically run \`node scripts/sync-memory-context.mjs --quiet\` on the fly to keep \`memory-bank/integrationsAndCustomizations.md\`, \`activeContext.md\`, and \`progress.md\` synchronized.\n   - **Line Budget & 2-Phase Cycling**: Keep every \`memory-bank/*.md\` file strictly **under 150 lines** (split deep domains into linked sub-files using \`@\`). When a major milestone completes or upon \`/update-memory\`, execute Phase 1 (Closure & Sync) followed immediately by Phase 2 (Explicit Auto-Start banner).`;
+    const onTheFlyMandateBody = `**On-the-Fly Pertinent Context Registration & Continuous Cycling (\`< 150 Lines\`)**:\n   - **Zero-Manual-Step On-the-Fly Registration**: Whenever the user provides pertinent architectural decisions, API keys/credentials, MCP configs, customizations, repo paths, or domain rules in a message—or whenever your ensuing work adds/modifies integrations, env keys, skills, rules, schemas, or endpoints—**immediately distill and register the pertinent structured facts** (never raw conversation logs) into the appropriate \`memory-bank/*.md\` file in the same turn without waiting for manual user commands.\n   - **Real-Time Lifecycle Hooks**: \`.agents/hooks.json\` (\`SessionStart\`, \`PostToolUse\`, \`Stop\`) and \`.git/hooks/post-commit\` automatically run \`node scripts/sync-memory-context.mjs --quiet\` on the fly to keep \`memory-bank/integrationsAndCustomizations.md\`, \`activeContext.md\`, and \`progress.md\` synchronized.\n   - **Line Budget & 2-Phase Cycling**: Keep every \`memory-bank/*.md\` file strictly **under 150 lines** (split deep domains into linked sub-files using \`@\`). When a major milestone completes or upon \`/update-memory\`, execute Phase 1 (Closure & Sync) followed immediately by Phase 2 (Explicit Auto-Start banner).`;
     if (oldMandatePattern.test(modifiedAgents)) {
-      modifiedAgents = modifiedAgents.replace(oldMandatePattern, onTheFlyMandate);
+      modifiedAgents = modifiedAgents.replace(oldMandatePattern, `3. ${onTheFlyMandateBody}`);
     }
 
-    if (!modifiedAgents.includes('Decoupled Backlog &')) {
-      const passiveMandate = `4. **Passive Observer Invariant**: The Memory Bank (\`memory-bank/*.md\`) is strictly a read-only context baseline and passive observer. All active feature tickets, development tasks, sprint boards, and bug fix records are maintained in \`docs/\` (\`docs/backlog.json\`, \`docs/MIGRATION_BOARD.md\` or \`docs/BACKLOG.md\`). Never conduct active operational ticket tracking inside \`memory-bank/*.md\`.\n5. **Decoupled Backlog & Context-Frugal Execution**: Capture tasks offline via \`npm run backlog add\` or in the Review pane to consume 0 AI tokens. Execute tasks with \`[/backlog-start](.agents/skills/backlog-start/SKILL.md)\` (e.g. \`/backlog-start FEAT-101\`), which ingests specs from \`docs/backlog.json\`, runs deterministic verification, and automatically updates the local backlog and Memory Bank with a full work recap. **Frugal means eliminating redundant context re-ingestion and chat overhead—never sacrificing code quality, root-cause depth, or verification rigor during execution.**`;
-      if (modifiedAgents.includes('## Operational Mandates')) {
-        modifiedAgents = modifiedAgents.replace(/(## Operational Mandates\n(?:[^\n]+\n)+)/, `$1${passiveMandate}\n`);
+    const mandateSectionRegex = /^(##\s+(?:\d+\.\s+)?(?:Operational Mandates|Operating Principles)[^\n]*\n)([\s\S]*?)(?=\n+(?:```|---|##\s))/m;
+    const sectionMatch = modifiedAgents.match(mandateSectionRegex);
+    if (sectionMatch) {
+      const heading = sectionMatch[1];
+      let body = sectionMatch[2].trimEnd();
+
+      if (!modifiedAgents.includes('On-the-Fly Pertinent Context Registration')) {
+        body += `\n99. ${onTheFlyMandateBody}`;
       }
+      if (!modifiedAgents.includes('Passive Observer Invariant')) {
+        body += `\n99. **Passive Observer Invariant**: The Memory Bank (\`memory-bank/*.md\`) is strictly a read-only context baseline and passive observer. All active feature tickets, development tasks, sprint boards, and bug fix records are maintained in \`docs/\` (\`docs/backlog.json\`, \`docs/MIGRATION_BOARD.md\` or \`docs/BACKLOG.md\`). Never conduct active operational ticket tracking inside \`memory-bank/*.md\`.`;
+      }
+      if (!modifiedAgents.includes('Decoupled Backlog &')) {
+        body += `\n99. **Decoupled Backlog & Context-Frugal Execution**: Capture tasks and attach context files (such as UX/UI \`.zip\` bundles, mockups, or specs) offline via \`npm run backlog add\` / \`npm run backlog attach\` or directly in the Review pane (\`📎\`) with zero token cost. Execute tasks via \`[/backlog-start](.agents/skills/backlog-start/SKILL.md)\` (e.g. \`/backlog-start FEAT-101\` or \`/backlog-start FEAT-101 @ux-ui.zip\`), which loads specs from \`docs/backlog.json\`, automatically unpacks and ingests any attached \`.zip\`/context files into \`docs/attachments/<ID>/extracted/\`, verifies tests, and automatically updates the local backlog, Review pane board, and Memory Bank with a work recap. **Frugal means eliminating redundant context re-ingestion and chat overhead—never sacrificing code quality, visual UX/UI fidelity, root-cause depth, or verification rigor during execution.**`;
+      }
+      if (!modifiedAgents.includes('Strict End-to-End Verification Before Closure')) {
+        body += `\n99. **Strict End-to-End Verification Before Closure**: NEVER mark any ticket involving third-party integrations, OAuth providers, or external credentials as \`done\` until live credentials are configured on the server and a real end-to-end integration test passes. If credentials or external setup are pending, the ticket MUST remain \`in_progress\`.`;
+      }
+
+      // Normalize sequential numbering (1, 2, 3...) across top-level mandate items
+      let seq = 0;
+      body = body.replace(/^\d+\.\s+(?=\*\*)/gm, () => `${++seq}. `);
+
+      modifiedAgents = modifiedAgents.replace(mandateSectionRegex, `${heading}${body}`);
     }
 
     if (!modifiedAgents.includes('/backlog-start')) {
@@ -1075,7 +1094,7 @@ Immediately after closing the previous session, initialize the new working cycle
     }
 
     await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
-    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration and decoupled backlog directives');
+    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration, decoupled backlog, and strict E2E verification mandates');
   }
 
   // 5. Install scripts/lint-memory.mjs
