@@ -84,6 +84,19 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-107: Passive Observer Invariant & Operational Board Separation into docs/
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `templates/AGENTS.md.tpl`, `rules/AGENTS.md`, `skills/update-memory/SKILL.md`
+- **Description:** Trickled up from downstream project usage: codify that memory-bank/*.md is strictly a passive observer baseline (<150 lines) while operational boards live in docs/.
+- **Technical Specification:**
+  Update agent directives and skills to prohibit active ticket management inside memory-bank/*.md.
+- **Acceptance Criteria:**
+  - [x] Memory Bank stays <150 lines (~1.5k tokens) as a read-only context baseline.
+  - [x] Operational tickets and bug logs are separated into docs/.
+
+---
+
 ### FEAT-108: Decoupled Zero-Token Backlog Engine, /backlog-start Skill & Review Pane Kanban
 - **Status:** Completed (`DONE`)
 - **Priority:** High
@@ -120,6 +133,82 @@ This board tracks active development tickets, feature backlogs, architecture ini
 - **Acceptance Criteria:**
   - [x] npm pack --dry-run includes only the 29 distributable engine files.
   - [x] isSelfRepo prevents self-overwriting or deleting upstream scripts/.
+
+---
+
+### BUG-101: Preserve Existing Curated Notes Non-Destructively in sync-memory-context.mjs
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/sync-memory-context.mjs`
+- **Description:** Trickled up from downstream commit sync: sync-memory-context.mjs previously overwrote manually curated accomplishments in activeContext.md and progress.md.
+- **Technical Specification:**
+  Prepend newly detected git commits above existing bullets and deduplicate by short commit hash.
+- **Acceptance Criteria:**
+  - [x] Existing manual notes in activeContext.md and progress.md are preserved.
+  - [x] Commits are deduplicated by hash.
+
+---
+
+### BUG-102: Bypass post-commit Hook During Git Rebase, Cherry-Pick & Merge
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `templates/git/hooks/post-commit.tpl`
+- **Description:** Trickled up during branch rebasing: post-commit hook triggered sync-memory-context.mjs mid-rebase, dirtying the working tree and interrupting git rebase.
+- **Technical Specification:**
+  Check for rebase-merge, rebase-apply, MERGE_HEAD, and CHERRY_PICK_HEAD in .git/ before executing post-commit memory sync.
+- **Acceptance Criteria:**
+  - [x] post-commit hook exits cleanly as a no-op during rebase, merge, or cherry-pick.
+
+---
+
+### BUG-103: Fix Active Brain Directory Discovery & Always Render docs/backlog.html
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`
+- **Description:** Trickled up when backlog.html was not created in the active session after npm run memory:upgrade: findActiveBrainDir() relied on directory stat.mtimeMs (which does not update when transcript.jsonl is appended) and required backlog.html/task.md to already exist.
+- **Technical Specification:**
+  Score brain directories by workspace path references inside .system_generated/logs/transcript.jsonl, use transcript.jsonl mtimeMs for recency, and always write docs/backlog.html alongside <brainDir>/backlog.html.
+- **Acceptance Criteria:**
+  - [x] Accurately targets the active conversation brain directory even in brand-new sessions.
+  - [x] Always writes docs/backlog.html in the project workspace.
+
+---
+
+### BUG-104: Remove Downstream Project Names & Private Host IPs from Upstream Templates
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `skills/backlog-start/SKILL.md`, `skills/update-memory/SKILL.md`, `rules/AGENTS.md`, `bin/cli.mjs`
+- **Description:** Trickled up after upstreaming the backlog engine from a downstream repo: hardcoded SnapCal references and Vast.ai host IPs leaked into upstream templates and skills.
+- **Technical Specification:**
+  Resolve project title dynamically from docs/backlog.json or path.basename(ROOT) and codify generic upstream template rules in rules/AGENTS.md.
+- **Acceptance Criteria:**
+  - [x] Zero downstream project names or private host IPs in bin/, skills/, rules/, or templates/.
+  - [x] scripts/backlog.mjs and templates/scripts/backlog.mjs remain byte-identical.
+
+---
+
+### BUG-105: Prevent MILESTONE-* Items from Being Re-Imported as Duplicate Feature Tasks
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `lib/backlog-adapter.mjs`
+- **Description:** Discovered while dogfooding upgrade inside antigravity-memory-bank: checklistItemRegex in lib/backlog-adapter.mjs matched - [x] **MILESTONE-1** in docs/BACKLOG.md and imported it into tasks.
+- **Technical Specification:**
+  Filter out MILESTONE-* IDs and existingMilestoneIds in sectionRegex and checklistItemRegex loops in lib/backlog-adapter.mjs.
+- **Acceptance Criteria:**
+  - [x] Repeated upgrade runs are 100% idempotent (0 duplicate tasks imported from MILESTONE-* bullets).
+
+---
+
+### BUG-106: Fix Stale _npx Cache, Workspace-Dominance Brain Matching & Sandboxed Kickoff Prompt Clipboard/Bridge
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `bin/cli.mjs`
+- **Description:** Resolved 3 root causes preventing 100% reliable backlog.html generation on upgrade/init and blocking Kickoff Prompt clipboard copy in sandboxed Review pane iframes: (1) npm cached stale git tarballs in ~/.npm/_npx, (2) flat +200 brain scoring caused multi-project conversations to steal backlog.html writes, and (3) unescaped double quotes in task titles + navigator.clipboard permissions blocked Kickoff Prompt.
+- **Technical Specification:**
+  Auto-clean _npx cache on exit and in package.json scripts, use workspace-dominance scoring in findTargetBrainDirs(), pre-render cards server-side with quote-safe kickoffTask(id), and implement 4-layer synchronous execCommand('copy') + top auto-selected prompt bar + local native pbcopy bridge on 127.0.0.1:4199.
+- **Acceptance Criteria:**
+  - [x] 100% accurate docs/backlog.html and <brainDir>/backlog.html generation across all 5 colocated projects on init and upgrade.
+  - [x] Kickoff Prompt works reliably on titles with quotes and copies to clipboard inside sandboxed iframes and via native OS pbcopy.
 
 ---
 

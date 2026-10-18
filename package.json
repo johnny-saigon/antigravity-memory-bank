@@ -30,7 +30,8 @@
     "backlog:add": "node scripts/backlog.mjs add",
     "backlog:start": "node scripts/backlog.mjs start",
     "backlog:done": "node scripts/backlog.mjs done",
-    "backlog:render": "node scripts/backlog.mjs render"
+    "backlog:render": "node scripts/backlog.mjs render",
+    "backlog:serve": "node scripts/backlog.mjs serve"
   },
   "keywords": [
     "antigravity",

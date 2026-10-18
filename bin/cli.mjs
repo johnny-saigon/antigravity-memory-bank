@@ -8,7 +8,7 @@
  * - uninstall: Safely exports context and cleanly uninstalls all memory files
  */
 
-import { promises as fs } from 'node:fs';
+import fsSync, { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
@@ -20,6 +20,15 @@ import { adaptExistingBacklog } from '../lib/backlog-adapter.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const pkgRoot = path.resolve(__dirname, '..');
+
+// Prevent npm's _npx directory from caching stale git tarballs across future npx invocations
+if (pkgRoot.includes('_npx')) {
+  process.on('exit', () => {
+    try {
+      fsSync.rmSync(pkgRoot, { recursive: true, force: true });
+    } catch {}
+  });
+}
 
 function parseCliArgs(argv) {
   const options = {
@@ -637,20 +646,24 @@ async function installSyncAndHooks(targetDir, detected) {
       pkgUpdated = true;
       console.log('  ✓ Added "memory:sync" script to package.json');
     }
-    if (!pkg.scripts['memory:upgrade']) {
-      pkg.scripts['memory:upgrade'] = 'npx github:johnny-saigon/antigravity-memory-bank upgrade';
+    const upgradeCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank upgrade';
+    const exportCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank export';
+    const uninstallCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank uninstall';
+
+    if (!detected.isSelfRepo && (!pkg.scripts['memory:upgrade'] || pkg.scripts['memory:upgrade'] === 'npx github:johnny-saigon/antigravity-memory-bank upgrade')) {
+      pkg.scripts['memory:upgrade'] = upgradeCmd;
       pkgUpdated = true;
-      console.log('  ✓ Added "memory:upgrade" script to package.json');
+      console.log('  ✓ Configured cache-safe "memory:upgrade" script in package.json');
     }
-    if (!pkg.scripts['memory:export']) {
-      pkg.scripts['memory:export'] = 'npx github:johnny-saigon/antigravity-memory-bank export';
+    if (!detected.isSelfRepo && (!pkg.scripts['memory:export'] || pkg.scripts['memory:export'] === 'npx github:johnny-saigon/antigravity-memory-bank export')) {
+      pkg.scripts['memory:export'] = exportCmd;
       pkgUpdated = true;
-      console.log('  ✓ Added "memory:export" script to package.json');
+      console.log('  ✓ Configured cache-safe "memory:export" script in package.json');
     }
-    if (!pkg.scripts['memory:uninstall']) {
-      pkg.scripts['memory:uninstall'] = 'npx github:johnny-saigon/antigravity-memory-bank uninstall';
+    if (!detected.isSelfRepo && (!pkg.scripts['memory:uninstall'] || pkg.scripts['memory:uninstall'] === 'npx github:johnny-saigon/antigravity-memory-bank uninstall')) {
+      pkg.scripts['memory:uninstall'] = uninstallCmd;
       pkgUpdated = true;
-      console.log('  ✓ Added "memory:uninstall" script to package.json');
+      console.log('  ✓ Configured cache-safe "memory:uninstall" script in package.json');
     }
     if (!pkg.scripts['backlog']) {
       pkg.scripts['backlog'] = 'node scripts/backlog.mjs';
@@ -675,6 +688,10 @@ async function installSyncAndHooks(targetDir, detected) {
     }
     if (!pkg.scripts['backlog:render']) {
       pkg.scripts['backlog:render'] = 'node scripts/backlog.mjs render';
+      pkgUpdated = true;
+    }
+    if (!pkg.scripts['backlog:serve']) {
+      pkg.scripts['backlog:serve'] = 'node scripts/backlog.mjs serve';
       pkgUpdated = true;
     }
 
@@ -881,9 +898,10 @@ async function initMemory(targetDir, opts, detected) {
     await adaptExistingBacklog(targetDir, projectName);
 
     try {
-      execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'pipe' });
-      console.log('  ✓ Rendered interactive Review pane Kanban board and artifacts');
-    } catch {}
+      execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'inherit' });
+    } catch (err) {
+      console.warn('⚠️ Backlog render warning:', err.message);
+    }
   }
 
   console.log('\n🧪 Auditing Memory Bank line budget (<150 lines per document)...');
@@ -1039,9 +1057,10 @@ Immediately after closing the previous session, initialize the new working cycle
 
   // Render initial Review pane artifacts
   try {
-    execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'pipe' });
-    console.log('  ✓ Rendered interactive Review pane Kanban board and artifacts');
-  } catch {}
+    execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'inherit' });
+  } catch (err) {
+    console.warn('⚠️ Backlog render warning:', err.message);
+  }
 
   // 7. Audit line budget on existing files
   console.log('\n🧪 Auditing existing Memory Bank line budget (<150 lines per document)...');

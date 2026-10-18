@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-18T00:06:00.000Z",
+  "lastUpdated": "2026-10-18T10:48:36.512Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -278,6 +278,25 @@
         "Repeated upgrade runs are 100% idempotent (0 duplicate tasks imported from MILESTONE-* bullets)."
       ],
       "completedAt": "2026-10-17T21:56:00.000Z"
+    },
+    {
+      "id": "BUG-106",
+      "type": "bug",
+      "title": "Fix Stale _npx Cache, Workspace-Dominance Brain Matching & Sandboxed Kickoff Prompt Clipboard/Bridge",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "bin/cli.mjs"
+      ],
+      "description": "Resolved 3 root causes preventing 100% reliable backlog.html generation on upgrade/init and blocking Kickoff Prompt clipboard copy in sandboxed Review pane iframes: (1) npm cached stale git tarballs in ~/.npm/_npx, (2) flat +200 brain scoring caused multi-project conversations to steal backlog.html writes, and (3) unescaped double quotes in task titles + navigator.clipboard permissions blocked Kickoff Prompt.",
+      "spec": "Auto-clean _npx cache on exit and in package.json scripts, use workspace-dominance scoring in findTargetBrainDirs(), pre-render cards server-side with quote-safe kickoffTask(id), and implement 4-layer synchronous execCommand('copy') + top auto-selected prompt bar + local native pbcopy bridge on 127.0.0.1:4199.",
+      "acceptanceCriteria": [
+        "100% accurate docs/backlog.html and <brainDir>/backlog.html generation across all 5 colocated projects on init and upgrade.",
+        "Kickoff Prompt works reliably on titles with quotes and copies to clipboard inside sandboxed iframes and via native OS pbcopy."
+      ],
+      "completedAt": "2026-10-18T10:48:00.000Z"
     },
     {
       "id": "FEAT-111",

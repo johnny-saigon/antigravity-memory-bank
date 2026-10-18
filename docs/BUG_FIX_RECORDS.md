@@ -46,3 +46,19 @@ This document records root-cause analyses and resolutions for bugs discovered wh
 - **Component:** `lib/backlog-adapter.mjs`
 - **Root Cause:** `checklistItemRegex` in `lib/backlog-adapter.mjs` matched `- [x] **MILESTONE-1**: ...` in `docs/BACKLOG.md` and imported it as a feature task in addition to a milestone.
 - **Resolution:** Excluded `MILESTONE-*` IDs and `existingMilestoneIds` from `sectionRegex` and `checklistItemRegex` task loops so repeated upgrades are 100% idempotent.
+
+---
+
+### BUG-106: Fix Stale `_npx` Cache, Workspace-Dominance Brain Matching & Sandboxed Kickoff Prompt Clipboard/Bridge
+- **Status:** Completed (`DONE`)
+- **Origin:** Trickled up when testing `upgrade`/`init` across `Binaryday`, `RemoveBackGround`, and `SnapCal`, and testing the **🤖 Kickoff Prompt** button in the Review pane.
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `bin/cli.mjs`
+- **Root Causes:**
+  1. **Stale `~/.npm/_npx` Cache:** `npx github:johnny-saigon/antigravity-memory-bank upgrade` cached git tarballs in `~/.npm/_npx/<hash>/node_modules/antigravity-memory-bank` and re-ran older cached builds instead of pulling new commits from GitHub.
+  2. **Cross-Project Brain Collisions:** `findActiveBrainDir()` awarded a flat `+200` score if `transcript.jsonl` mentioned `REPO_ROOT`, causing multi-project conversations that listed sibling directories (`ls`) to tie and steal `backlog.html` writes from `Binaryday` and `RemoveBackGround`.
+  3. **Kickoff Prompt Quote & Sandbox Failure:** `onclick="copyPrompt('${task.id}', '${task.title.replace(/'/g, "\\'")}')" ` broke with a `SyntaxError` whenever `task.title` contained double quotes (`"`), and `navigator.clipboard.writeText()` failed inside Antigravity's sandboxed Review pane iframe (`NotAllowedError`) with no synchronous fallback.
+- **Resolution:**
+  1. Added automatic `_npx` self-cleanup on exit in `bin/cli.mjs` and cache-busting `memory:upgrade` / `memory:export` / `memory:uninstall` scripts in `package.json`.
+  2. Replaced `findActiveBrainDir()` with workspace-dominance scoring (`findTargetBrainDirs()`) comparing path mention counts against sibling repositories, verified at 100% accuracy across all 5 colocated projects.
+  3. Pre-rendered Kanban cards server-side with quote-safe `onclick="kickoffTask('${safeIdAttr}')"`, implemented 4-layer synchronous `document.execCommand('copy')` + auto-selected top `#kickoffBanner` input + `window.parent.postMessage`, and added a zero-dependency local native HTTP bridge (`127.0.0.1:4199`) that executes native OS `pbcopy` and persists task state to `docs/backlog.json`.
+
