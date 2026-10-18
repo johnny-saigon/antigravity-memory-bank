@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `21a8404` — "feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks, 10-point baseline checklist & <24KB rule shard balancer" (2026-10-18)
+- **Last Synchronized Commit**: `9557d87` — "fix(backlog): auto-render Review Pane artifacts in lifecycle hooks and add live /api/backlog auto-sync" (2026-10-18)
 - **Current Phase**: v1.4 Release Hardening & Dogfooding.
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank and Decoupled Zero-Token Backlog Engine directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 
