@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks, 10-point baseline checklist & <24KB rule shard balancer** (`21a8404`)
 - [x] **feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks, 10-point baseline checklist & <24KB rule shard balancer** (`3d46aaf`)
 - [x] **fix(customizations): resolve BUG-107 by pulling API keys, MCP configs & customizations into memory-bank** (`6673fc2`)
 - [x] Codify Three-Tier Memory Hierarchy and `< 150 lines` token budget linter (`scripts/lint-memory.mjs`)
