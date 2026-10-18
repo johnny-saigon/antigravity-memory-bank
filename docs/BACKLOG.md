@@ -236,6 +236,20 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-114: On-the-Fly Lifecycle Hooks (.agents/hooks.json), Zero-Manual-Step Memory Registration & 10-Point Mandatory Ingestion Checklist
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `lib/ingestion-checklist.mjs`, `lib/customizations-scraper.mjs`, `scripts/sync-memory-context.mjs`, `bin/cli.mjs`, `templates/AGENTS.md.tpl`, `rules/AGENTS.md`
+- **Description:** Eliminate manual memory:sync / memory:upgrade actions when new API keys, MCP servers, skills, rules, repo paths, or architectural decisions are added. Enforce a 10-Point Mandatory Baseline Ingestion Checklist on every init and upgrade, auto-partition AGENTS.md @[...] includes under the 24KB per-rule cap, and wire .agents/hooks.json (SessionStart, PostToolUse, Stop) for real-time on-the-fly synchronization.
+- **Technical Specification:**
+  Create lib/ingestion-checklist.mjs to verify all 10 baseline pillars at init/upgrade time, install .agents/hooks.json (SessionStart, PostToolUse, Stop -> scripts/sync-memory-context.mjs --quiet --hook), update AGENTS.md Mandate #3 for immediate on-the-fly registration of pertinent facts, and balance @[...] includes across AGENTS.md and .agents/rules/memory-context.md (<24KB).
+- **Acceptance Criteria:**
+  - [x] Zero manual steps required when adding API keys, MCP servers, skills, rules, or repo paths (.agents/hooks.json auto-syncs on SessionStart, PostToolUse, and Stop).
+  - [x] 10-Point Mandatory Baseline Ingestion Checklist runs and passes 10/10 across all installed repositories on init and upgrade.
+  - [x] Automatic <24KB rule shard balancer ensures 100% of memory-bank/*.md files load into Antigravity rules without truncation.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

@@ -17,6 +17,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import { scrapeHistoricalContext } from '../lib/context-scraper.mjs';
 import { adaptExistingBacklog } from '../lib/backlog-adapter.mjs';
 import { syncCustomizationsToMemoryBank } from '../lib/customizations-scraper.mjs';
+import { runMandatoryIngestionChecklist } from '../lib/ingestion-checklist.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -259,6 +260,7 @@ async function exportMemory(targetDir, exportDir) {
   const memoryFiles = [];
   const candidatePaths = [
     'AGENTS.md',
+    '.agents/hooks.json',
     '.agents/rules/infra.md',
     '.agents/rules/negative-constraints.md',
     '.agents/skills/start/SKILL.md',
@@ -421,6 +423,22 @@ async function uninstallMemory(targetDir, opts, detected) {
     const remainingRules = await fs.readdir(path.join(targetDir, '.agents/rules'));
     if (remainingRules.length === 0) {
       await fs.rm(path.join(targetDir, '.agents/rules'), { recursive: true, force: true });
+    }
+  } catch {}
+
+  // 4b. Remove antigravity-memory-bank entry from .agents/hooks.json
+  const wsHooksPath = path.join(targetDir, '.agents/hooks.json');
+  try {
+    const hooksRaw = JSON.parse(await fs.readFile(wsHooksPath, 'utf8'));
+    if (hooksRaw['antigravity-memory-bank']) {
+      delete hooksRaw['antigravity-memory-bank'];
+      if (Object.keys(hooksRaw).length === 0) {
+        await fs.rm(wsHooksPath, { force: true });
+        console.log('  ✓ Removed .agents/hooks.json');
+      } else {
+        await fs.writeFile(wsHooksPath, JSON.stringify(hooksRaw, null, 2) + '\n', 'utf8');
+        console.log('  ✓ Removed antigravity-memory-bank hook from .agents/hooks.json');
+      }
     }
   } catch {}
 
@@ -897,11 +915,6 @@ async function initMemory(targetDir, opts, detected) {
     await copySkill('update-memory');
     await copySkill('backlog-start');
 
-    const custInit = await syncCustomizationsToMemoryBank(targetDir, projectName);
-    if (custInit) {
-      console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custInit.envKeyCount} env keys, ${custInit.mcpCount} MCP servers, ${custInit.rulesCount} rules, ${custInit.skillsCount} skills)`);
-    }
-
     const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
     const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
     if (path.resolve(linterSrc) !== path.resolve(linterDest) && !detected.isSelfRepo) {
@@ -914,6 +927,11 @@ async function initMemory(targetDir, opts, detected) {
     }
 
     await installSyncAndHooks(targetDir, detected);
+    const custInit = await syncCustomizationsToMemoryBank(targetDir, projectName);
+    if (custInit) {
+      console.log('  ✓ Configured .agents/hooks.json (SessionStart, PostToolUse, Stop on-the-fly sync)');
+      console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custInit.envKeyCount} env keys, ${custInit.mcpCount} MCP servers, ${custInit.rulesCount} rules, ${custInit.skillsCount} skills)`);
+    }
     await adaptExistingBacklog(targetDir, projectName);
 
     try {
@@ -928,6 +946,10 @@ async function initMemory(targetDir, opts, detected) {
     execSync('node scripts/lint-memory.mjs', { cwd: targetDir, stdio: 'inherit' });
   } catch (e) {
     console.warn('⚠️ Linter notice:', e.message);
+  }
+
+  if (!opts.asPlugin) {
+    runMandatoryIngestionChecklist(targetDir, detected);
   }
 
   if (opts.commit && detected.hasGit) {
@@ -949,8 +971,8 @@ async function initMemory(targetDir, opts, detected) {
 
   console.log('\n✅ Antigravity Memory Bank successfully activated on the fly!');
   console.log('⚡ Immediate In-Window Activation:');
-  console.log('   Because workspace skills and directives are dynamically ingested,');
-  console.log('   you can type /start right now in this Antigravity window with ZERO restart!\n');
+  console.log('   Because workspace skills, rules, and lifecycle hooks (.agents/hooks.json) are dynamically ingested,');
+  console.log('   all new keys, MCP servers, skills, rules, and distilled decisions now sync on the fly with ZERO manual steps!\n');
 }
 
 /**
@@ -996,7 +1018,7 @@ description: Memory synchronization workflow triggered via /update-memory or aft
 When \`/update-memory\` is triggered or a major milestone/task completes:
 
 ### Phase 1: Close & Synchronize Current Session
-1. Auto-sync recent git commit history into context drafts:
+1. Auto-sync recent git commit history, repo paths, API keys, MCP configs & customizations into context:
    \`\`\`bash
    node scripts/sync-memory-context.mjs
    \`\`\`
@@ -1035,31 +1057,25 @@ Immediately after closing the previous session, initialize the new working cycle
   // 4. Upgrade Operational Mandate in AGENTS.md
   if (agentsContent) {
     let modifiedAgents = agentsContent;
-    const oldMandatePattern = /\d+\.\s+\*\*Session State Updates & Line Budget\*\*:[^\n]+/g;
-    const newMandateText = `4. **Session State Updates & Continuous Cycling**: Keep every \`memory-bank/*.md\` file strictly **under 150 lines** (split deep domains into linked sub-files using \`@\`). When a major milestone is completed or upon \`/update-memory\`, synchronize and close the completed cycle, commit to Git, and immediately auto-bootstrap the new session state with a fresh status banner without requiring manual \`/start\`.`;
+    const oldMandatePattern = /\d+\.\s+\*\*Session State Updates & (?:Line Budget|Continuous Cycling)\*\*:[^\n]+(?:\n\s+-\s+[^\n]+)*/g;
+    const onTheFlyMandate = `3. **On-the-Fly Pertinent Context Registration & Continuous Cycling (\`< 150 Lines\`)**:\n   - **Zero-Manual-Step On-the-Fly Registration**: Whenever the user provides pertinent architectural decisions, API keys/credentials, MCP configs, customizations, repo paths, or domain rules in a message—or whenever your ensuing work adds/modifies integrations, env keys, skills, rules, schemas, or endpoints—**immediately distill and register the pertinent structured facts** (never raw conversation logs) into the appropriate \`memory-bank/*.md\` file in the same turn without waiting for manual user commands.\n   - **Real-Time Lifecycle Hooks**: \`.agents/hooks.json\` (\`SessionStart\`, \`PostToolUse\`, \`Stop\`) and \`.git/hooks/post-commit\` automatically run \`node scripts/sync-memory-context.mjs --quiet\` on the fly to keep \`memory-bank/integrationsAndCustomizations.md\`, \`activeContext.md\`, and \`progress.md\` synchronized.\n   - **Line Budget & 2-Phase Cycling**: Keep every \`memory-bank/*.md\` file strictly **under 150 lines** (split deep domains into linked sub-files using \`@\`). When a major milestone completes or upon \`/update-memory\`, execute Phase 1 (Closure & Sync) followed immediately by Phase 2 (Explicit Auto-Start banner).`;
     if (oldMandatePattern.test(modifiedAgents)) {
-      modifiedAgents = modifiedAgents.replace(oldMandatePattern, newMandateText);
+      modifiedAgents = modifiedAgents.replace(oldMandatePattern, onTheFlyMandate);
     }
 
     if (!modifiedAgents.includes('Decoupled Backlog &')) {
-      const passiveMandate = `5. **Passive Observer Invariant**: The Memory Bank (\`memory-bank/*.md\`) is strictly a read-only context baseline and passive observer. All active feature tickets, development tasks, sprint boards, and bug fix records are maintained in \`docs/\` (\`docs/backlog.json\`, \`docs/MIGRATION_BOARD.md\` or \`docs/BACKLOG.md\`). Never conduct active operational ticket tracking inside \`memory-bank/*.md\`.\n6. **Decoupled Backlog & Context-Frugal Execution**: Capture tasks offline via \`npm run backlog add\` or in the Review pane to consume 0 AI tokens. Execute tasks with \`@[/backlog-start](.agents/skills/backlog-start/SKILL.md)\` (e.g. \`/backlog-start FEAT-101\`), which ingests specs from \`docs/backlog.json\`, runs deterministic verification, and automatically updates the local backlog and Memory Bank with a full work recap. **Frugal means eliminating redundant context re-ingestion and chat overhead—never sacrificing code quality, root-cause depth, or verification rigor during execution.**`;
+      const passiveMandate = `4. **Passive Observer Invariant**: The Memory Bank (\`memory-bank/*.md\`) is strictly a read-only context baseline and passive observer. All active feature tickets, development tasks, sprint boards, and bug fix records are maintained in \`docs/\` (\`docs/backlog.json\`, \`docs/MIGRATION_BOARD.md\` or \`docs/BACKLOG.md\`). Never conduct active operational ticket tracking inside \`memory-bank/*.md\`.\n5. **Decoupled Backlog & Context-Frugal Execution**: Capture tasks offline via \`npm run backlog add\` or in the Review pane to consume 0 AI tokens. Execute tasks with \`[/backlog-start](.agents/skills/backlog-start/SKILL.md)\` (e.g. \`/backlog-start FEAT-101\`), which ingests specs from \`docs/backlog.json\`, runs deterministic verification, and automatically updates the local backlog and Memory Bank with a full work recap. **Frugal means eliminating redundant context re-ingestion and chat overhead—never sacrificing code quality, root-cause depth, or verification rigor during execution.**`;
       if (modifiedAgents.includes('## Operational Mandates')) {
         modifiedAgents = modifiedAgents.replace(/(## Operational Mandates\n(?:[^\n]+\n)+)/, `$1${passiveMandate}\n`);
       }
     }
 
     if (!modifiedAgents.includes('/backlog-start')) {
-      modifiedAgents = modifiedAgents.replace(/`@\[\/update-memory\]\([^)]+\)`/, '`@[/backlog-start](.agents/skills/backlog-start/SKILL.md)` · `@[/update-memory](.agents/skills/update-memory/SKILL.md)`');
+      modifiedAgents = modifiedAgents.replace(/`(?:\@)?\[\/update-memory\]\([^)]+\)`/, '`[/backlog-start](.agents/skills/backlog-start/SKILL.md)` · `[/update-memory](.agents/skills/update-memory/SKILL.md)`');
     }
 
     await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
-    console.log('  ✓ Upgraded AGENTS.md with continuous cycling and decoupled backlog directives');
-  }
-
-  // 4b. Synchronize API keys, MCP configs & customizations into memory-bank/integrationsAndCustomizations.md
-  const custUpgrade = await syncCustomizationsToMemoryBank(targetDir, projectTitle);
-  if (custUpgrade) {
-    console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custUpgrade.envKeyCount} env keys, ${custUpgrade.mcpCount} MCP servers, ${custUpgrade.rulesCount} rules, ${custUpgrade.skillsCount} skills)`);
+    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration and decoupled backlog directives');
   }
 
   // 5. Install scripts/lint-memory.mjs
@@ -1077,7 +1093,14 @@ Immediately after closing the previous session, initialize the new working cycle
   // 6. Install sync script, git hooks, package scripts, and CI workflows
   await installSyncAndHooks(targetDir, detected);
 
-  // 6b. Discover, adapt, and migrate existing boards and bug records into the decoupled backlog
+  // 6b. Configure .agents/hooks.json & synchronize repo paths, API keys, MCP configs & customizations
+  const custUpgrade = await syncCustomizationsToMemoryBank(targetDir, projectTitle);
+  if (custUpgrade) {
+    console.log('  ✓ Configured .agents/hooks.json (SessionStart, PostToolUse, Stop on-the-fly sync)');
+    console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custUpgrade.envKeyCount} env keys, ${custUpgrade.mcpCount} MCP servers, ${custUpgrade.rulesCount} rules, ${custUpgrade.skillsCount} skills)`);
+  }
+
+  // 6c. Discover, adapt, and migrate existing boards and bug records into the decoupled backlog
   const backlogResult = await adaptExistingBacklog(targetDir, projectTitle);
 
   // Render initial Review pane artifacts
@@ -1095,15 +1118,18 @@ Immediately after closing the previous session, initialize the new working cycle
     console.warn('⚠️ Linter notice:', e.message);
   }
 
+  // 7b. Run Mandatory 10-Point Baseline Ingestion & Verification Checklist
+  runMandatoryIngestionChecklist(targetDir, detected);
+
   // 8. Commit upgrade to Git if requested
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Committing memory upgrade to Git...');
     try {
-      execSync('git add .agents/skills/ AGENTS.md memory-bank/integrationsAndCustomizations.md scripts/ docs/ package.json .github/ 2>/dev/null || true', {
+      execSync('git add .agents/hooks.json .agents/skills/ AGENTS.md memory-bank/integrationsAndCustomizations.md scripts/ docs/ package.json .github/ 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'pipe',
       });
-      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank (API keys, MCP configs, customizations & backlog engine)"', {
+      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank (on-the-fly hooks, 10-point ingestion checklist, API keys & MCP sync)"', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -1116,15 +1142,14 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
   console.log('📦 New capabilities active in this project:');
+  console.log('   - ⚡ On-the-Fly Lifecycle Hooks: .agents/hooks.json (SessionStart, PostToolUse, Stop) + .git/hooks/post-commit');
+  console.log('   - 📋 10-Point Baseline Ingestion Checklist: Verified repo paths, keys, MCPs, rules, skills & <24KB rule cap');
   console.log('   - 🔑 API Keys, MCP & Customizations Index: memory-bank/integrationsAndCustomizations.md');
   console.log('   - 📋 Decoupled Zero-Token Backlog: docs/backlog.json & npm run backlog');
   console.log('   - 🚀 Autonomous Sprint Execution: /backlog-start <TICKET_ID> [optional_attachments]');
   console.log('   - 🖥️  Review Pane Board: backlog.html auxiliary pane Kanban board');
   console.log('   - 🔄 Continuous 2-Phase Cycle: /update-memory auto-boots the next session');
-  console.log('   - ⚡ Incremental Auto-Sync: .git/hooks/post-commit automatically syncs commits');
-  console.log('   - 📏 Token Budget Linter: npm run lint:memory (<150 lines/file)');
-  console.log('   - 📤 Context Export: npm run memory:export (or npx ... export)');
-  console.log('   - 🧹 Safe Deinstallation: npm run memory:uninstall (or npx ... uninstall)\n');
+  console.log('   - 📏 Token Budget Linter: npm run lint:memory (<150 lines/file)\n');
 }
 
 async function main() {

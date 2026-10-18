@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-18T12:20:55.797Z",
+  "lastUpdated": "2026-10-18T13:21:47.864Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -372,6 +372,29 @@
         "bin/cli.mjs supports positional target directory and upgrades all installed repositories cleanly under <150 lines."
       ],
       "completedAt": "2026-10-18T12:20:55.753Z"
+    },
+    {
+      "id": "FEAT-114",
+      "type": "feature",
+      "title": "On-the-Fly Lifecycle Hooks (.agents/hooks.json), Zero-Manual-Step Memory Registration & 10-Point Mandatory Ingestion Checklist",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "lib/ingestion-checklist.mjs",
+        "lib/customizations-scraper.mjs",
+        "scripts/sync-memory-context.mjs",
+        "bin/cli.mjs",
+        "templates/AGENTS.md.tpl",
+        "rules/AGENTS.md"
+      ],
+      "description": "Eliminate manual memory:sync / memory:upgrade actions when new API keys, MCP servers, skills, rules, repo paths, or architectural decisions are added. Enforce a 10-Point Mandatory Baseline Ingestion Checklist on every init and upgrade, auto-partition AGENTS.md @[...] includes under the 24KB per-rule cap, and wire .agents/hooks.json (SessionStart, PostToolUse, Stop) for real-time on-the-fly synchronization.",
+      "spec": "Create lib/ingestion-checklist.mjs to verify all 10 baseline pillars at init/upgrade time, install .agents/hooks.json (SessionStart, PostToolUse, Stop -> scripts/sync-memory-context.mjs --quiet --hook), update AGENTS.md Mandate #3 for immediate on-the-fly registration of pertinent facts, and balance @[...] includes across AGENTS.md and .agents/rules/memory-context.md (<24KB).",
+      "acceptanceCriteria": [
+        "Zero manual steps required when adding API keys, MCP servers, skills, rules, or repo paths (.agents/hooks.json auto-syncs on SessionStart, PostToolUse, and Stop).",
+        "10-Point Mandatory Baseline Ingestion Checklist runs and passes 10/10 across all installed repositories on init and upgrade.",
+        "Automatic <24KB rule shard balancer ensures 100% of memory-bank/*.md files load into Antigravity rules without truncation."
+      ],
+      "completedAt": "2026-10-18T13:22:00.000Z"
     }
   ],
   "milestones": [

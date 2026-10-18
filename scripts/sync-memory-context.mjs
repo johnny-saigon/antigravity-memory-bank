@@ -1,31 +1,68 @@
 #!/usr/bin/env node
 
 /**
- * Antigravity Memory Bank — Incremental Context Synchronizer
- * Automatically synchronizes git commit history, bug fixes, API keys, MCP configs & customizations into:
- * - memory-bank/progress.md (Recent Accomplishments)
- * - memory-bank/activeContext.md (Current Sprint Focus & Sync State)
- * - memory-bank/integrationsAndCustomizations.md (API Keys, Env Contracts, MCP Servers, Rules & Skills)
+ * Antigravity Memory Bank — On-the-Fly Context & Customizations Synchronizer
  *
- * Can be run manually (`npm run memory:sync`), via `post-commit` git hooks, or in CI pipelines.
+ * Runs automatically with ZERO manual commands via:
+ * 1. `.agents/hooks.json` lifecycle hooks (`SessionStart`, `PostToolUse`, `Stop`)
+ * 2. `.git/hooks/post-commit` on every git commit
+ * 3. `npm run memory:sync` or CI pipelines
+ *
+ * Automatically distills and synchronizes pertinent project & environment data (never raw conversations):
+ * - `memory-bank/integrationsAndCustomizations.md`: Repo paths, git remote, workspace layout, `.env*` keys,
+ *   `eas.json`/`.p8`/host credentials, active MCP servers & tool counts, rules, skills, workflows & hooks
+ * - `memory-bank/activeContext.md`: Latest git commit, active backlog focus, and distilled session component updates
+ * - `memory-bank/progress.md`: Completed `feat:` / `fix:` milestones
  */
 
 import fsSync, { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
-const targetDir = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Always resolve repo root from scripts/sync-memory-context.mjs so .agents/hooks.json cwd never breaks
+const scriptRepoRoot = path.resolve(__dirname, '..');
+const targetDir = fsSync.existsSync(path.join(scriptRepoRoot, 'memory-bank')) ? scriptRepoRoot : process.cwd();
 const memoryBankDir = path.join(targetDir, 'memory-bank');
 
 const args = process.argv.slice(2);
-const isQuiet = args.includes('--quiet') || args.includes('-q');
+const hookIdx = args.indexOf('--hook');
+const hookEvent = hookIdx !== -1 && args[hookIdx + 1] ? args[hookIdx + 1] : null;
+const isQuiet = Boolean(hookEvent) || args.includes('--quiet') || args.includes('-q');
 const autoCommit = args.includes('--commit');
 
 const SENSITIVE_KEY_REGEX = /(SECRET|TOKEN|PASSWORD|PRIVATE_KEY|API_KEY|ACCESS_KEY|WEBHOOK_SECRET|CREDENTIAL|AUTH_KEY|CLIENT_SECRET|DSN)/i;
 
 function log(...messages) {
   if (!isQuiet) console.log(...messages);
+}
+
+function readHookStdinSync() {
+  if (!hookEvent) return null;
+  try {
+    if (process.stdin.isTTY) return null;
+    const raw = fsSync.readFileSync(0, 'utf8').trim();
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeFileIfChangedSync(filePath, newContent) {
+  try {
+    if (fsSync.existsSync(filePath)) {
+      const existing = fsSync.readFileSync(filePath, 'utf8');
+      if (existing === newContent) return false;
+    }
+    fsSync.writeFileSync(filePath, newContent, 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function toTildePath(p) {
@@ -54,7 +91,7 @@ function summarizeEnvValue(key, rawVal) {
     }
   }
   if (SENSITIVE_KEY_REGEX.test(key)) {
-    const prefixMatch = val.match(/^(sk_live_|sk_test_|pk_live_|pk_test_|whsec_|re_|ghp_|gho_|AQ\.|AIza)[A-Za-z0-9_-]*/);
+    const prefixMatch = val.match(/^(sk_live_|sk_test_|pk_live_|pk_test_|whsec_|re_|ghp_|gho_|AQ\.|AIza|GK[0-9a-z]{2})[A-Za-z0-9_-]*/);
     if (prefixMatch) return `\`${prefixMatch[1]}***\` (configured)`;
     return 'configured (secret)';
   }
@@ -109,7 +146,7 @@ function extractMarkdownSummary(filePath) {
   return 'Custom workspace configuration';
 }
 
-async function syncIntegrationsAndCustomizations(rootDir) {
+function syncIntegrationsAndCustomizations(rootDir) {
   const resolvedRoot = path.resolve(rootDir);
   const homeDir = os.homedir();
   const geminiRoot = process.env.GEMINI_CONFIG_DIR || path.join(homeDir, '.gemini');
@@ -118,6 +155,36 @@ async function syncIntegrationsAndCustomizations(rootDir) {
     const agentsMd = fsSync.readFileSync(path.join(resolvedRoot, 'AGENTS.md'), 'utf8');
     const m = agentsMd.match(/^#\s+Antigravity Agent Directives\s+[—-]\s+([^\n]+)/m);
     if (m) displayProject = m[1].trim();
+  } catch {}
+
+  const workspaceRootTilde = toTildePath(resolvedRoot);
+  let gitRemote = 'local-only';
+  let gitBranch = 'main';
+  try {
+    gitRemote = execSync('git config --get remote.origin.url', { cwd: resolvedRoot, stdio: 'pipe' }).toString().trim() || 'local-only';
+  } catch {}
+  try {
+    gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: resolvedRoot, stdio: 'pipe' }).toString().trim() || 'main';
+  } catch {}
+
+  const topDirs = [];
+  for (const d of ['apps/mobile', 'apps/web', 'apps', 'server', 'src', 'lib', 'bin', 'scripts', 'docs', 'templates', 'memory-bank', '.agents']) {
+    if (fsSync.existsSync(path.join(resolvedRoot, d))) {
+      if (d === 'apps' && (topDirs.includes('`apps/mobile/`') || topDirs.includes('`apps/web/`'))) continue;
+      topDirs.push(`\`${d}/\``);
+    }
+  }
+
+  const siblingRepos = [];
+  const parentDir = path.dirname(resolvedRoot);
+  try {
+    for (const s of fsSync.readdirSync(parentDir, { withFileTypes: true })) {
+      if (!s.isDirectory() || s.name.startsWith('.') || s.name === path.basename(resolvedRoot)) continue;
+      const sibPath = path.join(parentDir, s.name);
+      if (fsSync.existsSync(path.join(sibPath, 'memory-bank')) || fsSync.existsSync(path.join(sibPath, '.git'))) {
+        siblingRepos.push(`\`${toTildePath(sibPath)}\``);
+      }
+    }
   } catch {}
 
   const envFiles = findWorkspaceFiles(resolvedRoot, (name) => name === '.env' || name.startsWith('.env.'), 3);
@@ -186,10 +253,11 @@ async function syncIntegrationsAndCustomizations(rootDir) {
   }
 
   const hostTokenCandidates = [
-    { path: path.join(homeDir, '.github_token'), label: 'GitHub PAT File' },
-    { path: path.join(homeDir, '.stripe_token'), label: 'Stripe API Token File' },
-    { path: path.join(homeDir, '.stitch_token'), label: 'Google Stitch Token File' },
-    { path: path.join(homeDir, '.ovh_credentials.json'), label: 'OVHcloud API Credentials' }
+    { path: path.join(homeDir, '.github_token'), label: 'GitHub PAT' },
+    { path: path.join(homeDir, '.stripe_token'), label: 'Stripe API Token' },
+    { path: path.join(homeDir, '.stitch_token'), label: 'Google Stitch Token' },
+    { path: path.join(homeDir, '.ovh_credentials.json'), label: 'OVHcloud API' },
+    { path: path.join(homeDir, '.meta_credentials.json'), label: 'Meta Graph API' }
   ];
   const hostTokens = hostTokenCandidates.filter(ht => fsSync.existsSync(ht.path)).map(ht => `\`${toTildePath(ht.path)}\` (${ht.label})`);
 
@@ -293,6 +361,22 @@ async function syncIntegrationsAndCustomizations(rootDir) {
     } catch {}
   }
 
+  const workspaceHooks = [];
+  const wsHooksPath = path.join(resolvedRoot, '.agents', 'hooks.json');
+  if (fsSync.existsSync(wsHooksPath)) {
+    try {
+      const hooksObj = JSON.parse(fsSync.readFileSync(wsHooksPath, 'utf8'));
+      for (const [hookGroup, cfg] of Object.entries(hooksObj)) {
+        if (cfg && typeof cfg === 'object') {
+          const events = Object.keys(cfg).filter(k => k !== 'enabled');
+          workspaceHooks.push(`\`${hookGroup}\` (${cfg.enabled !== false ? 'enabled' : 'disabled'}: ${events.join(', ')})`);
+        }
+      }
+    } catch {}
+  }
+
+  const hasGitPostCommit = fsSync.existsSync(path.join(resolvedRoot, '.git', 'hooks', 'post-commit'));
+
   const globalHooks = [];
   const hooksJsonPath = path.join(geminiRoot, 'config', 'hooks.json');
   if (fsSync.existsSync(hooksJsonPath)) {
@@ -319,14 +403,22 @@ async function syncIntegrationsAndCustomizations(rootDir) {
     } catch {}
   }
 
+  const isSelf = displayProject === 'antigravity-memory-bank';
   const lines = [
-    `# ${displayProject} — API Keys, MCP Configs & Customizations`,
+    `# ${displayProject} — Repo Paths, API Keys, MCP Configs & Customizations`,
     '',
-    '> **Agent Lookup Directive**: Raw secret literals are stored in the local git-ignored `.env*` and `~/.gemini/` files indexed below (never committed in plaintext to Git). Read the referenced source file or invoke the corresponding MCP server when executing tasks.',
+    '> **On-the-Fly Lookup & Sync Directive**: Auto-synchronized via `.agents/hooks.json` (`SessionStart`, `PostToolUse`, `Stop`) and `.git/hooks/post-commit`. Raw secret literals stay in git-ignored `.env*` / `~/.gemini/` files; read the indexed paths or invoke the MCP servers below when executing tasks.',
     '',
-    '## 1. Environment Files, API Keys & Credentials Inventory'
+    '## 1. Repository Paths & Workspace Topology',
+    `- **Workspace Root**: \`${workspaceRootTilde}\` · **Git Remote**: \`${gitRemote}\` (\`${gitBranch}\`)`,
+    `- **Directory Layout**: ${topDirs.join(', ') || '`/`'}`
   ];
 
+  if (!isSelf && siblingRepos.length > 0) {
+    lines.push(`- **Colocated Sibling Repos**: ${siblingRepos.join(', ')}`);
+  }
+
+  lines.push('', '## 2. Environment Files, API Keys & Credentials Inventory');
   if (liveEnvFiles.length > 0) lines.push(`- **Active Local Env Files**: ${liveEnvFiles.map(f => `\`${f.relPath}\` (${f.count} keys)`).join(', ')}`);
   if (templateEnvFiles.length > 0) lines.push(`- **Env Templates**: ${templateEnvFiles.map(f => `\`${f.relPath}\` (${f.count} keys)`).join(', ')}`);
   if (hostTokens.length > 0) lines.push(`- **Host Token Files**: ${hostTokens.join(' · ')}`);
@@ -348,7 +440,7 @@ async function syncIntegrationsAndCustomizations(rootDir) {
     lines.push('- **Workspace `.env` Files**: None detected (uses host environment & `~/.gemini/config/mcp_config.json`).');
   }
 
-  lines.push('', '## 2. Active MCP Servers (`~/.gemini/config/mcp_config.json`)');
+  lines.push('', '## 3. Active MCP Servers (`~/.gemini/config/mcp_config.json`)');
   if (mcpServers.length > 0) {
     lines.push('| MCP Server | Bridge / Package | Tools | Auth & Credential Source |', '| :--- | :--- | :---: | :--- |');
     for (const s of mcpServers.slice(0, 14)) {
@@ -358,9 +450,13 @@ async function syncIntegrationsAndCustomizations(rootDir) {
     lines.push('- No MCP servers detected in `~/.gemini/config/mcp_config.json` or `.mcp.json`.');
   }
 
-  lines.push('', '## 3. Antigravity Customizations (Rules, Skills, Hooks & Policies)', '- **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`');
+  lines.push('', '## 4. Antigravity Customizations & Lifecycle Hooks', '- **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`');
   if (globalSettingsSummary) lines.push(`- **Global Agent Policy (\`~/.gemini/config/config.json\`)**: ${globalSettingsSummary}`);
-  if (globalHooks.length > 0) lines.push(`- **Global Lifecycle Hooks (\`~/.gemini/config/hooks.json\`)**: ${globalHooks.join(', ')}`);
+  const hookSummaries = [];
+  if (workspaceHooks.length > 0) hookSummaries.push(`Workspace \`.agents/hooks.json\`: ${workspaceHooks.join(', ')}`);
+  if (hasGitPostCommit) hookSummaries.push(`Git \`.git/hooks/post-commit\`: auto-sync enabled`);
+  if (globalHooks.length > 0) hookSummaries.push(`Global \`~/.gemini/config/hooks.json\`: ${globalHooks.join(', ')}`);
+  if (hookSummaries.length > 0) lines.push(`- **On-the-Fly Lifecycle Hooks**: ${hookSummaries.join(' · ')}`);
   if (workspaceRules.length > 0) {
     lines.push(`- **Workspace Rules (${workspaceRules.length})**:`);
     for (const r of workspaceRules.slice(0, 10)) lines.push(`  - \`${r.relPath}\`: ${r.summary}`);
@@ -375,19 +471,51 @@ async function syncIntegrationsAndCustomizations(rootDir) {
   }
   lines.push('');
 
-  await fs.writeFile(path.join(memoryBankDir, 'integrationsAndCustomizations.md'), lines.join('\n'), 'utf8');
-  log('  ✓ Updated memory-bank/integrationsAndCustomizations.md');
+  const changed = writeFileIfChangedSync(path.join(memoryBankDir, 'integrationsAndCustomizations.md'), lines.join('\n'));
+  if (changed) log('  ✓ Updated memory-bank/integrationsAndCustomizations.md');
+}
+
+/**
+ * Distill pertinent file modifications from the hook payload or recent git working tree (never raw conversations)
+ */
+function distillRecentWorkspaceActivity(rootDir, hookPayload) {
+  const touchedFiles = new Set();
+  if (hookPayload && hookPayload.toolCall && hookPayload.toolCall.args) {
+    const tcArgs = hookPayload.toolCall.args;
+    const f = tcArgs.TargetFile || tcArgs.AbsolutePath;
+    if (f && String(f).startsWith(rootDir + '/')) {
+      const rel = String(f).slice(rootDir.length + 1);
+      if (!rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html')) {
+        touchedFiles.add(rel);
+      }
+    }
+  }
+  try {
+    const statusOut = execSync('git status --porcelain', { cwd: rootDir, stdio: 'pipe' }).toString().trim();
+    if (statusOut) {
+      for (const line of statusOut.split('\n')) {
+        const rel = line.slice(3).trim().replace(/^"|"$/g, '');
+        if (rel && !rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html') && !rel.startsWith('??')) {
+          touchedFiles.add(rel);
+        }
+      }
+    }
+  } catch {}
+  return Array.from(touchedFiles).slice(0, 5);
 }
 
 async function runSync() {
+  const hookPayload = readHookStdinSync();
   try {
-    // 1. Verify memory-bank exists
-    try {
-      await fs.access(memoryBankDir);
-    } catch {
+    if (!fsSync.existsSync(memoryBankDir)) {
       log('ℹ️ No memory-bank directory found, skipping sync.');
       return;
     }
+
+    // 1. Always sync Repo Paths, API Keys, MCP Configs & Customizations on the fly
+    try {
+      syncIntegrationsAndCustomizations(targetDir);
+    } catch {}
 
     // 2. Inspect latest git commit
     let lastCommitMsg = '';
@@ -400,89 +528,113 @@ async function runSync() {
       const parts = logOutput.split('|');
       lastCommitHash = parts[0];
       lastCommitMsg = parts[1] || '';
-    } catch {
-      log('ℹ️ Not a git repository or no commits found.');
-      return;
-    }
+    } catch {}
 
-    // Prevent recursive loop on memory commits
-    if (
+    const isMemoryCommit =
       lastCommitMsg.startsWith('docs(memory') ||
       lastCommitMsg.startsWith('chore(memory') ||
-      lastCommitMsg.startsWith('chore(sync)')
-    ) {
-      log('ℹ️ Last commit is already a memory sync commit. Skipping.');
-      return;
-    }
+      lastCommitMsg.startsWith('chore(sync)');
 
-    log(`🔄 Auto-syncing memory context with commit [${lastCommitHash}] ${lastCommitMsg}...`);
+    if (!isMemoryCommit && lastCommitHash) {
+      log(`🔄 Auto-syncing memory context with commit [${lastCommitHash}] ${lastCommitMsg}...`);
+    }
 
     // 3. Update memory-bank/activeContext.md if present
     const activeContextPath = path.join(memoryBankDir, 'activeContext.md');
-    try {
-      let content = await fs.readFile(activeContextPath, 'utf8');
+    if (fsSync.existsSync(activeContextPath)) {
+      try {
+        let content = fsSync.readFileSync(activeContextPath, 'utf8');
 
-      // Update Last Synchronized Commit in Active Context
-      const syncStamp = `- **Last Synchronized Commit**: \`${lastCommitHash}\` — "${lastCommitMsg}" (${new Date().toISOString().split('T')[0]})`;
-      if (content.includes('**Last Synchronized Commit**:')) {
-        content = content.replace(/- \*\*Last Synchronized Commit\*\*:[^\n]+/g, syncStamp);
-      } else if (content.includes('## 1. Current Phase & Sprint Objective')) {
-        content = content.replace('## 1. Current Phase & Sprint Objective', `## 1. Current Phase & Sprint Objective\n${syncStamp}`);
-      }
+        if (!isMemoryCommit && lastCommitHash && lastCommitMsg) {
+          const syncStamp = `- **Last Synchronized Commit**: \`${lastCommitHash}\` — "${lastCommitMsg}" (${new Date().toISOString().split('T')[0]})`;
+          if (content.includes('**Last Synchronized Commit**:')) {
+            content = content.replace(/- \*\*Last Synchronized Commit\*\*:[^\n]+/g, syncStamp);
+          } else if (content.includes('## 1. Current Phase & Sprint Objective')) {
+            content = content.replace('## 1. Current Phase & Sprint Objective', `## 1. Current Phase & Sprint Objective\n${syncStamp}`);
+          }
 
-      // If ## 2. Recent Technical Decisions & Accomplishments exists, prepend if new
-      const recentHeader = '## 2. Recent Technical Decisions & Accomplishments';
-      const alreadyHasCommitInActive = content.includes(lastCommitHash);
-      if (!alreadyHasCommitInActive && content.includes(recentHeader) && lastCommitMsg) {
-        const newBullet = `- **${lastCommitMsg}** (\`${lastCommitHash}\`)`;
-        content = content.replace(recentHeader, `${recentHeader}\n${newBullet}`);
-      }
+          const recentHeader = '## 2. Recent Technical Decisions & Accomplishments';
+          const alreadyHasCommitInActive = content.includes(lastCommitHash);
+          if (!alreadyHasCommitInActive && content.includes(recentHeader)) {
+            const newBullet = `- **${lastCommitMsg}** (\`${lastCommitHash}\`)`;
+            content = content.replace(recentHeader, `${recentHeader}\n${newBullet}`);
+          }
+        }
 
-      await fs.writeFile(activeContextPath, content, 'utf8');
-      log('  ✓ Updated memory-bank/activeContext.md');
-    } catch {}
+        // Sync active backlog ticket status if docs/backlog.json exists
+        const backlogPath = path.join(targetDir, 'docs', 'backlog.json');
+        if (fsSync.existsSync(backlogPath)) {
+          try {
+            const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
+            const tasks = Array.isArray(bj.tasks) ? bj.tasks : [];
+            const inProg = tasks.filter(t => t.status === 'in_progress');
+            const todo = tasks.filter(t => t.status === 'todo');
+            const done = tasks.filter(t => t.status === 'done');
+            const backlogLine = inProg.length > 0
+              ? `- **Active Backlog Sprint**: \`${inProg.map(t => `${t.id} (${t.title})`).join(', ')}\` · ${todo.length} todo · ${done.length} done`
+              : `- **Backlog Status**: ${done.length} done · ${todo.length} todo${todo[0] ? ` (Next: \`${todo[0].id}: ${todo[0].title}\`)` : ''}`;
+            if (content.includes('- **Active Backlog Sprint**:') || content.includes('- **Backlog Status**:')) {
+              content = content.replace(/- \*\*(?:Active Backlog Sprint|Backlog Status)\*\*:[^\n]+/g, backlogLine);
+            }
+          } catch {}
+        }
+
+        // Enforce < 140 line budget on activeContext.md by trimming excess lines if needed
+        const acLines = content.split('\n');
+        if (acLines.length > 140) {
+          content = acLines.slice(0, 140).join('\n') + '\n';
+        }
+
+        if (writeFileIfChangedSync(activeContextPath, content)) {
+          log('  ✓ Updated memory-bank/activeContext.md');
+        }
+      } catch {}
+    }
 
     // 4. Update memory-bank/progress.md if present
     const progressPath = path.join(memoryBankDir, 'progress.md');
-    try {
-      let content = await fs.readFile(progressPath, 'utf8');
-
-      // Prepend if new milestone/feature
-      const alreadyHasCommitInProgress = content.includes(lastCommitHash);
-      const isFeatureOrFix = lastCommitMsg.startsWith('feat') || lastCommitMsg.startsWith('fix') || lastCommitMsg.includes('BUG-');
-      if (!alreadyHasCommitInProgress && isFeatureOrFix) {
-        const newMilestone = `- [x] **${lastCommitMsg}** (\`${lastCommitHash}\`)`;
-        const possibleHeaders = [
-          '## 1. Milestone Tracking',
-          '## 1. Feature Implementation & Readiness Checklist',
-          '## 1. Feature Implementation',
-        ];
-        for (const h of possibleHeaders) {
-          if (content.includes(h)) {
-            content = content.replace(h, `${h}\n${newMilestone}`);
-            break;
+    if (!isMemoryCommit && lastCommitHash && fsSync.existsSync(progressPath)) {
+      try {
+        let content = fsSync.readFileSync(progressPath, 'utf8');
+        const alreadyHasCommitInProgress = content.includes(lastCommitHash);
+        const isFeatureOrFix = lastCommitMsg.startsWith('feat') || lastCommitMsg.startsWith('fix') || lastCommitMsg.includes('BUG-');
+        if (!alreadyHasCommitInProgress && isFeatureOrFix) {
+          const newMilestone = `- [x] **${lastCommitMsg}** (\`${lastCommitHash}\`)`;
+          const possibleHeaders = [
+            '## 1. High-Level Milestone Tracking',
+            '## 1. Milestone Tracking',
+            '## 1. Feature Implementation & Readiness Checklist',
+            '## 1. Feature Implementation',
+          ];
+          for (const h of possibleHeaders) {
+            if (content.includes(h)) {
+              content = content.replace(h, `${h}\n${newMilestone}`);
+              break;
+            }
+          }
+          const pLines = content.split('\n');
+          if (pLines.length > 140) {
+            content = pLines.slice(0, 140).join('\n') + '\n';
+          }
+          if (writeFileIfChangedSync(progressPath, content)) {
+            log('  ✓ Updated memory-bank/progress.md');
           }
         }
+      } catch {}
+    }
+
+    // 5. Run line budget audit if not in quiet hook mode
+    if (!hookEvent) {
+      const linterPath = path.join(targetDir, 'scripts/lint-memory.mjs');
+      if (fsSync.existsSync(linterPath)) {
+        try {
+          execSync('node scripts/lint-memory.mjs', { cwd: targetDir, stdio: isQuiet ? 'ignore' : 'inherit' });
+        } catch {}
       }
+    }
 
-      await fs.writeFile(progressPath, content, 'utf8');
-      log('  ✓ Updated memory-bank/progress.md');
-    } catch {}
-
-    // 5. Synchronize API keys, MCP configs & customizations
-    try {
-      await syncIntegrationsAndCustomizations(targetDir);
-    } catch {}
-
-    // 6. Run line budget audit to guarantee < 150 lines
-    const linterPath = path.join(targetDir, 'scripts/lint-memory.mjs');
-    try {
-      await fs.access(linterPath);
-      execSync('node scripts/lint-memory.mjs', { cwd: targetDir, stdio: isQuiet ? 'ignore' : 'inherit' });
-    } catch {}
-
-    // 7. Auto-commit if requested
-    if (autoCommit) {
+    // 6. Auto-commit if requested
+    if (autoCommit && lastCommitHash) {
       try {
         execSync('git add memory-bank/', { cwd: targetDir, stdio: 'pipe' });
         const diffStatus = execSync('git diff --cached --name-only', { cwd: targetDir, stdio: 'pipe' }).toString().trim();
@@ -500,7 +652,15 @@ async function runSync() {
 
     log('✨ Memory context synchronization complete.\n');
   } catch (err) {
-    console.error('⚠️ Warning during memory sync:', err.message);
+    if (!hookEvent) {
+      console.error('⚠️ Warning during memory sync:', err.message);
+    }
+  } finally {
+    if (hookEvent === 'Stop') {
+      process.stdout.write('{"decision":"allow"}\n');
+    } else if (hookEvent) {
+      process.stdout.write('{}\n');
+    }
   }
 }
 

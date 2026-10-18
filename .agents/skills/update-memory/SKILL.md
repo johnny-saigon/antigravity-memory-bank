@@ -8,7 +8,7 @@ description: Memory synchronization workflow triggered via /update-memory or aft
 When `/update-memory` is triggered or a major milestone/task completes:
 
 ### Phase 1: Close & Synchronize Current Session
-1. Auto-sync recent git commit history into context drafts:
+1. Auto-sync recent git commit history, repo paths, API keys, MCP configs & customizations into context:
    ```bash
    node scripts/sync-memory-context.mjs
    ```

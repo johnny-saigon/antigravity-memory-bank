@@ -1,12 +1,16 @@
-# antigravity-memory-bank — API Keys, MCP Configs & Customizations
+# antigravity-memory-bank — Repo Paths, API Keys, MCP Configs & Customizations
 
-> **Agent Lookup Directive**: Raw secret literals are stored in the local git-ignored `.env*` and `~/.gemini/` files indexed below (never committed in plaintext to Git). Read the referenced source file or invoke the corresponding MCP server when executing tasks.
+> **On-the-Fly Lookup & Sync Directive**: Auto-synchronized via `.agents/hooks.json` (`SessionStart`, `PostToolUse`, `Stop`) and `.git/hooks/post-commit`. Raw secret literals stay in git-ignored `.env*` / `~/.gemini/` files; read the indexed paths or invoke the MCP servers below when executing tasks.
 
-## 1. Environment Files, API Keys & Credentials Inventory
-- **Host Token Files**: `~/.github_token` (GitHub PAT File) · `~/.stripe_token` (Stripe API Token File) · `~/.stitch_token` (Google Stitch Token File) · `~/.ovh_credentials.json` (OVHcloud API Credentials)
+## 1. Repository Paths & Workspace Topology
+- **Workspace Root**: `~/Documents/antigravity-memory-bank` · **Git Remote**: `https://github.com/johnny-saigon/antigravity-memory-bank.git` (`main`)
+- **Directory Layout**: `lib/`, `bin/`, `scripts/`, `docs/`, `templates/`, `memory-bank/`, `.agents/`
+
+## 2. Environment Files, API Keys & Credentials Inventory
+- **Host Token Files**: `~/.github_token` (GitHub PAT) · `~/.stripe_token` (Stripe API Token) · `~/.stitch_token` (Google Stitch Token) · `~/.ovh_credentials.json` (OVHcloud API)
 - **Workspace `.env` Files**: None detected (uses host environment & `~/.gemini/config/mcp_config.json`).
 
-## 2. Active MCP Servers (`~/.gemini/config/mcp_config.json`)
+## 3. Active MCP Servers (`~/.gemini/config/mcp_config.json`)
 | MCP Server | Bridge / Package | Tools | Auth & Credential Source |
 | :--- | :--- | :---: | :--- |
 | **`github`** | `@modelcontextprotocol/server-github` | 26 | `GITHUB_TOKEN_PATH` -> `~/.github_token` |
@@ -19,10 +23,10 @@
 | **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 9 | `ASC_KEY_ID`=`Y9V6TK5R8A`, `ASC_ISSUER_ID`=`c06bde3f-875e-492e-a1fc-235a6f305e3e`, `ASC_PRIVATE_KEY_PATH` -> `credentials/AuthKey_Y9V6TK5R8A.p8` |
 | **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | `META_CREDENTIALS_PATH` -> `~/.meta_credentials.json` |
 
-## 3. Antigravity Customizations (Rules, Skills, Hooks & Policies)
+## 4. Antigravity Customizations & Lifecycle Hooks
 - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`
 - **Global Agent Policy (`~/.gemini/config/config.json`)**: Preset: `AGENT_PERMISSION_PRESET_TURBO` · Execution: `CASCADE_COMMANDS_AUTO_EXECUTION_EAGER`
-- **Global Lifecycle Hooks (`~/.gemini/config/hooks.json`)**: `antigravity-remote-bridge` (enabled: PreToolUse, PostToolUse, Stop)
+- **On-the-Fly Lifecycle Hooks**: Workspace `.agents/hooks.json`: `antigravity-memory-bank` (enabled: SessionStart, PostToolUse, Stop) · Git `.git/hooks/post-commit`: auto-sync enabled · Global `~/.gemini/config/hooks.json`: `antigravity-remote-bridge` (enabled: PreToolUse, PostToolUse, Stop)
 - **Workspace Rules (2)**:
   - `.agents/rules/infra.md`: Tier 2: Shared Cluster & Infrastructure Guardrails
   - `.agents/rules/negative-constraints.md`: Tier 2: Negative Constraints & Execution Deny-List
