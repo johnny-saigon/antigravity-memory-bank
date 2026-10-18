@@ -88,18 +88,13 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
 
   try {
     const entries = fs.readdirSync(brainBase, { withFileTypes: true });
-    const parentDir = path.dirname(rootDir);
-    const displayProject = getDisplayProjectName(data, rootDir);
-    const projectSlug = (data && data.project) || path.basename(rootDir).toLowerCase().replace(/[^a-z0-9]/g, '_');
-
-    // Discover sibling project paths in the same parent folder to compare dominance
-    let siblingPaths = [];
-    try {
-      siblingPaths = fs.readdirSync(parentDir, { withFileTypes: true })
-        .filter(d => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
-        .map(d => path.join(parentDir, d.name))
-        .filter(p => path.resolve(p) !== path.resolve(rootDir));
-    } catch {}
+    const resolvedRoot = path.resolve(rootDir);
+    const displayProject = getDisplayProjectName(data, resolvedRoot);
+    const projectSlug = (data && data.project) || path.basename(resolvedRoot).toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const escapedHome = homeDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const homeProjRegex = homeDir
+      ? new RegExp(`${escapedHome}/(?!\\.|Library/)(?:[^/"'\\\\\\s\`]+/){1,2}`, 'g')
+      : null;
 
     const candidates = [];
     const now = Date.now();
@@ -121,31 +116,49 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
       if (fs.existsSync(transcriptPath)) {
         try {
           const fullText = fs.readFileSync(transcriptPath, 'utf8');
-          myCount = countWorkspaceMentions(fullText, rootDir);
-          for (const sibPath of siblingPaths) {
-            const c = countWorkspaceMentions(fullText, sibPath);
-            if (c > maxOther) maxOther = c;
+          myCount = countWorkspaceMentions(fullText, resolvedRoot);
+
+          if (homeProjRegex) {
+            const otherCounts = {};
+            let m;
+            homeProjRegex.lastIndex = 0;
+            while ((m = homeProjRegex.exec(fullText)) !== null) {
+              const candidatePath = path.resolve(m[0]);
+              if (
+                candidatePath !== resolvedRoot &&
+                !resolvedRoot.startsWith(candidatePath + path.sep) &&
+                !candidatePath.startsWith(resolvedRoot + path.sep)
+              ) {
+                otherCounts[candidatePath] = (otherCounts[candidatePath] || 0) + 1;
+              }
+            }
+            for (const c of Object.values(otherCounts)) {
+              if (c > maxOther) maxOther = c;
+            }
           }
         } catch {}
       }
 
       let ownsExisting = false;
+      let ownedByOther = false;
       if (fs.existsSync(existingBacklogHtml)) {
         try {
           const htmlSample = fs.readFileSync(existingBacklogHtml, 'utf8').slice(0, 4000);
           if (
             htmlSample.includes(`<title>${displayProject} Backlog`) ||
             htmlSample.includes(`"project":"${projectSlug}"`) ||
-            htmlSample.includes(`"repoRoot":${JSON.stringify(rootDir)}`)
+            htmlSample.includes(`"repoRoot":${JSON.stringify(resolvedRoot)}`)
           ) {
             ownsExisting = true;
+          } else if (htmlSample.includes('"repoRoot":') || htmlSample.includes('Backlog & Sprint Board</title>')) {
+            ownedByOther = true;
           }
         } catch {}
       }
 
-      const isDominantWorkspace = myCount > 0 && myCount >= maxOther * 0.5;
-      const isOwnedByProject = ownsExisting && (myCount > 0 || maxOther === 0);
-      const isBrandNewUnassigned = myCount === 0 && maxOther === 0 && (now - mtime < 15 * 60 * 1000);
+      const isDominantWorkspace = myCount > 0 && myCount >= maxOther;
+      const isOwnedByProject = ownsExisting && !ownedByOther && (myCount > 0 || maxOther === 0);
+      const isBrandNewUnassigned = myCount === 0 && maxOther === 0 && !ownedByOther && (now - mtime < 15 * 60 * 1000);
 
       candidates.push({
         dirPath,
@@ -153,6 +166,7 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
         maxOther,
         mtime,
         ownsExisting,
+        ownedByOther,
         matched: isDominantWorkspace || isOwnedByProject || isBrandNewUnassigned
       });
     }
@@ -167,12 +181,10 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
       return matchedDirs;
     }
 
-    // Fallback: if no brain dir met the dominance threshold, pick the one with highest myCount > 0
     const withMentions = candidates.find(c => c.myCount > 0);
     if (withMentions) return [withMentions.dirPath];
 
-    // Only fallback to most recent if the brain dir is genuinely unowned and has zero mentions of other workspaces
-    const unownedRecent = candidates.find(c => !c.ownsExisting && c.maxOther === 0);
+    const unownedRecent = candidates.find(c => !c.ownsExisting && !c.ownedByOther && c.maxOther === 0);
     if (unownedRecent) return [unownedRecent.dirPath];
 
     return [];
