@@ -69,12 +69,22 @@ npm run backlog list high
 # Basic task:
 npm run backlog:add "Implement User Profile Settings"
 
-# Detailed task with priority and target components:
+# Detailed task with priority, target components, and UX/UI .zip attachment:
 npm run backlog add "Push Notification Action Buttons" \
   --type feature \
   --priority high \
   --desc "Allow snoozing or completing reminders directly from iOS banner" \
-  --components "src/notifications.ts,src/services/push.ts"
+  --components "src/notifications.ts,src/services/push.ts" \
+  --attach "~/Downloads/ux-ui-export.zip"
+```
+
+### Attach UX/UI `.zip` Bundles, Mockups, or Specs to an Existing Ticket
+```bash
+# Copies the file into docs/attachments/<ID>/ and automatically unpacks .zip/.tar.gz archives:
+npm run backlog attach FEAT-101 ~/Downloads/stitch-ux-ui.zip
+
+# Re-unpack or inspect the categorized manifest of extracted design tokens, HTML/TSX markup & visual assets:
+npm run backlog unpack FEAT-101
 ```
 
 ### Update Status
@@ -85,8 +95,11 @@ npm run backlog:status FEAT-101 done
 
 ### Kick Off a Task with Antigravity
 ```bash
-# Via Slash Command in Antigravity chat:
+# Via Slash Command in Antigravity chat (automatically unpacks & ingests any attached .zip or files):
 /backlog-start FEAT-101
+
+# Or pass a UX/UI .zip or context file directly inline with the command:
+/backlog-start FEAT-101 @ux-ui.zip
 
 # Or for multiple tickets in one sprint:
 /backlog-start FEAT-101, BUG-102

@@ -28,6 +28,8 @@
     "backlog": "node scripts/backlog.mjs",
     "backlog:list": "node scripts/backlog.mjs list",
     "backlog:add": "node scripts/backlog.mjs add",
+    "backlog:attach": "node scripts/backlog.mjs attach",
+    "backlog:unpack": "node scripts/backlog.mjs unpack",
     "backlog:start": "node scripts/backlog.mjs start",
     "backlog:done": "node scripts/backlog.mjs done",
     "backlog:render": "node scripts/backlog.mjs render",

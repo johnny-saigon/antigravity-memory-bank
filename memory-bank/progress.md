@@ -8,11 +8,12 @@
 - [x] Adapt existing boards, docs, and bug records into `docs/backlog.json` during `init` and `upgrade` (`lib/backlog-adapter.mjs`)
 - [x] Dogfood Three-Tier Memory Bank and Decoupled Backlog inside `antigravity-memory-bank` with strict upstream package isolation (`package.json` `"files"`, `isSelfRepo`, `.gitignore`)
 - [x] Resolve `BUG-106`: `_npx` cache auto-purge, workspace-dominance brain matching across 5 colocated repos, and sandboxed Kickoff Prompt 4-layer clipboard + local `127.0.0.1:4199` `pbcopy` bridge
+- [x] Implement `FEAT-113`: Automatic context attachment & UX/UI `.zip` bundle unpacking (`npm run backlog attach/unpack`, Review pane `📎` file upload, `/api/attach` bridge v1.2.0, and `/backlog-start` Phase 1 ingestion)
 
 ## 2. Test Matrix & Verification Status
 - **Test & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs`) — 12/12 files passing (`< 150 lines`).
 - **Package Whitelist Audit**: `npm pack --dry-run` — excludes `memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`, and `.github/`.
-- **Backlog Renderer & Live Bridge**: `npm run backlog:render` + `http://127.0.0.1:4199/api/health` — synchronizes `docs/BACKLOG.md`, `docs/backlog.html`, and exact project `<brainDir>/backlog.html` with native OS clipboard copy.
+- **Backlog Renderer & Live Bridge**: `npm run backlog:render` + `http://127.0.0.1:4199/api/health` (v1.2.0) — synchronizes `docs/BACKLOG.md`, `docs/backlog.html`, and exact project `<brainDir>/backlog.html` with native OS clipboard copy and `.zip` attachment unpacking.
 
 ## 3. Active Development & Documentation
 - **Active Development Board**: Operational tickets and feature backlogs are managed in `docs/backlog.json` and `docs/BACKLOG.md`.

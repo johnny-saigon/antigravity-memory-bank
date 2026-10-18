@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-18T10:48:36.512Z",
+  "lastUpdated": "2026-10-18T11:20:27.232Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -332,6 +332,23 @@
       "acceptanceCriteria": [
         "npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge."
       ]
+    },
+    {
+      "id": "FEAT-113",
+      "type": "feature",
+      "title": "Automatic Context & UX/UI .zip Bundle Ingestion in /backlog-start & Backlog Engine",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "skills/backlog-start/SKILL.md",
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "lib/backlog-adapter.mjs"
+      ],
+      "description": "Automatically detect, copy, and unpack attached files (such as UX/UI .zip exports containing DESIGN.md, tokens.json, HTML/Tailwind screens, and mockups) via CLI, Review pane UI, or inline /backlog-start prompts.",
+      "spec": "Automatically detect, copy, and unpack attached files (such as UX/UI .zip exports containing DESIGN.md, tokens.json, HTML/Tailwind screens, and mockups) via CLI, Review pane UI, or inline /backlog-start prompts.",
+      "acceptanceCriteria": [],
+      "completedAt": "2026-10-18T11:19:10.760Z"
     }
   ],
   "milestones": [

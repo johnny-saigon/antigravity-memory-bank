@@ -10,5 +10,6 @@ build/
 .env.*
 !.env.example
 docs/backlog.html
+docs/attachments/*/extracted/
 memory-backups/
 

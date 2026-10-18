@@ -228,6 +228,188 @@ function getMigrationBoardPath(rootDir = REPO_ROOT) {
     : path.join(rootDir, 'docs', 'BACKLOG.md');
 }
 
+/**
+ * Resolve an attachment path (supports @mentions, ~/ home expansion, relative to rootDir, or absolute)
+ */
+function resolveAttachmentPath(rawPath, rootDir = REPO_ROOT) {
+  if (!rawPath) return '';
+  let cleaned = String(rawPath).trim().replace(/^@+/, '');
+  const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+  if (cleaned.startsWith('~/') && homeDir) {
+    cleaned = path.join(homeDir, cleaned.slice(2));
+  }
+  return path.isAbsolute(cleaned) ? path.resolve(cleaned) : path.resolve(rootDir, cleaned);
+}
+
+/**
+ * Recursively list files inside a directory, ignoring macOS/git noise
+ */
+function walkDirectoryFiles(dirPath) {
+  const results = [];
+  if (!fs.existsSync(dirPath)) return results;
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (
+        entry.name === '.DS_Store' ||
+        entry.name === '__MACOSX' ||
+        entry.name === '.git' ||
+        entry.name === 'node_modules'
+      ) {
+        continue;
+      }
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        results.push(...walkDirectoryFiles(fullPath));
+      } else if (entry.isFile()) {
+        results.push(fullPath);
+      }
+    }
+  } catch {}
+  return results;
+}
+
+/**
+ * Discover and unpack any attached files (.zip, .tar.gz, .tgz, mockups, specs) for a task
+ * into docs/attachments/<TASK_ID>/extracted/ and return a categorized manifest.
+ */
+function unpackTaskAttachments(task, rootDir = REPO_ROOT, extraPaths = []) {
+  const taskId = typeof task === 'string' ? task : task.id;
+  const taskAttachments = (task && Array.isArray(task.attachments)) ? task.attachments : [];
+  const taskAttachDir = path.join(rootDir, 'docs', 'attachments', taskId);
+  const extractedRoot = path.join(taskAttachDir, 'extracted');
+
+  const candidateFiles = new Set();
+  for (const p of [...taskAttachments, ...extraPaths]) {
+    const abs = resolveAttachmentPath(p, rootDir);
+    if (abs && fs.existsSync(abs) && fs.statSync(abs).isFile()) {
+      candidateFiles.add(abs);
+    }
+  }
+
+  // Also auto-discover any files dropped directly into docs/attachments/<TASK_ID>/
+  if (fs.existsSync(taskAttachDir)) {
+    try {
+      for (const entry of fs.readdirSync(taskAttachDir, { withFileTypes: true })) {
+        if (entry.isFile() && entry.name !== '.DS_Store') {
+          candidateFiles.add(path.join(taskAttachDir, entry.name));
+        }
+      }
+    } catch {}
+  }
+
+  const archivesUnpacked = [];
+  const inspectedFiles = new Set();
+
+  for (const filePath of candidateFiles) {
+    const lower = filePath.toLowerCase();
+    const baseName = path.basename(filePath);
+    const stem = baseName.replace(/\.(zip|tar\.gz|tgz|tar)$/i, '');
+
+    if (lower.endsWith('.zip')) {
+      const destDir = path.join(extractedRoot, stem);
+      fs.mkdirSync(destDir, { recursive: true });
+      let ok = false;
+      const unzipRes = spawnSync('unzip', ['-q', '-o', filePath, '-d', destDir], { timeout: 20000 });
+      if (unzipRes.status === 0) {
+        ok = true;
+      } else {
+        const tarRes = spawnSync('tar', ['-xf', filePath, '-C', destDir], { timeout: 20000 });
+        ok = tarRes.status === 0;
+      }
+      if (ok) {
+        archivesUnpacked.push({ archive: filePath, destDir });
+        for (const extracted of walkDirectoryFiles(destDir)) {
+          inspectedFiles.add(extracted);
+        }
+      } else {
+        inspectedFiles.add(filePath);
+      }
+    } else if (lower.endsWith('.tar.gz') || lower.endsWith('.tgz') || lower.endsWith('.tar')) {
+      const destDir = path.join(extractedRoot, stem);
+      fs.mkdirSync(destDir, { recursive: true });
+      const tarRes = spawnSync('tar', ['-xf', filePath, '-C', destDir], { timeout: 20000 });
+      if (tarRes.status === 0) {
+        archivesUnpacked.push({ archive: filePath, destDir });
+        for (const extracted of walkDirectoryFiles(destDir)) {
+          inspectedFiles.add(extracted);
+        }
+      } else {
+        inspectedFiles.add(filePath);
+      }
+    } else {
+      inspectedFiles.add(filePath);
+    }
+  }
+
+  // Also include any previously extracted files in docs/attachments/<TASK_ID>/extracted/
+  if (fs.existsSync(extractedRoot)) {
+    for (const extracted of walkDirectoryFiles(extractedRoot)) {
+      inspectedFiles.add(extracted);
+    }
+  }
+
+  const allFiles = Array.from(inspectedFiles);
+  const categories = {
+    designTokens: [],
+    uiMarkup: [],
+    visualAssets: [],
+    specsAndData: []
+  };
+
+  for (const f of allFiles) {
+    const base = path.basename(f).toLowerCase();
+    if (/design\.md|tokens|theme|tailwind\.config|\.css$|\.scss$/i.test(base)) {
+      categories.designTokens.push(f);
+    } else if (/\.(html|htm|tsx|jsx|vue|svelte)$/i.test(base)) {
+      categories.uiMarkup.push(f);
+    } else if (/\.(png|jpg|jpeg|webp|gif|svg|pdf)$/i.test(base)) {
+      categories.visualAssets.push(f);
+    } else {
+      categories.specsAndData.push(f);
+    }
+  }
+
+  return {
+    taskId,
+    candidateFiles: Array.from(candidateFiles),
+    archivesUnpacked,
+    allFiles,
+    categories,
+    extractedRoot
+  };
+}
+
+function printUnpackedManifest(manifest, rootDir = REPO_ROOT) {
+  if (!manifest || manifest.allFiles.length === 0) {
+    return false;
+  }
+  const rel = (p) => (p.startsWith(rootDir + path.sep) ? path.relative(rootDir, p) : p);
+  console.log(`\n📦 Attached Context & UX/UI Bundle Manifest for [${manifest.taskId}]:`);
+  if (manifest.archivesUnpacked.length > 0) {
+    for (const a of manifest.archivesUnpacked) {
+      console.log(`   🗜️  Unpacked Archive: ${rel(a.archive)} -> ${rel(a.destDir)}/`);
+    }
+  }
+  if (manifest.categories.designTokens.length > 0) {
+    console.log(`   🎨 Design System & Tokens (${manifest.categories.designTokens.length}):`);
+    for (const f of manifest.categories.designTokens) console.log(`      - ${rel(f)}`);
+  }
+  if (manifest.categories.uiMarkup.length > 0) {
+    console.log(`   🧩 UI Markup & Components (${manifest.categories.uiMarkup.length}):`);
+    for (const f of manifest.categories.uiMarkup) console.log(`      - ${rel(f)}`);
+  }
+  if (manifest.categories.visualAssets.length > 0) {
+    console.log(`   🖼️  Visual Reference Assets (${manifest.categories.visualAssets.length}):`);
+    for (const f of manifest.categories.visualAssets) console.log(`      - ${rel(f)}`);
+  }
+  if (manifest.categories.specsAndData.length > 0) {
+    console.log(`   📄 Specs & Context Files (${manifest.categories.specsAndData.length}):`);
+    for (const f of manifest.categories.specsAndData) console.log(`      - ${rel(f)}`);
+  }
+  return true;
+}
+
 // Render docs/MIGRATION_BOARD.md or docs/BACKLOG.md from backlog data
 function renderMigrationBoard(data, rootDir = REPO_ROOT) {
   const displayProject = getDisplayProjectName(data, rootDir);
@@ -263,6 +445,9 @@ function renderMigrationBoard(data, rootDir = REPO_ROOT) {
     if (task.components && task.components.length > 0) {
       lines.push(`- **Components:** ${task.components.map(c => `\`${c}\``).join(', ')}`);
     }
+    if (task.attachments && task.attachments.length > 0) {
+      lines.push(`- **Attachments:** ${task.attachments.map(a => `\`${a}\``).join(', ')}`);
+    }
     if (task.description) {
       lines.push(`- **Description:** ${task.description}`);
     }
@@ -293,6 +478,9 @@ function renderMigrationBoard(data, rootDir = REPO_ROOT) {
       lines.push(`### ${task.id}: ${task.title}`);
       lines.push(`- **Status:** ${statusLabel}`);
       if (task.components && task.components.length > 0) lines.push(`- **Platform:** ${task.components.join(', ')}`);
+      if (task.attachments && task.attachments.length > 0) {
+        lines.push(`- **Attachments:** ${task.attachments.map(a => `\`${a}\``).join(', ')}`);
+      }
       if (task.description) lines.push(`- **Scope:**\n  ${task.description}`);
       if (task.acceptanceCriteria && task.acceptanceCriteria.length > 0) {
         lines.push('- **Acceptance Criteria:**');
@@ -343,6 +531,7 @@ function renderCardServer(task) {
   const safeIdHtml = escapeHtmlServer(task.id);
   const safeTitleHtml = escapeHtmlServer(task.title);
   const safeDescHtml = escapeHtmlServer(task.description);
+  const attachments = Array.isArray(task.attachments) ? task.attachments : [];
 
   const prioColor = task.priority === 'high'
     ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
@@ -365,7 +554,8 @@ function renderCardServer(task) {
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-1">
               ${!isDone
-                ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>`
+                ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
+                   <button onclick="updateTaskStatus('${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>`
                 : `<button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>`}
               ${!isInProgress && !isDone
                 ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'in_progress')" class="text-xs hover:text-blue-400 p-0.5" title="Mark In Progress">⚡</button>`
@@ -377,11 +567,17 @@ function renderCardServer(task) {
           </h3>
           ${safeDescHtml ? `<p class="text-xs text-[var(--muted-foreground,#94a3b8)] line-clamp-2 mb-2 leading-relaxed">${safeDescHtml}</p>` : ''}
           ${task.components && task.components.length > 0
-            ? `<div class="flex flex-wrap gap-1 mb-2.5">${task.components.map(c => `<span class="text-xs font-mono bg-slate-800/80 text-slate-300 px-1.5 py-0.5 rounded">${escapeHtmlServer(String(c).split('/').pop())}</span>`).join('')}</div>`
+            ? `<div class="flex flex-wrap gap-1 mb-2">${task.components.map(c => `<span class="text-xs font-mono bg-slate-800/80 text-slate-300 px-1.5 py-0.5 rounded">${escapeHtmlServer(String(c).split('/').pop())}</span>`).join('')}</div>`
+            : ''}
+          ${attachments.length > 0
+            ? `<div class="flex flex-wrap gap-1 mb-2.5">${attachments.map(a => `<span class="text-xs font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded flex items-center gap-1" title="${escapeHtmlServer(String(a))}">📎 ${escapeHtmlServer(String(a).split('/').pop())}</span>`).join('')}</div>`
             : ''}
           <div class="pt-2 border-t border-[var(--border,#334155)]/50 flex items-center justify-between gap-2">
             ${!isDone
-              ? `<button onclick="kickoffTask('${safeIdAttr}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1.5 cursor-pointer"><span>🤖</span> Kickoff Prompt</button>`
+              ? `<div class="flex items-center gap-1.5">
+                   <button onclick="kickoffTask('${safeIdAttr}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1.5 cursor-pointer"><span>🤖</span> Kickoff Prompt</button>
+                   <button onclick="triggerAttachFile('${safeIdAttr}')" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/50 text-xs px-2 py-1 rounded-md transition cursor-pointer" title="Attach UX/UI .zip or spec file">📎</button>
+                 </div>`
               : `<span class="text-xs text-emerald-400 font-medium">✓ Completed</span>`}
             <button onclick="copyCliCommand('npm run backlog status ${safeIdAttr} in_progress')" class="text-xs text-[var(--muted-foreground,#94a3b8)] hover:text-white font-mono cursor-pointer">CLI copy</button>
           </div>
@@ -463,6 +659,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     </div>
   </div>
 
+  <!-- Hidden File Input for Card Attachment Upload -->
+  <input id="cardAttachInput" type="file" multiple accept=".zip,.tar.gz,.tgz,.tar,.png,.jpg,.jpeg,.webp,.svg,.pdf,.md,.json,.html,.css,.txt" class="hidden" onchange="handleCardFileSelect(event)">
+
   <!-- Quick Capture Form (Collapsible) -->
   <div id="quickAddPanel" class="hidden mb-6 bg-[var(--card,#1e293b)] border border-[var(--primary,#3b82f6)]/40 rounded-xl p-4 shadow-lg">
     <div class="flex items-center justify-between mb-3">
@@ -502,8 +701,18 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Description &amp; Acceptance Criteria</label>
       <textarea id="newDesc" rows="2" placeholder="Brief technical summary and key acceptance criteria..." class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500"></textarea>
     </div>
+    <div class="mb-3">
+      <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Context Attachments (UX/UI <code>.zip</code> bundle, Stitch/Figma export, Mockups, Specs)</label>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input id="newAttachments" type="text" placeholder="Optional path(s), e.g. ~/Downloads/ux-ui.zip, docs/spec.md" class="flex-1 bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
+        <label class="bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/40 text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap">
+          <span>📎</span> <span id="newAttachFileLabel">Choose .zip / File(s)</span>
+          <input id="newAttachFilesInput" type="file" multiple accept=".zip,.tar.gz,.tgz,.tar,.png,.jpg,.jpeg,.webp,.svg,.pdf,.md,.json,.html,.css,.txt" class="hidden" onchange="updateNewAttachLabel(this)">
+        </label>
+      </div>
+    </div>
     <div class="flex items-center justify-between">
-      <span class="text-xs text-[var(--muted-foreground,#94a3b8)]">Adds instantly to local backlog with 0 AI tokens.</span>
+      <span class="text-xs text-[var(--muted-foreground,#94a3b8)]">Adds instantly to local backlog &amp; auto-unpacks <code>.zip</code> UX/UI bundles with 0 AI tokens.</span>
       <div class="flex gap-2">
         <button onclick="saveNewTask()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition">
           Save Task Offline
@@ -575,6 +784,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     const BRIDGE_URL = 'http://127.0.0.1:${DEFAULT_PORT}';
     let currentFilter = 'all';
     let bridgeOnline = false;
+    let activeAttachTaskId = null;
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -598,7 +808,85 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       clearTimeout(window.__toastTimer);
       window.__toastTimer = setTimeout(() => {
         toast.classList.add('hidden');
-      }, 3800);
+      }, 4200);
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const res = String(reader.result || '');
+          const commaIdx = res.indexOf(',');
+          resolve(commaIdx !== -1 ? res.slice(commaIdx + 1) : res);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function updateNewAttachLabel(inputEl) {
+      const label = document.getElementById('newAttachFileLabel');
+      if (!label) return;
+      const files = inputEl && inputEl.files ? Array.from(inputEl.files) : [];
+      if (files.length === 0) {
+        label.textContent = 'Choose .zip / File(s)';
+      } else if (files.length === 1) {
+        label.textContent = files[0].name;
+      } else {
+        label.textContent = files.length + ' files selected';
+      }
+    }
+
+    function triggerAttachFile(taskId) {
+      activeAttachTaskId = taskId;
+      const fileInput = document.getElementById('cardAttachInput');
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+      }
+    }
+
+    async function handleCardFileSelect(event) {
+      const files = event.target && event.target.files ? Array.from(event.target.files) : [];
+      const taskId = activeAttachTaskId;
+      if (!taskId || files.length === 0) return;
+
+      const task = rawData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      if (!Array.isArray(task.attachments)) task.attachments = [];
+
+      let uploadedCount = 0;
+      let totalUnpacked = 0;
+
+      for (const file of files) {
+        try {
+          const base64Data = await readFileAsBase64(file);
+          const relPath = 'docs/attachments/' + taskId + '/' + file.name;
+          if (!task.attachments.includes(relPath)) {
+            task.attachments.push(relPath);
+          }
+          renderBoard();
+
+          const bridgeRes = await callLocalBridge('/api/attach', {
+            repoRoot: rawData.repoRoot,
+            id: taskId,
+            fileName: file.name,
+            base64Data: base64Data
+          });
+          if (bridgeRes && bridgeRes.ok) {
+            uploadedCount++;
+            totalUnpacked += (bridgeRes.unpackedCount || 0);
+          }
+        } catch (e) {}
+      }
+
+      if (uploadedCount > 0) {
+        showToast('📎 Attached ' + files.map(f => f.name).join(', ') + ' to [' + taskId + '] (' + totalUnpacked + ' context files ready for /backlog-start)!');
+      } else {
+        const cmd = 'npm run backlog attach ' + taskId + ' ' + files.map(f => '"' + f.name + '"').join(' ');
+        copyTextToClipboard(cmd, true, taskId);
+        showToast('📋 Bridge offline — CLI attach command copied to clipboard!');
+      }
     }
 
     /**
@@ -767,12 +1055,15 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       // Immediately copy & highlight synchronously inside click handler
       copyTextToClipboard(prompt, true, id);
 
+      const attachCount = (task && Array.isArray(task.attachments)) ? task.attachments.length : 0;
+      const attachSuffix = attachCount > 0 ? ' (📎 ' + attachCount + ' attachment' + (attachCount > 1 ? 's' : '') + ' auto-unpacked)' : '';
+
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl && task) {
-        titleEl.textContent = '🚀 Ready to Kick Off [' + task.id + ']: ' + task.title;
+        titleEl.textContent = '🚀 Ready to Kick Off [' + task.id + ']: ' + task.title + attachSuffix;
       }
 
-      // Also invoke local native bridge (runs OS pbcopy + persists in_progress to docs/backlog.json)
+      // Also invoke local native bridge (runs OS pbcopy + persists in_progress + unpacks .zip attachments)
       const bridgeRes = await callLocalBridge('/api/kickoff', {
         repoRoot: rawData.repoRoot,
         id: id,
@@ -780,7 +1071,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       });
 
       if (bridgeRes && bridgeRes.ok) {
-        showToast('🚀 Copied "' + prompt + '" via OS clipboard & marked ' + id + ' IN_PROGRESS! Paste (⌘V) in chat.');
+        showToast('🚀 Copied "' + prompt + '" & marked ' + id + ' IN_PROGRESS' + attachSuffix + '! Paste (⌘V) in chat.');
       } else {
         showToast('📋 Ready: "' + prompt + '" copied & selected in top bar — press ⌘V in Antigravity chat!');
       }
@@ -817,11 +1108,20 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const type = document.getElementById('newType').value;
       const priority = document.getElementById('newPriority').value;
       const desc = document.getElementById('newDesc').value.trim();
+      const attachRaw = (document.getElementById('newAttachments') ? document.getElementById('newAttachments').value : '').trim();
+      const fileInput = document.getElementById('newAttachFilesInput');
+      const selectedFiles = fileInput && fileInput.files ? Array.from(fileInput.files) : [];
 
       if (!id || !title) {
         showToast('⚠️ Please provide both Ticket ID and Title');
         return;
       }
+
+      const manualAttachments = attachRaw
+        ? attachRaw.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      const uploadedRelPaths = selectedFiles.map(f => 'docs/attachments/' + id + '/' + f.name);
+      const attachments = Array.from(new Set([...manualAttachments, ...uploadedRelPaths]));
 
       const newTask = {
         id,
@@ -830,6 +1130,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         status: 'todo',
         priority,
         components: [],
+        attachments,
         description: desc,
         spec: desc,
         acceptanceCriteria: []
@@ -844,10 +1145,27 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         task: newTask
       });
 
+      for (const file of selectedFiles) {
+        try {
+          const base64Data = await readFileAsBase64(file);
+          await callLocalBridge('/api/attach', {
+            repoRoot: rawData.repoRoot,
+            id: id,
+            fileName: file.name,
+            base64Data: base64Data
+          });
+        } catch (e) {}
+      }
+
+      if (fileInput) fileInput.value = '';
+      updateNewAttachLabel(null);
+      if (document.getElementById('newAttachments')) document.getElementById('newAttachments').value = '';
+
       if (bridgeRes && bridgeRes.ok) {
-        showToast('✅ Saved [' + id + '] directly to docs/backlog.json (0 tokens)!');
+        showToast('✅ Saved [' + id + '] to docs/backlog.json' + (attachments.length ? ' with ' + attachments.length + ' attachment(s)' : '') + ' (0 tokens)!');
       } else {
-        const cmd = 'npm run backlog add "' + title.replace(/"/g, '\\\\"') + '" --id ' + id + ' --type ' + type + ' --priority ' + priority + ' --desc "' + desc.replace(/"/g, '\\\\"') + '"';
+        const attachFlag = attachments.length ? ' --attach "' + attachments.join(',') + '"' : '';
+        const cmd = 'npm run backlog add "' + title.replace(/"/g, '\\\\"') + '" --id ' + id + ' --type ' + type + ' --priority ' + priority + ' --desc "' + desc.replace(/"/g, '\\\\"') + '"' + attachFlag;
         copyTextToClipboard(cmd, true, id);
         showToast('✅ Task captured! Command copied to persist offline.');
       }
@@ -860,6 +1178,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const safeIdHtml = escapeHtml(task.id);
       const safeTitleHtml = escapeHtml(task.title);
       const safeDescHtml = escapeHtml(task.description);
+      const attachments = Array.isArray(task.attachments) ? task.attachments : [];
       
       const prioColor = task.priority === 'high' 
         ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
@@ -884,6 +1203,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             <!-- Quick Status Toggles -->
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-1">
               \${!isDone ? \`
+                <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
                 <button onclick="updateTaskStatus('\${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>
               \` : \`
                 <button onclick="updateTaskStatus('\${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>
@@ -905,17 +1225,28 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           \` : ''}
 
           \${task.components && task.components.length > 0 ? \`
-            <div class="flex flex-wrap gap-1 mb-2.5">
+            <div class="flex flex-wrap gap-1 mb-2">
               \${task.components.map(c => \`<span class="text-xs font-mono bg-slate-800/80 text-slate-300 px-1.5 py-0.5 rounded">\${escapeHtml(String(c).split('/').pop())}</span>\`).join('')}
+            </div>
+          \` : ''}
+
+          \${attachments.length > 0 ? \`
+            <div class="flex flex-wrap gap-1 mb-2.5">
+              \${attachments.map(a => \`<span class="text-xs font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded flex items-center gap-1" title="\${escapeHtml(String(a))}">📎 \${escapeHtml(String(a).split('/').pop())}</span>\`).join('')}
             </div>
           \` : ''}
 
           <!-- Action Footer -->
           <div class="pt-2 border-t border-[var(--border,#334155)]/50 flex items-center justify-between gap-2">
             \${!isDone ? \`
-              <button onclick="kickoffTask('\${safeIdAttr}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1.5 cursor-pointer">
-                <span>🤖</span> Kickoff Prompt
-              </button>
+              <div class="flex items-center gap-1.5">
+                <button onclick="kickoffTask('\${safeIdAttr}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1.5 cursor-pointer">
+                  <span>🤖</span> Kickoff Prompt
+                </button>
+                <button onclick="triggerAttachFile('\${safeIdAttr}')" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/50 text-xs px-2 py-1 rounded-md transition cursor-pointer" title="Attach UX/UI .zip or spec file">
+                  📎
+                </button>
+              </div>
             \` : \`
               <span class="text-xs text-emerald-400 font-medium">✓ Completed</span>
             \`}
@@ -988,6 +1319,9 @@ function generateReviewArtifactMd(data, rootDir = REPO_ROOT) {
     if (task.description) lines.push(`- **Overview:** ${task.description}`);
     if (task.components && task.components.length > 0) {
       lines.push(`- **Target Files:** ${task.components.map(c => `\`${c}\``).join(', ')}`);
+    }
+    if (task.attachments && task.attachments.length > 0) {
+      lines.push(`- **Attached Context:** ${task.attachments.map(a => `\`${a}\``).join(', ')}`);
     }
     lines.push(`- **Frugal Kickoff:** \`/backlog-start ${task.id}\``);
     lines.push('');
@@ -1062,27 +1396,43 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT) {
   }
 }
 
+const BRIDGE_VERSION = '1.2.0';
+
+function spawnBridgeDaemon() {
+  try {
+    const child = spawn(process.execPath, [__filename, 'serve', '--port', String(DEFAULT_PORT)], {
+      cwd: REPO_ROOT,
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.unref();
+  } catch {}
+}
+
 /**
  * Ensure the lightweight background bridge daemon on 127.0.0.1:4199 is running
- * so clicking "Kickoff Prompt" or status toggles in backlog.html has native OS pbcopy
- * and live docs/backlog.json persistence.
+ * at the latest BRIDGE_VERSION so clicking "Kickoff Prompt", status toggles, or "Attach"
+ * in backlog.html has native OS pbcopy, .zip unpacking, and live docs/backlog.json persistence.
  */
 function ensureDaemonRunning() {
   if (process.env.CI || process.env.NODE_TEST_CONTEXT || process.env.ANTIGRAVITY_NO_DAEMON) {
     return;
   }
-  const req = http.get(`http://127.0.0.1:${DEFAULT_PORT}/api/health`, { timeout: 150 }, (res) => {
-    res.resume();
+  const req = http.get(`http://127.0.0.1:${DEFAULT_PORT}/api/health`, { timeout: 200 }, (res) => {
+    let raw = '';
+    res.on('data', chunk => { raw += chunk; });
+    res.on('end', () => {
+      try {
+        const info = JSON.parse(raw || '{}');
+        if (info.version !== BRIDGE_VERSION) {
+          spawnSync('pkill', ['-f', 'backlog.mjs serve'], { timeout: 1000 });
+          setTimeout(spawnBridgeDaemon, 80);
+        }
+      } catch {}
+    });
   });
   req.on('error', () => {
-    try {
-      const child = spawn(process.execPath, [__filename, 'serve', '--port', String(DEFAULT_PORT)], {
-        cwd: REPO_ROOT,
-        detached: true,
-        stdio: 'ignore'
-      });
-      child.unref();
-    } catch {}
+    spawnBridgeDaemon();
   });
   req.on('timeout', () => {
     req.destroy();
@@ -1125,7 +1475,7 @@ function startBridgeServer(port = DEFAULT_PORT) {
     const url = new URL(req.url || '/', `http://127.0.0.1:${port}`);
 
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      sendJson(res, 200, { ok: true, service: 'antigravity-backlog-bridge', port });
+      sendJson(res, 200, { ok: true, service: 'antigravity-backlog-bridge', version: BRIDGE_VERSION, port });
       return;
     }
 
@@ -1155,11 +1505,14 @@ function startBridgeServer(port = DEFAULT_PORT) {
         if (id) {
           const data = loadBacklog(targetRoot);
           const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
-          if (task && task.status === 'todo') {
-            task.status = 'in_progress';
-            saveBacklog(data, targetRoot);
-            renderMigrationBoard(data, targetRoot);
-            writeReviewPaneArtifacts(data, targetRoot);
+          if (task) {
+            if (task.status === 'todo') {
+              task.status = 'in_progress';
+              saveBacklog(data, targetRoot);
+              renderMigrationBoard(data, targetRoot);
+              writeReviewPaneArtifacts(data, targetRoot);
+            }
+            unpackTaskAttachments(task, targetRoot);
           }
         }
         return { status: 200, payload: { ok: true, copied, prompt, id } };
@@ -1174,6 +1527,9 @@ function startBridgeServer(port = DEFAULT_PORT) {
           return { status: 404, payload: { ok: false, error: 'Task not found' } };
         }
         task.status = newStatus;
+        if (newStatus === 'in_progress') {
+          unpackTaskAttachments(task, targetRoot);
+        }
         saveBacklog(data, targetRoot);
         renderMigrationBoard(data, targetRoot);
         writeReviewPaneArtifacts(data, targetRoot);
@@ -1187,22 +1543,79 @@ function startBridgeServer(port = DEFAULT_PORT) {
         }
         const data = loadBacklog(targetRoot);
         if (!data.tasks.some(existing => existing.id.toLowerCase() === String(t.id).toLowerCase())) {
-          data.tasks.unshift({
+          const createdTask = {
             id: String(t.id).trim(),
             type: t.type || 'feature',
             title: String(t.title).trim(),
             status: t.status || 'todo',
             priority: t.priority || 'medium',
             components: Array.isArray(t.components) ? t.components : [],
+            attachments: Array.isArray(t.attachments) ? t.attachments : [],
             description: String(t.description || ''),
             spec: String(t.spec || t.description || ''),
             acceptanceCriteria: Array.isArray(t.acceptanceCriteria) ? t.acceptanceCriteria : []
-          });
+          };
+          data.tasks.unshift(createdTask);
+          if (createdTask.attachments.length > 0) {
+            unpackTaskAttachments(createdTask, targetRoot);
+          }
           saveBacklog(data, targetRoot);
           renderMigrationBoard(data, targetRoot);
           writeReviewPaneArtifacts(data, targetRoot);
         }
         return { status: 200, payload: { ok: true, id: t.id } };
+      }
+
+      if (endpoint === '/api/attach') {
+        const id = String(body.id || '').trim();
+        const data = loadBacklog(targetRoot);
+        const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
+        if (!task) {
+          return { status: 404, payload: { ok: false, error: 'Task not found' } };
+        }
+        if (!Array.isArray(task.attachments)) task.attachments = [];
+
+        const attachDir = path.join(targetRoot, 'docs', 'attachments', task.id);
+        fs.mkdirSync(attachDir, { recursive: true });
+
+        if (body.fileName && body.base64Data) {
+          const safeName = path.basename(String(body.fileName)).replace(/[^a-zA-Z0-9._-]/g, '_');
+          const destPath = path.join(attachDir, safeName);
+          fs.writeFileSync(destPath, Buffer.from(String(body.base64Data), 'base64'));
+          const relPath = `docs/attachments/${task.id}/${safeName}`;
+          if (!task.attachments.includes(relPath)) {
+            task.attachments.push(relPath);
+          }
+        } else if (body.filePath) {
+          const abs = resolveAttachmentPath(body.filePath, targetRoot);
+          if (abs && fs.existsSync(abs)) {
+            const safeName = path.basename(abs);
+            const destPath = path.join(attachDir, safeName);
+            if (path.resolve(abs) !== path.resolve(destPath)) {
+              fs.copyFileSync(abs, destPath);
+            }
+            const relPath = `docs/attachments/${task.id}/${safeName}`;
+            if (!task.attachments.includes(relPath)) {
+              task.attachments.push(relPath);
+            }
+          }
+        }
+
+        const manifest = unpackTaskAttachments(task, targetRoot);
+        saveBacklog(data, targetRoot);
+        renderMigrationBoard(data, targetRoot);
+        writeReviewPaneArtifacts(data, targetRoot);
+
+        return {
+          status: 200,
+          payload: {
+            ok: true,
+            id: task.id,
+            attachments: task.attachments,
+            unpackedCount: manifest.allFiles.length,
+            archivesUnpacked: manifest.archivesUnpacked.length
+          }
+        };
       }
 
       return { status: 404, payload: { ok: false, error: 'Unknown endpoint' } };
@@ -1228,7 +1641,7 @@ function startBridgeServer(port = DEFAULT_PORT) {
       let rawBody = '';
       req.on('data', chunk => {
         rawBody += chunk;
-        if (rawBody.length > 1e6) req.destroy();
+        if (rawBody.length > 50 * 1024 * 1024) req.destroy();
       });
       req.on('end', () => {
         try {
@@ -1259,6 +1672,45 @@ function startBridgeServer(port = DEFAULT_PORT) {
   });
 }
 
+/**
+ * Attach one or more files to a task, copying external files into docs/attachments/<ID>/
+ * so they remain self-contained in the project, and return the stored relative paths.
+ */
+function attachFilesToTask(task, rawPaths, rootDir = REPO_ROOT, copyFiles = true) {
+  if (!Array.isArray(task.attachments)) task.attachments = [];
+  const attachDir = path.join(rootDir, 'docs', 'attachments', task.id);
+  const added = [];
+
+  for (const raw of rawPaths) {
+    if (!raw) continue;
+    const abs = resolveAttachmentPath(raw, rootDir);
+    if (abs && fs.existsSync(abs) && fs.statSync(abs).isFile()) {
+      let storedPath;
+      if (copyFiles) {
+        fs.mkdirSync(attachDir, { recursive: true });
+        const destPath = path.join(attachDir, path.basename(abs));
+        if (path.resolve(abs) !== path.resolve(destPath)) {
+          fs.copyFileSync(abs, destPath);
+        }
+        storedPath = path.relative(rootDir, destPath);
+      } else {
+        storedPath = abs.startsWith(rootDir + path.sep) ? path.relative(rootDir, abs) : abs;
+      }
+      if (!task.attachments.includes(storedPath)) {
+        task.attachments.push(storedPath);
+      }
+      added.push(storedPath);
+    } else {
+      const cleaned = String(raw).trim().replace(/^@+/, '');
+      if (cleaned && !task.attachments.includes(cleaned)) {
+        task.attachments.push(cleaned);
+        added.push(cleaned);
+      }
+    }
+  }
+  return added;
+}
+
 // CLI commands
 function printUsage(data) {
   const displayProject = getDisplayProjectName(data);
@@ -1267,7 +1719,9 @@ ${displayProject} Zero-Token Local Backlog Engine
 
 Usage:
   npm run backlog list [todo|in_progress|done|high|all]
-  npm run backlog add "<title>" [--id <ID>] [--type <feature|bug|qa|refactor>] [--priority <high|medium|low>] [--desc "<desc>"] [--components "<file1,file2>"]
+  npm run backlog add "<title>" [--id <ID>] [--type <feature|bug|qa|refactor>] [--priority <high|medium|low>] [--desc "<desc>"] [--components "<file1,file2>"] [--attach "<ux-ui.zip,spec.md>"]
+  npm run backlog attach <id> <file1> [file2 ...] [--no-copy]
+  npm run backlog unpack <id> [optional_extra_files...]
   npm run backlog status <id> <todo|in_progress|testing|done>
   npm run backlog start <id>
   npm run backlog done <id>
@@ -1315,6 +1769,9 @@ function main() {
       if (t.components && t.components.length > 0) {
         console.log(`   └─ Components: ${t.components.join(', ')}`);
       }
+      if (t.attachments && t.attachments.length > 0) {
+        console.log(`   └─ Attachments: 📎 ${t.attachments.join(', ')}`);
+      }
     }
     console.log('='.repeat(70));
     console.log(`💡 To kickoff a task with 0 token waste: npm run backlog prompt <ID>\n`);
@@ -1333,13 +1790,17 @@ function main() {
     let priority = 'medium';
     let desc = '';
     let components = [];
+    let rawAttachments = [];
 
     for (let i = 2; i < args.length; i++) {
       if (args[i] === '--id' && args[i + 1]) id = args[++i];
       else if (args[i] === '--type' && args[i + 1]) type = args[++i];
       else if (args[i] === '--priority' && args[i + 1]) priority = args[++i];
       else if (args[i] === '--desc' && args[i + 1]) desc = args[++i];
-      else if (args[i] === '--components' && args[i + 1]) components = args[++i].split(',').map(s => s.trim());
+      else if (args[i] === '--components' && args[i + 1]) components = args[++i].split(',').map(s => s.trim()).filter(Boolean);
+      else if ((args[i] === '--attach' || args[i] === '--attachments') && args[i + 1]) {
+        rawAttachments.push(...args[++i].split(',').map(s => s.trim()).filter(Boolean));
+      }
     }
 
     if (!id) {
@@ -1357,10 +1818,15 @@ function main() {
       status: 'todo',
       priority,
       components,
+      attachments: [],
       description: desc,
       spec: desc,
       acceptanceCriteria: []
     };
+
+    if (rawAttachments.length > 0) {
+      attachFilesToTask(newTask, rawAttachments, REPO_ROOT, true);
+    }
 
     data.tasks.push(newTask);
     saveBacklog(data);
@@ -1369,7 +1835,62 @@ function main() {
     ensureDaemonRunning();
 
     console.log(`\n✅ Added task [${id}] to local backlog: "${title}" (0 tokens consumed)`);
+    if (newTask.attachments.length > 0) {
+      const manifest = unpackTaskAttachments(newTask, REPO_ROOT);
+      printUnpackedManifest(manifest, REPO_ROOT);
+    }
     console.log(`💡 Frugal prompt to kick off: "/backlog-start ${id}"\n`);
+    return;
+  }
+
+  if (command === 'attach') {
+    const id = args[1];
+    const copyFiles = !args.includes('--no-copy');
+    const fileArgs = args.slice(2).filter(a => a !== '--no-copy' && a !== '--copy');
+
+    if (!id || fileArgs.length === 0) {
+      console.error('❌ Usage: npm run backlog attach <id> <file1> [file2 ...] [--no-copy]');
+      process.exit(1);
+    }
+
+    const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
+    if (!task) {
+      console.error(`❌ Task ${id} not found in backlog.`);
+      process.exit(1);
+    }
+
+    const added = attachFilesToTask(task, fileArgs, REPO_ROOT, copyFiles);
+    saveBacklog(data);
+    renderMigrationBoard(data);
+    writeReviewPaneArtifacts(data);
+    ensureDaemonRunning();
+
+    console.log(`\n📎 Attached ${added.length} file(s) to [${task.id}]: ${added.join(', ')}`);
+    const manifest = unpackTaskAttachments(task, REPO_ROOT);
+    printUnpackedManifest(manifest, REPO_ROOT);
+    return;
+  }
+
+  if (command === 'unpack') {
+    const id = args[1];
+    const extraFiles = args.slice(2).filter(Boolean);
+    if (!id) {
+      console.error('❌ Usage: npm run backlog unpack <id> [optional_file_paths...]');
+      process.exit(1);
+    }
+
+    const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
+    if (task && extraFiles.length > 0) {
+      attachFilesToTask(task, extraFiles, REPO_ROOT, true);
+      saveBacklog(data);
+      renderMigrationBoard(data);
+      writeReviewPaneArtifacts(data);
+    }
+
+    const manifest = unpackTaskAttachments(task || { id, attachments: extraFiles }, REPO_ROOT, extraFiles);
+    if (!printUnpackedManifest(manifest, REPO_ROOT)) {
+      console.log(`ℹ️  No attached archives or context files found for [${id}].`);
+    }
     return;
   }
 
@@ -1394,6 +1915,10 @@ function main() {
     ensureDaemonRunning();
 
     console.log(`\n✅ Updated [${task.id}] status to: ${task.status.toUpperCase()}`);
+    if (task.status === 'in_progress') {
+      const manifest = unpackTaskAttachments(task, REPO_ROOT);
+      printUnpackedManifest(manifest, REPO_ROOT);
+    }
     return;
   }
 
@@ -1424,6 +1949,11 @@ function main() {
     renderMigrationBoard(data);
     writeReviewPaneArtifacts(data);
     ensureDaemonRunning();
+
+    for (const task of matchedTasks) {
+      const manifest = unpackTaskAttachments(task, REPO_ROOT);
+      printUnpackedManifest(manifest, REPO_ROOT);
+    }
 
     const idList = matchedTasks.map(t => t.id).join(', ');
     const kickoffCmd = `/backlog-start ${idList}`;

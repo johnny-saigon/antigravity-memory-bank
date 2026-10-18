@@ -678,6 +678,14 @@ async function installSyncAndHooks(targetDir, detected) {
       pkg.scripts['backlog:add'] = 'node scripts/backlog.mjs add';
       pkgUpdated = true;
     }
+    if (!pkg.scripts['backlog:attach']) {
+      pkg.scripts['backlog:attach'] = 'node scripts/backlog.mjs attach';
+      pkgUpdated = true;
+    }
+    if (!pkg.scripts['backlog:unpack']) {
+      pkg.scripts['backlog:unpack'] = 'node scripts/backlog.mjs unpack';
+      pkgUpdated = true;
+    }
     if (!pkg.scripts['backlog:start']) {
       pkg.scripts['backlog:start'] = 'node scripts/backlog.mjs start';
       pkgUpdated = true;

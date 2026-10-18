@@ -212,6 +212,16 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-113: Automatic Context & UX/UI .zip Bundle Ingestion in /backlog-start & Backlog Engine
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `skills/backlog-start/SKILL.md`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `lib/backlog-adapter.mjs`
+- **Description:** Automatically detect, copy, and unpack attached files (such as UX/UI .zip exports containing DESIGN.md, tokens.json, HTML/Tailwind screens, and mockups) via CLI, Review pane UI, or inline /backlog-start prompts.
+- **Technical Specification:**
+  Automatically detect, copy, and unpack attached files (such as UX/UI .zip exports containing DESIGN.md, tokens.json, HTML/Tailwind screens, and mockups) via CLI, Review pane UI, or inline /backlog-start prompts.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)
