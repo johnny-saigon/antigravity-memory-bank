@@ -167,13 +167,15 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
       return matchedDirs;
     }
 
-    // Fallback: if no brain dir met the dominance threshold, pick the one with highest myCount > 0,
-    // or the most recently active brain directory if none have workspace mentions yet.
+    // Fallback: if no brain dir met the dominance threshold, pick the one with highest myCount > 0
     const withMentions = candidates.find(c => c.myCount > 0);
     if (withMentions) return [withMentions.dirPath];
 
-    candidates.sort((a, b) => b.mtime - a.mtime);
-    return candidates.length > 0 ? [candidates[0].dirPath] : [];
+    // Only fallback to most recent if the brain dir is genuinely unowned and has zero mentions of other workspaces
+    const unownedRecent = candidates.find(c => !c.ownsExisting && c.maxOther === 0);
+    if (unownedRecent) return [unownedRecent.dirPath];
+
+    return [];
   } catch {
     return [];
   }
