@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `0fda0d8` — "feat(backlog): implement FEAT-113 automatic context file & UX/UI .zip bundle ingestion in /backlog-start" (2026-10-18)
+- **Last Synchronized Commit**: `6673fc2` — "fix(customizations): resolve BUG-107 by pulling API keys, MCP configs & customizations into memory-bank" (2026-10-18)
 - **Current Phase**: v1.4 Release Hardening & Dogfooding.
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank and Decoupled Zero-Token Backlog Engine directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 
