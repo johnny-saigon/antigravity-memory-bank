@@ -576,6 +576,27 @@ async function runSync() {
             if (content.includes('- **Active Backlog Sprint**:') || content.includes('- **Backlog Status**:')) {
               content = content.replace(/- \*\*(?:Active Backlog Sprint|Backlog Status)\*\*:[^\n]+/g, backlogLine);
             }
+
+            // Automatically re-render Review Pane artifacts (backlog.html & backlog-board.md)
+            // whenever docs/backlog.json is newer than docs/backlog.html or whenStop hook fires
+            const backlogHtmlPath = path.join(targetDir, 'docs', 'backlog.html');
+            const backlogScriptPath = path.join(targetDir, 'scripts', 'backlog.mjs');
+            if (fsSync.existsSync(backlogScriptPath)) {
+              let shouldRenderBacklog = !fsSync.existsSync(backlogHtmlPath) || hookEvent === 'Stop' || !hookEvent;
+              if (!shouldRenderBacklog) {
+                try {
+                  const jsonMtime = fsSync.statSync(backlogPath).mtimeMs;
+                  const htmlMtime = fsSync.statSync(backlogHtmlPath).mtimeMs;
+                  if (jsonMtime >= htmlMtime) shouldRenderBacklog = true;
+                } catch {
+                  shouldRenderBacklog = true;
+                }
+              }
+              if (shouldRenderBacklog) {
+                execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'ignore' });
+                log('  ✓ Auto-rendered backlog.html & Review pane artifacts');
+              }
+            }
           } catch {}
         }
 

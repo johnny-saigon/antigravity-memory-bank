@@ -1285,13 +1285,48 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       document.getElementById('count-done').textContent = doneTasks.length;
     }
 
-    function refreshData() {
-      location.reload();
+    let lastTaskSignature = JSON.stringify((rawData.tasks || []).map(t => t.id + ':' + t.status + ':' + t.title));
+
+    async function syncLiveBacklogFromBridge(showNotification = false) {
+      try {
+        const res = await fetch(BRIDGE_URL + '/api/backlog?repoRoot=' + encodeURIComponent(rawData.repoRoot || '') + '&t=' + Date.now(), {
+          method: 'GET',
+          cache: 'no-store'
+        });
+        if (res.ok) {
+          const live = await res.json();
+          if (live && Array.isArray(live.tasks)) {
+            setBridgeBadge(true);
+            const nextSig = JSON.stringify(live.tasks.map(t => t.id + ':' + t.status + ':' + t.title));
+            if (nextSig !== lastTaskSignature || showNotification) {
+              rawData.tasks = live.tasks;
+              if (Array.isArray(live.milestones)) rawData.milestones = live.milestones;
+              lastTaskSignature = nextSig;
+              renderBoard();
+              if (showNotification) {
+                showToast('🔄 Synced ' + live.tasks.length + ' tickets live from docs/backlog.json!');
+              }
+            }
+            return true;
+          }
+        }
+      } catch (e) {}
+      return false;
     }
 
-    // Initial render + local bridge probe
+    async function refreshData() {
+      const ok = await syncLiveBacklogFromBridge(true);
+      if (!ok) {
+        location.reload();
+      }
+    }
+
+    // Initial render + local bridge probe + live auto-sync every 2.5s and on window focus
     renderBoard();
     probeBridge();
+    syncLiveBacklogFromBridge(false);
+    setInterval(() => syncLiveBacklogFromBridge(false), 2500);
+    window.addEventListener('focus', () => syncLiveBacklogFromBridge(false));
   </script>
 </body>
 </html>`;
@@ -1396,7 +1431,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT) {
   }
 }
 
-const BRIDGE_VERSION = '1.2.0';
+const BRIDGE_VERSION = '1.3.0';
 
 function spawnBridgeDaemon() {
   try {
@@ -1476,6 +1511,13 @@ function startBridgeServer(port = DEFAULT_PORT) {
 
     if (req.method === 'GET' && url.pathname === '/api/health') {
       sendJson(res, 200, { ok: true, service: 'antigravity-backlog-bridge', version: BRIDGE_VERSION, port });
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/backlog') {
+      const targetRoot = resolveSafeRepoRoot(url.searchParams.get('repoRoot'));
+      const data = loadBacklog(targetRoot);
+      sendJson(res, 200, { ok: true, repoRoot: targetRoot, ...data });
       return;
     }
 
