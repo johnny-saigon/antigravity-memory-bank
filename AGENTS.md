@@ -18,6 +18,7 @@ This project operates inside a strict **Three-Tier Memory Hierarchy**:
 5. **Decoupled Backlog & Context-Frugal Execution**: Capture tasks and attach context files (such as UX/UI `.zip` bundles, mockups, or specs) offline via `npm run backlog add` / `npm run backlog attach` or directly in the Review pane (`📎`) with zero token cost. Execute tasks via `@[/backlog-start](.agents/skills/backlog-start/SKILL.md)` (e.g. `/backlog-start FEAT-101` or `/backlog-start FEAT-101 @ux-ui.zip`), which loads specs from `docs/backlog.json`, automatically unpacks and ingests any attached `.zip`/context files into `docs/attachments/<ID>/extracted/`, verifies tests, and automatically updates the local backlog, Review pane board, and Memory Bank with a work recap. **Frugal means eliminating redundant context re-ingestion and chat overhead—never sacrificing code quality, visual UX/UI fidelity, root-cause depth, or verification rigor during execution.**
 
 ## Context Links
+- **API Keys, MCP Servers & Customizations**: @[Integrations & Customizations](memory-bank/integrationsAndCustomizations.md)
 - **Active Backlog & Tasks**: @[Local Backlog JSON](docs/backlog.json) · @[Backlog Guide](docs/BACKLOG_GUIDE.md)
 - **North Star & Platform Scope**: @[Project Brief](memory-bank/projectbrief.md)
 - **UX Brief, Tokens & Screen Flows**: @[Product Context](memory-bank/productContext.md)

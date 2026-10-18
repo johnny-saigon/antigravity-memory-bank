@@ -62,3 +62,18 @@ This document records root-cause analyses and resolutions for bugs discovered wh
   2. Replaced `findActiveBrainDir()` with workspace-dominance scoring (`findTargetBrainDirs()`) comparing path mention counts against sibling repositories, verified at 100% accuracy across all 5 colocated projects.
   3. Pre-rendered Kanban cards server-side with quote-safe `onclick="kickoffTask('${safeIdAttr}')"`, implemented 4-layer synchronous `document.execCommand('copy')` + auto-selected top `#kickoffBanner` input + `window.parent.postMessage`, and added a zero-dependency local native HTTP bridge (`127.0.0.1:4199`) that executes native OS `pbcopy` and persists task state to `docs/backlog.json`.
 
+---
+
+### BUG-107: Pull API Keys, Env Contracts, MCP Server Configs & Customizations into Memory Bank on Init/Upgrade/Sync
+- **Status:** Completed (`DONE`)
+- **Origin:** Discovered across installed Memory Bank instances (`RemoveBackGround`, `Binaryday`, `SnapCal`, `AntigravityRemote`, `antigravity-memory-bank`) where `.env*` keys, `eas.json` credentials, MCP servers, and `.agents/` skills/rules/hooks were missing from `memory-bank/*.md`.
+- **Components:** `lib/customizations-scraper.mjs`, `bin/cli.mjs`, `scripts/sync-memory-context.mjs`, `templates/memory-bank/integrationsAndCustomizations.md.tpl`, `templates/AGENTS.md.tpl`, `skills/start/SKILL.md`
+- **Root Causes:**
+  1. `lib/context-scraper.mjs` only scraped `git log`, `docs/*.md`, and `transcript.jsonl`, ignoring `.env*`, `eas.json`, `credentials/*.p8`, `~/.gemini/config/mcp_config.json`, `~/.gemini/antigravity/mcp/*`, `~/.gemini/config/hooks.json`, `.agents/rules/*.md`, and `.agents/skills/*/SKILL.md`.
+  2. `upgradeMemory()` in `bin/cli.mjs` skipped `memory-bank/` completely on existing installations and never synchronized API key/MCP/customization inventories.
+  3. `parseCliArgs()` in `bin/cli.mjs` ignored positional target directory arguments (`node bin/cli.mjs upgrade /path/to/repo`).
+- **Resolution:**
+  1. Created `lib/customizations-scraper.mjs` and embedded standalone sync inside `scripts/sync-memory-context.mjs` to auto-generate and refresh `memory-bank/integrationsAndCustomizations.md` (`< 125 lines`), safely masking raw secret literals (`sk_live_***`, `re_***`) while indexing all variable names, file paths, non-secret IDs, MCP server tool counts, rules, skills, and hooks.
+  2. Wired `syncCustomizationsToMemoryBank` into `init`, `upgrade`, and `sync` in `bin/cli.mjs` and linked `memory-bank/integrationsAndCustomizations.md` in `AGENTS.md` and `.agents/skills/start/SKILL.md`.
+  3. Updated `parseCliArgs()` in `bin/cli.mjs` to accept positional directory arguments and `--dir <path>`.
+

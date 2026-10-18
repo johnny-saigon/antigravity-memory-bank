@@ -16,6 +16,7 @@ import { execSync } from 'node:child_process';
 import { stdin as input, stdout as output } from 'node:process';
 import { scrapeHistoricalContext } from '../lib/context-scraper.mjs';
 import { adaptExistingBacklog } from '../lib/backlog-adapter.mjs';
+import { syncCustomizationsToMemoryBank } from '../lib/customizations-scraper.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +34,7 @@ if (pkgRoot.includes('_npx')) {
 function parseCliArgs(argv) {
   const options = {
     command: 'init',
+    targetDir: null,
     asPlugin: false,
     yes: false,
     commit: false,
@@ -64,6 +66,8 @@ function parseCliArgs(argv) {
       options.command = 'upgrade';
     } else if (a === 'sync') {
       options.command = 'sync';
+    } else if ((a === '--dir' || a === '-d') && args[i + 1]) {
+      options.targetDir = path.resolve(args[++i]);
     } else if (a === '--quiet' || a === '-q') {
       options.quiet = true;
     } else if (a === '--as-plugin') {
@@ -99,6 +103,8 @@ function parseCliArgs(argv) {
     } else if (a === '-h' || a === '--help') {
       printHelp();
       process.exit(0);
+    } else if (!a.startsWith('-') && !options.targetDir) {
+      options.targetDir = path.resolve(a);
     }
   }
 
@@ -891,6 +897,11 @@ async function initMemory(targetDir, opts, detected) {
     await copySkill('update-memory');
     await copySkill('backlog-start');
 
+    const custInit = await syncCustomizationsToMemoryBank(targetDir, projectName);
+    if (custInit) {
+      console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custInit.envKeyCount} env keys, ${custInit.mcpCount} MCP servers, ${custInit.rulesCount} rules, ${custInit.skillsCount} skills)`);
+    }
+
     const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
     const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
     if (path.resolve(linterSrc) !== path.resolve(linterDest) && !detected.isSelfRepo) {
@@ -1045,6 +1056,12 @@ Immediately after closing the previous session, initialize the new working cycle
     console.log('  ✓ Upgraded AGENTS.md with continuous cycling and decoupled backlog directives');
   }
 
+  // 4b. Synchronize API keys, MCP configs & customizations into memory-bank/integrationsAndCustomizations.md
+  const custUpgrade = await syncCustomizationsToMemoryBank(targetDir, projectTitle);
+  if (custUpgrade) {
+    console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custUpgrade.envKeyCount} env keys, ${custUpgrade.mcpCount} MCP servers, ${custUpgrade.rulesCount} rules, ${custUpgrade.skillsCount} skills)`);
+  }
+
   // 5. Install scripts/lint-memory.mjs
   const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
   const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
@@ -1082,11 +1099,11 @@ Immediately after closing the previous session, initialize the new working cycle
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Committing memory upgrade to Git...');
     try {
-      execSync('git add .agents/skills/ AGENTS.md scripts/ docs/ package.json .github/ 2>/dev/null || true', {
+      execSync('git add .agents/skills/ AGENTS.md memory-bank/integrationsAndCustomizations.md scripts/ docs/ package.json .github/ 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'pipe',
       });
-      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank to v1.4 (zero-token backlog engine, /backlog-start, continuous lifecycle)"', {
+      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank (API keys, MCP configs, customizations & backlog engine)"', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -1099,8 +1116,9 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
   console.log('📦 New capabilities active in this project:');
+  console.log('   - 🔑 API Keys, MCP & Customizations Index: memory-bank/integrationsAndCustomizations.md');
   console.log('   - 📋 Decoupled Zero-Token Backlog: docs/backlog.json & npm run backlog');
-  console.log('   - 🚀 Autonomous Sprint Execution: /backlog-start <TICKET_ID>');
+  console.log('   - 🚀 Autonomous Sprint Execution: /backlog-start <TICKET_ID> [optional_attachments]');
   console.log('   - 🖥️  Review Pane Board: backlog.html auxiliary pane Kanban board');
   console.log('   - 🔄 Continuous 2-Phase Cycle: /update-memory auto-boots the next session');
   console.log('   - ⚡ Incremental Auto-Sync: .git/hooks/post-commit automatically syncs commits');
@@ -1111,7 +1129,7 @@ Immediately after closing the previous session, initialize the new working cycle
 
 async function main() {
   const opts = parseCliArgs(process.argv);
-  const targetDir = process.cwd();
+  const targetDir = opts.targetDir || process.cwd();
   const detected = await detectProjectContext(targetDir);
 
   if (opts.command === 'export') {
@@ -1119,6 +1137,7 @@ async function main() {
   } else if (opts.command === 'uninstall') {
     await uninstallMemory(targetDir, opts, detected);
   } else if (opts.command === 'sync') {
+    await syncCustomizationsToMemoryBank(targetDir, detected.name);
     await syncMemory(targetDir, opts);
   } else if (opts.command === 'upgrade' || (opts.command === 'init' && detected.memoryBankExists && !opts.force)) {
     await upgradeMemory(targetDir, opts, detected);

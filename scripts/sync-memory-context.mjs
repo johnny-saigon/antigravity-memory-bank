@@ -2,15 +2,17 @@
 
 /**
  * Antigravity Memory Bank — Incremental Context Synchronizer
- * Automatically synchronizes git commit history and bug fixes into:
+ * Automatically synchronizes git commit history, bug fixes, API keys, MCP configs & customizations into:
  * - memory-bank/progress.md (Recent Accomplishments)
  * - memory-bank/activeContext.md (Current Sprint Focus & Sync State)
+ * - memory-bank/integrationsAndCustomizations.md (API Keys, Env Contracts, MCP Servers, Rules & Skills)
  *
- * Can be run manually, via `post-commit` git hooks, or in CI pipelines.
+ * Can be run manually (`npm run memory:sync`), via `post-commit` git hooks, or in CI pipelines.
  */
 
-import { promises as fs } from 'node:fs';
+import fsSync, { promises as fs } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { execSync } from 'node:child_process';
 
 const targetDir = process.cwd();
@@ -20,8 +22,361 @@ const args = process.argv.slice(2);
 const isQuiet = args.includes('--quiet') || args.includes('-q');
 const autoCommit = args.includes('--commit');
 
+const SENSITIVE_KEY_REGEX = /(SECRET|TOKEN|PASSWORD|PRIVATE_KEY|API_KEY|ACCESS_KEY|WEBHOOK_SECRET|CREDENTIAL|AUTH_KEY|CLIENT_SECRET|DSN)/i;
+
 function log(...messages) {
   if (!isQuiet) console.log(...messages);
+}
+
+function toTildePath(p) {
+  if (!p) return '';
+  const home = os.homedir();
+  const str = String(p);
+  if (home && str.startsWith(home)) return '~' + str.slice(home.length);
+  return str;
+}
+
+function summarizeEnvValue(key, rawVal) {
+  const val = String(rawVal || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!val) return 'empty';
+  if (val.includes('your_') || val.includes('replace_') || val.includes('example') || val.includes('xxx') || val === 'changeme') {
+    return 'template placeholder';
+  }
+  if (val.startsWith('/') || val.startsWith('~/') || val.startsWith('./')) {
+    return `path: \`${toTildePath(val)}\``;
+  }
+  if (/^[a-z0-9+.-]+:\/\/[^/]*:[^/]*@/i.test(val)) {
+    try {
+      const u = new URL(val);
+      return `\`${u.protocol}//${u.username}:***@${u.host}${u.pathname}\``;
+    } catch {
+      return '`configured URI`';
+    }
+  }
+  if (SENSITIVE_KEY_REGEX.test(key)) {
+    const prefixMatch = val.match(/^(sk_live_|sk_test_|pk_live_|pk_test_|whsec_|re_|ghp_|gho_|AQ\.|AIza)[A-Za-z0-9_-]*/);
+    if (prefixMatch) return `\`${prefixMatch[1]}***\` (configured)`;
+    return 'configured (secret)';
+  }
+  if (val.length > 65) return `\`${val.slice(0, 42)}...\``;
+  return `\`${val}\``;
+}
+
+function parseEnvFile(content) {
+  const entries = [];
+  for (const rawLine of String(content || '').split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eqIdx = line.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = line.slice(0, eqIdx).trim().replace(/^export\s+/, '');
+    const value = line.slice(eqIdx + 1).trim();
+    if (!key || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    entries.push({ key, value, summary: summarizeEnvValue(key, value) });
+  }
+  return entries;
+}
+
+function findWorkspaceFiles(rootDir, predicate, maxDepth = 3, currentDepth = 0, relPrefix = '') {
+  const results = [];
+  if (currentDepth > maxDepth || !fsSync.existsSync(rootDir)) return results;
+  try {
+    const entries = fsSync.readdirSync(rootDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (['node_modules', '.git', 'dist', 'build', '.next', '.expo', 'memory-backups', '__pycache__', '.venv', 'venv'].includes(entry.name)) {
+        continue;
+      }
+      const relPath = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
+      const fullPath = path.join(rootDir, entry.name);
+      if (entry.isFile() && predicate(entry.name, relPath, fullPath)) {
+        results.push({ name: entry.name, relPath, fullPath });
+      } else if (entry.isDirectory()) {
+        results.push(...findWorkspaceFiles(fullPath, predicate, maxDepth, currentDepth + 1, relPath));
+      }
+    }
+  } catch {}
+  return results;
+}
+
+function extractMarkdownSummary(filePath) {
+  try {
+    const content = fsSync.readFileSync(filePath, 'utf8');
+    const descMatch = content.match(/^description:\s*>?-?\s*\n?\s*([^\n]+)/m);
+    if (descMatch && descMatch[1].trim()) return descMatch[1].trim().replace(/^['"]|['"]$/g, '').slice(0, 110);
+    const h1Match = content.match(/^#\s+([^\n]+)/m);
+    if (h1Match && h1Match[1].trim()) return h1Match[1].trim().slice(0, 110);
+  } catch {}
+  return 'Custom workspace configuration';
+}
+
+async function syncIntegrationsAndCustomizations(rootDir) {
+  const resolvedRoot = path.resolve(rootDir);
+  const homeDir = os.homedir();
+  const geminiRoot = process.env.GEMINI_CONFIG_DIR || path.join(homeDir, '.gemini');
+  let displayProject = path.basename(resolvedRoot);
+  try {
+    const agentsMd = fsSync.readFileSync(path.join(resolvedRoot, 'AGENTS.md'), 'utf8');
+    const m = agentsMd.match(/^#\s+Antigravity Agent Directives\s+[—-]\s+([^\n]+)/m);
+    if (m) displayProject = m[1].trim();
+  } catch {}
+
+  const envFiles = findWorkspaceFiles(resolvedRoot, (name) => name === '.env' || name.startsWith('.env.'), 3);
+  const liveEnvFiles = [];
+  const templateEnvFiles = [];
+  const allEnvKeysMap = new Map();
+
+  for (const ef of envFiles) {
+    const isTemplate = ef.name.includes('example') || ef.name.includes('sample') || ef.name.includes('template');
+    const parsed = parseEnvFile(fsSync.readFileSync(ef.fullPath, 'utf8'));
+    if (isTemplate) templateEnvFiles.push({ relPath: ef.relPath, count: parsed.length });
+    else liveEnvFiles.push({ relPath: ef.relPath, count: parsed.length });
+
+    for (const item of parsed) {
+      if (!allEnvKeysMap.has(item.key)) {
+        allEnvKeysMap.set(item.key, { key: item.key, sources: [], liveSummary: null, templateSummary: null });
+      }
+      const rec = allEnvKeysMap.get(item.key);
+      if (!rec.sources.includes(ef.relPath)) rec.sources.push(ef.relPath);
+      if (!isTemplate && item.value) rec.liveSummary = item.summary;
+      else if (isTemplate && !rec.templateSummary) rec.templateSummary = item.summary;
+    }
+  }
+
+  const easFiles = findWorkspaceFiles(resolvedRoot, (name) => name === 'eas.json' || name === 'wrangler.toml', 3);
+  const platformCredentials = [];
+  for (const ef of easFiles) {
+    if (ef.name === 'eas.json') {
+      try {
+        const eas = JSON.parse(fsSync.readFileSync(ef.fullPath, 'utf8'));
+        const buildEnvs = new Map();
+        for (const [, prof] of Object.entries(eas.build || {})) {
+          if (prof && prof.env) {
+            for (const [k, v] of Object.entries(prof.env)) buildEnvs.set(k, summarizeEnvValue(k, v));
+          }
+        }
+        if (buildEnvs.size > 0) {
+          platformCredentials.push(`- **EAS Build Env (\`${ef.relPath}\`)**: ${Array.from(buildEnvs.entries()).map(([k, v]) => `\`${k}\`=${v}`).join(', ')}`);
+        }
+        const iosSub = eas.submit?.production?.ios || eas.submit?.testflight?.ios;
+        if (iosSub) {
+          const parts = [];
+          if (iosSub.ascAppId) parts.push(`App ID \`${iosSub.ascAppId}\``);
+          if (iosSub.ascApiKeyId) parts.push(`Key ID \`${iosSub.ascApiKeyId}\``);
+          if (iosSub.ascApiKeyIssuerId) parts.push(`Issuer \`${iosSub.ascApiKeyIssuerId}\``);
+          if (iosSub.ascApiKeyPath) parts.push(`Key \`${iosSub.ascApiKeyPath}\``);
+          if (parts.length > 0) platformCredentials.push(`- **App Store Connect (\`${ef.relPath}\`)**: ${parts.join(' · ')}`);
+        }
+        const androidSub = eas.submit?.production?.android || eas.submit?.['internal-track']?.android;
+        if (androidSub && androidSub.serviceAccountKeyPath) {
+          platformCredentials.push(`- **Google Play Submit (\`${ef.relPath}\`)**: Service Account \`${androidSub.serviceAccountKeyPath}\` (track: \`${androidSub.track || 'internal'}\`)`);
+        }
+      } catch {}
+    } else if (ef.name === 'wrangler.toml') {
+      platformCredentials.push(`- **Cloudflare Wrangler Config**: \`${ef.relPath}\``);
+    }
+  }
+
+  const workspaceCredFiles = findWorkspaceFiles(
+    resolvedRoot,
+    (name, relPath) => name.endsWith('.p8') || (relPath.includes('credentials/') && (name.endsWith('.json') || name.endsWith('.pem') || name.endsWith('.key'))),
+    4
+  );
+  for (const cf of workspaceCredFiles) {
+    platformCredentials.push(`- **Local Credential Key**: \`${cf.relPath}\``);
+  }
+
+  const hostTokenCandidates = [
+    { path: path.join(homeDir, '.github_token'), label: 'GitHub PAT File' },
+    { path: path.join(homeDir, '.stripe_token'), label: 'Stripe API Token File' },
+    { path: path.join(homeDir, '.stitch_token'), label: 'Google Stitch Token File' },
+    { path: path.join(homeDir, '.ovh_credentials.json'), label: 'OVHcloud API Credentials' }
+  ];
+  const hostTokens = hostTokenCandidates.filter(ht => fsSync.existsSync(ht.path)).map(ht => `\`${toTildePath(ht.path)}\` (${ht.label})`);
+
+  const mcpServers = [];
+  const mcpConfigCandidates = [
+    { path: path.join(resolvedRoot, '.mcp.json'), scope: 'Workspace' },
+    { path: path.join(resolvedRoot, 'mcp_config.json'), scope: 'Workspace' },
+    { path: path.join(geminiRoot, 'config', 'mcp_config.json'), scope: 'Global' }
+  ];
+  const seenMcpNames = new Set();
+  for (const cand of mcpConfigCandidates) {
+    if (!fsSync.existsSync(cand.path)) continue;
+    try {
+      const raw = JSON.parse(fsSync.readFileSync(cand.path, 'utf8'));
+      const serversObj = raw.mcpServers || raw.servers || {};
+      for (const [serverName, spec] of Object.entries(serversObj)) {
+        if (seenMcpNames.has(serverName)) continue;
+        seenMcpNames.add(serverName);
+
+        let toolCount = 0;
+        const schemaDir = path.join(geminiRoot, 'antigravity', 'mcp', serverName);
+        if (fsSync.existsSync(schemaDir)) {
+          try {
+            toolCount = fsSync.readdirSync(schemaDir).filter(f => f.endsWith('.json')).length;
+          } catch {}
+        }
+
+        const cmd = spec.command ? toTildePath(spec.command) : (spec.url || spec.serverUrl || 'stdio');
+        const cArgs = Array.isArray(spec.args) ? spec.args : [];
+        let bridgeSummary = `\`${toTildePath(cmd)}\``;
+        if (cmd === 'npx') {
+          const pkgArg = cArgs.find(a => !a.startsWith('-') && a !== 'run' && !a.startsWith('http') && !a.startsWith('X-Goog'));
+          const urlArg = cArgs.find(a => a.startsWith('http'));
+          if (pkgArg && urlArg) bridgeSummary = `\`npx ${pkgArg}\` (\`${urlArg}\`)`;
+          else if (pkgArg) {
+            const runIdx = cArgs.indexOf('run');
+            const acctId = (runIdx !== -1 && cArgs[runIdx + 1]) ? ` (acct \`${cArgs[runIdx + 1].slice(0, 10)}...\`)` : '';
+            bridgeSummary = `\`npx ${pkgArg}\`${acctId}`;
+          }
+        } else if (cmd === '/bin/bash' || cmd === 'bash' || cmd === 'sh') {
+          const mcpPkg = cArgs.join(' ').match(/@modelcontextprotocol\/[a-z0-9-]+/i);
+          bridgeSummary = mcpPkg ? `\`${mcpPkg[0]}\`` : '`bash bridge`';
+        }
+
+        const authParts = [];
+        if (spec.env && typeof spec.env === 'object') {
+          for (const [ek, ev] of Object.entries(spec.env)) {
+            const evStr = String(ev || '');
+            if (evStr.startsWith('/') || evStr.startsWith('~/')) {
+              let displayEvPath = toTildePath(evStr);
+              if (evStr.startsWith(resolvedRoot + '/')) displayEvPath = evStr.slice(resolvedRoot.length + 1);
+              else if (displayEvPath.startsWith('~/Documents/')) displayEvPath = `credentials/${path.basename(evStr)}`;
+              authParts.push(`\`${ek}\` -> \`${displayEvPath}\``);
+            } else if (SENSITIVE_KEY_REGEX.test(ek)) {
+              authParts.push(`\`${ek}\` (${summarizeEnvValue(ek, evStr)})`);
+            } else {
+              authParts.push(`\`${ek}\`=\`${evStr}\``);
+            }
+          }
+        }
+        for (const a of cArgs) {
+          if (String(a).toLowerCase().includes('api-key') || String(a).toLowerCase().includes('authorization')) {
+            authParts.push(`Header \`${String(a).split(':')[0].trim()}\` (configured)`);
+          }
+        }
+        mcpServers.push({ name: serverName, bridgeSummary, toolCount, authSummary: authParts.length > 0 ? authParts.join(', ') : 'Default / CLI auth' });
+      }
+    } catch {}
+  }
+
+  const workspaceRules = [];
+  const rulesDir = path.join(resolvedRoot, '.agents', 'rules');
+  if (fsSync.existsSync(rulesDir)) {
+    try {
+      for (const f of fsSync.readdirSync(rulesDir).filter(x => x.endsWith('.md')).sort()) {
+        workspaceRules.push({ relPath: `.agents/rules/${f}`, summary: extractMarkdownSummary(path.join(rulesDir, f)) });
+      }
+    } catch {}
+  }
+
+  const workspaceSkills = [];
+  const skillsDir = path.join(resolvedRoot, '.agents', 'skills');
+  if (fsSync.existsSync(skillsDir)) {
+    try {
+      for (const d of fsSync.readdirSync(skillsDir, { withFileTypes: true }).filter(x => x.isDirectory()).map(x => x.name).sort()) {
+        const skillMd = path.join(skillsDir, d, 'SKILL.md');
+        if (fsSync.existsSync(skillMd)) {
+          workspaceSkills.push({ name: d, relPath: `.agents/skills/${d}/SKILL.md`, summary: extractMarkdownSummary(skillMd) });
+        }
+      }
+    } catch {}
+  }
+
+  const workspaceWorkflows = [];
+  const workflowsDir = path.join(resolvedRoot, '.agents', 'workflows');
+  if (fsSync.existsSync(workflowsDir)) {
+    try {
+      for (const f of fsSync.readdirSync(workflowsDir).filter(x => x.endsWith('.md')).sort()) {
+        workspaceWorkflows.push({ relPath: `.agents/workflows/${f}` });
+      }
+    } catch {}
+  }
+
+  const globalHooks = [];
+  const hooksJsonPath = path.join(geminiRoot, 'config', 'hooks.json');
+  if (fsSync.existsSync(hooksJsonPath)) {
+    try {
+      const hooksObj = JSON.parse(fsSync.readFileSync(hooksJsonPath, 'utf8'));
+      for (const [hookGroup, cfg] of Object.entries(hooksObj)) {
+        if (cfg && typeof cfg === 'object') {
+          const events = Object.keys(cfg).filter(k => k !== 'enabled');
+          globalHooks.push(`\`${hookGroup}\` (${cfg.enabled !== false ? 'enabled' : 'disabled'}: ${events.join(', ')})`);
+        }
+      }
+    } catch {}
+  }
+
+  let globalSettingsSummary = '';
+  const configJsonPath = path.join(geminiRoot, 'config', 'config.json');
+  if (fsSync.existsSync(configJsonPath)) {
+    try {
+      const us = JSON.parse(fsSync.readFileSync(configJsonPath, 'utf8')).userSettings || {};
+      const parts = [];
+      if (us.permissionPreset) parts.push(`Preset: \`${us.permissionPreset}\``);
+      if (us.autoExecutionPolicy) parts.push(`Execution: \`${us.autoExecutionPolicy}\``);
+      if (parts.length > 0) globalSettingsSummary = parts.join(' · ');
+    } catch {}
+  }
+
+  const lines = [
+    `# ${displayProject} — API Keys, MCP Configs & Customizations`,
+    '',
+    '> **Agent Lookup Directive**: Raw secret literals are stored in the local git-ignored `.env*` and `~/.gemini/` files indexed below (never committed in plaintext to Git). Read the referenced source file or invoke the corresponding MCP server when executing tasks.',
+    '',
+    '## 1. Environment Files, API Keys & Credentials Inventory'
+  ];
+
+  if (liveEnvFiles.length > 0) lines.push(`- **Active Local Env Files**: ${liveEnvFiles.map(f => `\`${f.relPath}\` (${f.count} keys)`).join(', ')}`);
+  if (templateEnvFiles.length > 0) lines.push(`- **Env Templates**: ${templateEnvFiles.map(f => `\`${f.relPath}\` (${f.count} keys)`).join(', ')}`);
+  if (hostTokens.length > 0) lines.push(`- **Host Token Files**: ${hostTokens.join(' · ')}`);
+  for (const pc of platformCredentials.slice(0, 6)) lines.push(pc);
+
+  const allEnvKeys = Array.from(allEnvKeysMap.values());
+  if (allEnvKeys.length > 0) {
+    lines.push('', '### Key & Environment Variable Registry');
+    const prioritized = [...allEnvKeys].sort((a, b) => (b.liveSummary ? 1 : 0) - (a.liveSummary ? 1 : 0));
+    const maxDetailed = 18;
+    for (const item of prioritized.slice(0, maxDetailed)) {
+      const status = item.liveSummary ? `✅ Live (${item.liveSummary})` : `📋 Template (${item.templateSummary || 'defined'})`;
+      lines.push(`- **\`${item.key}\`**: ${status} — in ${item.sources.map(s => `\`${s}\``).join(', ')}`);
+    }
+    if (prioritized.length > maxDetailed) {
+      lines.push(`- **Additional Env Keys (${prioritized.length - maxDetailed})**: ${prioritized.slice(maxDetailed).map(i => `\`${i.key}\``).join(', ')}`);
+    }
+  } else if (liveEnvFiles.length === 0 && templateEnvFiles.length === 0) {
+    lines.push('- **Workspace `.env` Files**: None detected (uses host environment & `~/.gemini/config/mcp_config.json`).');
+  }
+
+  lines.push('', '## 2. Active MCP Servers (`~/.gemini/config/mcp_config.json`)');
+  if (mcpServers.length > 0) {
+    lines.push('| MCP Server | Bridge / Package | Tools | Auth & Credential Source |', '| :--- | :--- | :---: | :--- |');
+    for (const s of mcpServers.slice(0, 14)) {
+      lines.push(`| **\`${s.name}\`** | ${s.bridgeSummary} | ${s.toolCount || '—'} | ${s.authSummary} |`);
+    }
+  } else {
+    lines.push('- No MCP servers detected in `~/.gemini/config/mcp_config.json` or `.mcp.json`.');
+  }
+
+  lines.push('', '## 3. Antigravity Customizations (Rules, Skills, Hooks & Policies)', '- **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`');
+  if (globalSettingsSummary) lines.push(`- **Global Agent Policy (\`~/.gemini/config/config.json\`)**: ${globalSettingsSummary}`);
+  if (globalHooks.length > 0) lines.push(`- **Global Lifecycle Hooks (\`~/.gemini/config/hooks.json\`)**: ${globalHooks.join(', ')}`);
+  if (workspaceRules.length > 0) {
+    lines.push(`- **Workspace Rules (${workspaceRules.length})**:`);
+    for (const r of workspaceRules.slice(0, 10)) lines.push(`  - \`${r.relPath}\`: ${r.summary}`);
+  }
+  if (workspaceSkills.length > 0) {
+    lines.push(`- **Workspace Skills (${workspaceSkills.length})**:`);
+    for (const sk of workspaceSkills.slice(0, 16)) lines.push(`  - \`/${sk.name}\` (\`${sk.relPath}\`): ${sk.summary}`);
+    if (workspaceSkills.length > 16) lines.push(`  - *Additional Skills*: ${workspaceSkills.slice(16).map(s => `\`/${s.name}\``).join(', ')}`);
+  }
+  if (workspaceWorkflows.length > 0) {
+    lines.push(`- **Workspace Workflows**: ${workspaceWorkflows.map(w => `\`${w.relPath}\``).join(', ')}`);
+  }
+  lines.push('');
+
+  await fs.writeFile(path.join(memoryBankDir, 'integrationsAndCustomizations.md'), lines.join('\n'), 'utf8');
+  log('  ✓ Updated memory-bank/integrationsAndCustomizations.md');
 }
 
 async function runSync() {
@@ -62,30 +417,7 @@ async function runSync() {
 
     log(`🔄 Auto-syncing memory context with commit [${lastCommitHash}] ${lastCommitMsg}...`);
 
-    // 3. Extract recent commits (last 10)
-    let recentCommits = [];
-    try {
-      const recentLog = execSync('git log -n 10 --pretty=format:"%h|%s"', {
-        cwd: targetDir,
-        stdio: 'pipe',
-      }).toString().trim();
-
-      const lines = recentLog.split('\n');
-      for (const line of lines) {
-        const [hash, msg] = line.split('|');
-        if (!msg) continue;
-        if (
-          msg.startsWith('docs(memory') ||
-          msg.startsWith('chore(memory') ||
-          msg.startsWith('chore(sync)')
-        ) {
-          continue;
-        }
-        recentCommits.push(`- **${msg}** (\`${hash}\`)`);
-      }
-    } catch {}
-
-    // 4. Update memory-bank/activeContext.md if present
+    // 3. Update memory-bank/activeContext.md if present
     const activeContextPath = path.join(memoryBankDir, 'activeContext.md');
     try {
       let content = await fs.readFile(activeContextPath, 'utf8');
@@ -110,7 +442,7 @@ async function runSync() {
       log('  ✓ Updated memory-bank/activeContext.md');
     } catch {}
 
-    // 5. Update memory-bank/progress.md if present
+    // 4. Update memory-bank/progress.md if present
     const progressPath = path.join(memoryBankDir, 'progress.md');
     try {
       let content = await fs.readFile(progressPath, 'utf8');
@@ -135,6 +467,11 @@ async function runSync() {
 
       await fs.writeFile(progressPath, content, 'utf8');
       log('  ✓ Updated memory-bank/progress.md');
+    } catch {}
+
+    // 5. Synchronize API keys, MCP configs & customizations
+    try {
+      await syncIntegrationsAndCustomizations(targetDir);
     } catch {}
 
     // 6. Run line budget audit to guarantee < 150 lines

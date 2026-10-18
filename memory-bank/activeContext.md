@@ -6,12 +6,12 @@
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank and Decoupled Zero-Token Backlog Engine directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 
 ## 2. Recent Technical Decisions & Accomplishments
-1. **feat(backlog): implement FEAT-113 automatic context file & UX/UI `.zip` bundle attachment and unpacking (`npm run backlog attach/unpack`, `backlog.html` `📎` upload + `/api/attach` bridge, and Phase 1 auto-unpacking in `/backlog-start`)**
-2. **fix(backlog): resolve BUG-106 stale `_npx` cache, workspace-dominance brain matching (`findTargetBrainDirs`), server-side card pre-rendering, and 4-layer Kickoff Prompt clipboard + `127.0.0.1:4199` native `pbcopy` bridge**
-3. **feat(isolation): implement dogfood isolation architecture (`package.json` `"files"` whitelist, `isSelfRepo` guard in `bin/cli.mjs`, and `.gitignore` ephemeral HTML policy)**
-4. **fix(backlog): make backlog engine, review artifacts, and skills fully generic upstream (00ba072)**
-5. **fix(backlog): fix findActiveBrainDir scoring/mtime and write docs/backlog.html alongside brain/backlog.html (4adb32c)**
-6. **feat(memory): refine update-memory template in cli to reflect passive observer and backlog render (2965ee7)**
+1. **fix(customizations): resolve BUG-107 by auto-scraping and syncing API keys (`.env*`, `eas.json`, `.p8`, host tokens), MCP server configs (`~/.gemini/config/mcp_config.json`), and Antigravity customizations (`.agents/rules/*`, `.agents/skills/*`, hooks) into `memory-bank/integrationsAndCustomizations.md` on `init`/`upgrade`/`sync`**
+2. **feat(backlog): implement FEAT-113 automatic context file & UX/UI `.zip` bundle attachment and unpacking (`npm run backlog attach/unpack`, `backlog.html` `📎` upload + `/api/attach` bridge, and Phase 1 auto-unpacking in `/backlog-start`)**
+3. **fix(backlog): resolve BUG-106 stale `_npx` cache, workspace-dominance brain matching (`findTargetBrainDirs`), server-side card pre-rendering, and 4-layer Kickoff Prompt clipboard + `127.0.0.1:4199` native `pbcopy` bridge**
+4. **feat(isolation): implement dogfood isolation architecture (`package.json` `"files"` whitelist, `isSelfRepo` guard in `bin/cli.mjs`, and `.gitignore` ephemeral HTML policy)**
+5. **fix(backlog): make backlog engine, review artifacts, and skills fully generic upstream (00ba072)**
+6. **fix(backlog): fix findActiveBrainDir scoring/mtime and write docs/backlog.html alongside brain/backlog.html (4adb32c)**
 
 ## 3. Operational Context & Active Backlog
 - **Observer Status**: The Memory Bank acts strictly as a passive context listener and baseline reflector. Active ticket management and development execution are conducted in `docs/backlog.json` and `docs/BACKLOG.md`.

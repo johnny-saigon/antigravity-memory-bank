@@ -222,6 +222,20 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### BUG-107: Pull API Keys, Env Contracts, MCP Server Configs & Customizations into Memory Bank on Init/Upgrade/Sync
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `lib/customizations-scraper.mjs`, `bin/cli.mjs`, `scripts/sync-memory-context.mjs`, `templates/memory-bank/integrationsAndCustomizations.md.tpl`, `templates/AGENTS.md.tpl`, `skills/start/SKILL.md`
+- **Description:** API keys (.env*, eas.json, credentials/*.p8, host token files), MCP server configs (~/.gemini/config/mcp_config.json, .mcp.json), and Antigravity customizations (.agents/rules/*, .agents/skills/*, .agents/workflows/*, ~/.gemini/config/hooks.json, ~/.gemini/config/config.json) were not pulled into memory-bank during init, upgrade, or sync. Additionally, bin/cli.mjs ignored positional directory arguments.
+- **Technical Specification:**
+  Create lib/customizations-scraper.mjs and embed standalone sync in scripts/sync-memory-context.mjs to generate memory-bank/integrationsAndCustomizations.md (<150 lines, masking raw secret literals while preserving key names, file paths, non-secret IDs, MCP tools, rules, skills, and hooks), wire into init/upgrade/sync in bin/cli.mjs, support positional targetDir, and redeploy across all installed instances.
+- **Acceptance Criteria:**
+  - [x] Automatically indexes all .env* keys, eas.json credentials, host tokens, MCP servers, rules, skills, and hooks into memory-bank/integrationsAndCustomizations.md.
+  - [x] Never commits raw secret literals to Git while giving agents 100% visibility into key names and file paths.
+  - [x] bin/cli.mjs supports positional target directory and upgrades all installed repositories cleanly under <150 lines.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

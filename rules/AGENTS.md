@@ -20,6 +20,7 @@ This project operates within the **Three-Tier Memory Hierarchy**:
 - **UX Brief, Tokens & Screen Flows**: `memory-bank/productContext.md`
 - **Architecture, Schemas & Pipelines**: `memory-bank/systemPatterns.md`
 - **Host Boundaries & Port Allocations**: `memory-bank/infrastructureInvariants.md`
+- **API Keys, MCP Servers & Customizations**: `memory-bank/integrationsAndCustomizations.md`
 - **Active Sprint & Live Deployments**: `memory-bank/activeContext.md`
 - **Acceptance Checklist & Test Matrix**: `memory-bank/progress.md`
 - **Workflows**: `@[/start](.agents/skills/start/SKILL.md)` · `@[/backlog-start](.agents/skills/backlog-start/SKILL.md)` · `@[/update-memory](.agents/skills/update-memory/SKILL.md)`

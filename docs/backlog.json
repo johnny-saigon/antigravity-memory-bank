@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-18T11:22:42.373Z",
+  "lastUpdated": "2026-10-18T12:20:55.797Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -349,6 +349,29 @@
       "spec": "Automatically detect, copy, and unpack attached files (such as UX/UI .zip exports containing DESIGN.md, tokens.json, HTML/Tailwind screens, and mockups) via CLI, Review pane UI, or inline /backlog-start prompts.",
       "acceptanceCriteria": [],
       "completedAt": "2026-10-18T11:19:10.760Z"
+    },
+    {
+      "id": "BUG-107",
+      "type": "bug",
+      "title": "Pull API Keys, Env Contracts, MCP Server Configs & Customizations into Memory Bank on Init/Upgrade/Sync",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "lib/customizations-scraper.mjs",
+        "bin/cli.mjs",
+        "scripts/sync-memory-context.mjs",
+        "templates/memory-bank/integrationsAndCustomizations.md.tpl",
+        "templates/AGENTS.md.tpl",
+        "skills/start/SKILL.md"
+      ],
+      "description": "API keys (.env*, eas.json, credentials/*.p8, host token files), MCP server configs (~/.gemini/config/mcp_config.json, .mcp.json), and Antigravity customizations (.agents/rules/*, .agents/skills/*, .agents/workflows/*, ~/.gemini/config/hooks.json, ~/.gemini/config/config.json) were not pulled into memory-bank during init, upgrade, or sync. Additionally, bin/cli.mjs ignored positional directory arguments.",
+      "spec": "Create lib/customizations-scraper.mjs and embed standalone sync in scripts/sync-memory-context.mjs to generate memory-bank/integrationsAndCustomizations.md (<150 lines, masking raw secret literals while preserving key names, file paths, non-secret IDs, MCP tools, rules, skills, and hooks), wire into init/upgrade/sync in bin/cli.mjs, support positional targetDir, and redeploy across all installed instances.",
+      "acceptanceCriteria": [
+        "Automatically indexes all .env* keys, eas.json credentials, host tokens, MCP servers, rules, skills, and hooks into memory-bank/integrationsAndCustomizations.md.",
+        "Never commits raw secret literals to Git while giving agents 100% visibility into key names and file paths.",
+        "bin/cli.mjs supports positional target directory and upgrades all installed repositories cleanly under <150 lines."
+      ],
+      "completedAt": "2026-10-18T12:20:55.753Z"
     }
   ],
   "milestones": [
