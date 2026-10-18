@@ -22,6 +22,8 @@
 | **`StitchMCP`** | `npx mcp-remote` (`https://stitch.googleapis.com/mcp`) | 15 | Header `X-Goog-Api-Key` (configured) |
 | **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 9 | `ASC_KEY_ID`=`Y9V6TK5R8A`, `ASC_ISSUER_ID`=`c06bde3f-875e-492e-a1fc-235a6f305e3e`, `ASC_PRIVATE_KEY_PATH` -> `credentials/AuthKey_Y9V6TK5R8A.p8` |
 | **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | `META_CREDENTIALS_PATH` -> `~/.meta_credentials.json` |
+| **`azure-mcp`** | `npx @azure/mcp@latest` | 69 | Default / CLI auth |
+| **`entra`** | `~/.gemini/antigravity/bin/entra_mcp.cjs` | 4 | `ENTRA_CREDENTIALS_PATH` -> `~/.entra_credentials.json` |
 
 ## 4. Antigravity Customizations & Lifecycle Hooks
 - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`
