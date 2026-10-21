@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(skills): add Mandatory Dual-Test Invariant for bug fixes to backlog-start skill** (`473b9f6`)
 - [x] **feat(organize): implement FEAT-117 AI-native repository & root reorganization engine** (`d8f933d`)
 - [x] **fix(customizations): ensure <24KB rule shard balance and pre-auth mandate across all repos [skip ci]** (`611658d`)
 - [x] **feat(customizations): verify and store pre-authenticated MCP & customization state to prevent redundant access prompts [skip ci]** (`825487f`)
