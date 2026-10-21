@@ -367,7 +367,27 @@ Full documentation is available in [`docs/BACKLOG_GUIDE.md`](templates/docs/BACK
 
 ---
 
-## 🔒 5. Dogfooding & Upstream Package Isolation Architecture
+## 📐 5. Structured Planning Mode (`Explore → Plan → Execute`) & 3-Artifact Lifecycle
+
+Every project initialized (`init`) or updated (`upgrade`) with `antigravity-memory-bank` automatically installs **Antigravity Planning Mode** prerequisites and correlates the **3-Artifact Planning Lifecycle** directly with `docs/backlog.json` and `memory-bank/*.md`:
+
+1. **`task.md` (`docs/planning/task.md` & `<brainDir>/task.md`)**: Live 4-group checklist (**Context Discovery & Baseline**, **Active Sprint Execution**, **Queued Backlog**, and **Completed Tasks**) correlated 1-to-1 with `docs/backlog.json`.
+2. **`implementation_plan.md` (`docs/planning/implementation_plan.md` & `<brainDir>/implementation_plan.md`)**: Formal 4-section architectural blueprint (**1. Goal Description**, **2. User Review Required** with `IMPORTANT`/`WARNING` alerts, **3. Proposed Changes** marked `[NEW]`/`[MODIFY]`/`[DELETE]`, and **4. Verification Plan** with concrete terminal commands).
+3. **`walkthrough.md` (`docs/planning/walkthrough.md` & `<brainDir>/walkthrough.md`)**: Cumulative verification proof and execution summary of completed tickets and test matrices.
+
+For already-advanced projects, `init` and `upgrade` automatically pre-populate all 3 artifacts with existing project architecture, active sprint tickets, and historical accomplishments so the project immediately follows the unified structured blueprint.
+
+```bash
+# Synchronize or focus Planning Mode artifacts on specific ticket(s) (0 tokens):
+npm run backlog:plan
+npm run backlog plan FEAT-101
+```
+
+In Antigravity chat, trigger structured architectural planning via `/backlog-plan <ID>` (or click **`📐 Plan`** on any ticket card in `backlog.html`). Full documentation is available in [`docs/PLANNING_GUIDE.md`](templates/docs/PLANNING_GUIDE.md).
+
+---
+
+## 🔒 6. Dogfooding & Upstream Package Isolation Architecture
 
 `antigravity-memory-bank` dogfoods its own **Three-Tier Memory Bank** (`memory-bank/*.md`, `AGENTS.md`, `.agents/`) and **Decoupled Zero-Token Backlog Engine** (`docs/backlog.json`, `docs/BACKLOG.md`) directly inside this repository while guaranteeing **zero interference** with clean installations in downstream projects:
 
@@ -384,13 +404,14 @@ Full documentation is available in [`docs/BACKLOG_GUIDE.md`](templates/docs/BACK
 
 ---
 
-## 🛠️ 6. Repository Scripts
+## 🛠️ 7. Repository Scripts
 
 | Script | Command | Description |
 | :--- | :--- | :--- |
 | **Backlog Board** | `npm run backlog` | Lists tasks and provides zero-token backlog CLI controls |
 | **List Backlog** | `npm run backlog:list` | Displays backlog with status icons and priority tags |
 | **Add Task** | `npm run backlog:add "<title>"` | Captures a task offline into docs/backlog.json (0 tokens) |
+| **Plan Task** | `npm run backlog:plan [<id>]` | Generates/syncs 3-artifact Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md`) |
 | **Start Task** | `npm run backlog:start <id>` | Marks task in-progress and outputs 1-line kickoff prompt |
 | **Complete Task** | `npm run backlog:done <id>` | Marks task completed and refreshes Review pane board |
 | **Render Board** | `npm run backlog:render` | Refreshes interactive Review pane HTML & MD artifacts |

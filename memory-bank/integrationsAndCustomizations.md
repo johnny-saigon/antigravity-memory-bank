@@ -32,10 +32,12 @@
 - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`
 - **Global Agent Policy (`~/.gemini/config/config.json`)**: Preset: `AGENT_PERMISSION_PRESET_TURBO` · Execution: `CASCADE_COMMANDS_AUTO_EXECUTION_EAGER`
 - **On-the-Fly Lifecycle Hooks**: Workspace `.agents/hooks.json`: `antigravity-memory-bank` (enabled: SessionStart, PostToolUse, Stop) · Git `.git/hooks/post-commit`: auto-sync enabled · Global `~/.gemini/config/hooks.json`: `antigravity-remote-bridge` (enabled: PreToolUse, PostToolUse, Stop)
-- **Workspace Rules (2)**:
+- **Workspace Rules (3)**:
   - `.agents/rules/infra.md`: Tier 2: Shared Cluster & Infrastructure Guardrails
+  - `.agents/rules/memory-context.md`: antigravity-memory-bank — Extended Memory Bank Context (Auto-Partitioned <24KB Rule Shard)
   - `.agents/rules/negative-constraints.md`: Tier 2: Negative Constraints & Execution Deny-List
-- **Workspace Skills (3)**:
+- **Workspace Skills (4)**:
+  - `/backlog-plan` (`.agents/skills/backlog-plan/SKILL.md`): Structured Antigravity Planning Mode workflow (/backlog-plan FEAT-101 or /backlog-plan) correlated with docs/b
   - `/backlog-start` (`.agents/skills/backlog-start/SKILL.md`): Automated, frugal execution of backlog tickets (e.g. /backlog-start FEAT-101 or /backlog-start FEAT-101, BUG-1
   - `/start` (`.agents/skills/start/SKILL.md`): Context bootstrap workflow run on session start (/start) to load the Memory Bank.
   - `/update-memory` (`.agents/skills/update-memory/SKILL.md`): Memory synchronization workflow triggered via /update-memory or after major milestones.

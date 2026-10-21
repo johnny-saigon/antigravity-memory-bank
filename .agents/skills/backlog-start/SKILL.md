@@ -32,12 +32,13 @@ Execute the following 3 phases autonomously:
        - **UX/UI `.zip` Bundles**: Read extracted design tokens (`DESIGN.md`, `tokens.json`, `tailwind.config.*`, CSS variables), HTML/JSX/TSX markup, and SVG/image assets. View reference screenshots using `view_file` so layout, spacing, typography, states, and color tokens are implemented with 100% visual and structural fidelity.
        - **Direct Attachments (Images, PDFs, Markdown/JSON Specs)**: Read or view each attached file via `view_file` to incorporate all visual and technical requirements.
    - Do **NOT** ask the user to re-explain the task; trust the specification in `docs/backlog.json` and the ingested attachments.
-3. **Activate Task Locally**:
-   - Mark the ticket(s) as `in_progress` in the local data store:
+3. **Activate Task Locally & Correlate Planning Artifacts (`task.md` & `implementation_plan.md`)**:
+   - Mark the ticket(s) as `in_progress` and synchronize the correlated 3-Artifact Planning Mode files (`task.md`, `implementation_plan.md`, `walkthrough.md`):
      ```bash
      npm run backlog status <TICKET_ID> in_progress
      ```
-   - This automatically refreshes the Antigravity Review pane Kanban board (`backlog.html`).
+   - If an approved `implementation_plan.md` exists in `<brainDir>/implementation_plan.md` or `docs/planning/implementation_plan.md`, ingest its **Proposed Changes**, **User Review Required** notes, and **Verification Plan** as the authoritative blueprint.
+   - This automatically refreshes the Antigravity Review pane Kanban board (`backlog.html`) and marks `<TICKET_ID>` as `[/]` in `task.md`.
 4. **Output Activation Banner**:
    - Output a brief acknowledgment:
      - 🚀 **Backlog Sprint Active**: `[TICKET_ID]: Title`
@@ -74,13 +75,13 @@ Execute the following 3 phases autonomously:
 
 ## Phase 3: Automated Dual-Sync, Git Push & Work Recap
 
-1. **Complete Local Backlog (Only After Live Verification Passes)**:
+1. **Complete Local Backlog & Synchronize `task.md` / `walkthrough.md` (Only After Live Verification Passes)**:
    - **Guard**: For integration/OAuth/credential tickets, verify Phase 2 Rule 4 is satisfied (live server credentials configured and provider HTTP requests passing) before running `backlog done`. If external credentials are still pending, keep the ticket in `in_progress` and skip `backlog done`.
    - Mark the ticket(s) as completed:
      ```bash
      npm run backlog done <TICKET_ID>
      ```
-   - This automatically updates `docs/backlog.json` and project migration boards, and re-renders the Review pane Kanban board.
+   - This automatically updates `docs/backlog.json`, project migration boards, the Review pane Kanban board (`backlog.html`), and the correlated Planning Mode artifacts (`task.md` checked off `[x]`, `implementation_plan.md`, and `walkthrough.md` verification summary).
 2. **Update Passive Memory Bank**:
    - In `memory-bank/progress.md`, record the completed ticket and update test counts.
    - In `memory-bank/activeContext.md`, add a bullet under accomplishments summarizing the implementation.

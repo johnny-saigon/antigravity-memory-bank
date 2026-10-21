@@ -393,8 +393,8 @@ async function uninstallMemory(targetDir, opts, detected) {
     console.log('  ✓ Removed memory-bank/');
   } catch {}
 
-  // 3. Remove skills: start, update-memory, and backlog-start
-  const skillsToRemove = ['start', 'update-memory', 'backlog-start'];
+  // 3. Remove skills: start, update-memory, backlog-start, and backlog-plan
+  const skillsToRemove = ['start', 'update-memory', 'backlog-start', 'backlog-plan'];
   for (const s of skillsToRemove) {
     try {
       await fs.rm(path.join(targetDir, '.agents/skills', s), { recursive: true, force: true });
@@ -624,12 +624,17 @@ async function installSyncAndHooks(targetDir, detected) {
     console.log('  ↷ Preserved upstream scripts/backlog.mjs (self-repository guard)');
   }
 
-  // 4. Install docs/BACKLOG_GUIDE.md
+  // 4. Install docs/BACKLOG_GUIDE.md and docs/PLANNING_GUIDE.md
   const guideSrc = path.join(pkgRoot, 'templates/docs/BACKLOG_GUIDE.md');
   const guideDest = path.join(targetDir, 'docs/BACKLOG_GUIDE.md');
   await fs.mkdir(path.dirname(guideDest), { recursive: true });
   await fs.copyFile(guideSrc, guideDest);
   console.log('  ✓ Installed docs/BACKLOG_GUIDE.md (decoupled backlog guide)');
+
+  const planGuideSrc = path.join(pkgRoot, 'templates/docs/PLANNING_GUIDE.md');
+  const planGuideDest = path.join(targetDir, 'docs/PLANNING_GUIDE.md');
+  await fs.copyFile(planGuideSrc, planGuideDest);
+  console.log('  ✓ Installed docs/PLANNING_GUIDE.md (3-artifact planning mode guide)');
 
   // 5. Install docs/backlog.json if not present
   const backlogJsonDest = path.join(targetDir, 'docs/backlog.json');
@@ -646,12 +651,18 @@ async function installSyncAndHooks(targetDir, detected) {
     console.log('  ✓ Created docs/backlog.json (local task store)');
   }
 
-  // 6. Install .agents/skills/backlog-start/SKILL.md
+  // 6. Install .agents/skills/backlog-start/SKILL.md and .agents/skills/backlog-plan/SKILL.md
   const backlogSkillSrc = path.join(pkgRoot, 'skills/backlog-start/SKILL.md');
   const backlogSkillDest = path.join(targetDir, '.agents/skills/backlog-start/SKILL.md');
   await fs.mkdir(path.dirname(backlogSkillDest), { recursive: true });
   await fs.copyFile(backlogSkillSrc, backlogSkillDest);
   console.log('  ✓ Installed skill: backlog-start (/backlog-start)');
+
+  const backlogPlanSkillSrc = path.join(pkgRoot, 'skills/backlog-plan/SKILL.md');
+  const backlogPlanSkillDest = path.join(targetDir, '.agents/skills/backlog-plan/SKILL.md');
+  await fs.mkdir(path.dirname(backlogPlanSkillDest), { recursive: true });
+  await fs.copyFile(backlogPlanSkillSrc, backlogPlanSkillDest);
+  console.log('  ✓ Installed skill: backlog-plan (/backlog-plan)');
 
   // 7. Update package.json scripts with lint, sync, upgrade, export, uninstall, and backlog commands
   const pkgPath = path.join(targetDir, 'package.json');
@@ -708,6 +719,10 @@ async function installSyncAndHooks(targetDir, detected) {
     }
     if (!pkg.scripts['backlog:unpack']) {
       pkg.scripts['backlog:unpack'] = 'node scripts/backlog.mjs unpack';
+      pkgUpdated = true;
+    }
+    if (!pkg.scripts['backlog:plan']) {
+      pkg.scripts['backlog:plan'] = 'node scripts/backlog.mjs plan';
       pkgUpdated = true;
     }
     if (!pkg.scripts['backlog:start']) {
@@ -900,6 +915,7 @@ async function initMemory(targetDir, opts, detected) {
     await copySkill('start');
     await copySkill('update-memory');
     await copySkill('backlog-start');
+    await copySkill('backlog-plan');
   } else {
     await processTemplate('AGENTS.md.tpl', 'AGENTS.md');
     await processTemplate('rules/infra.md.tpl', '.agents/rules/infra.md');
@@ -914,6 +930,7 @@ async function initMemory(targetDir, opts, detected) {
     await copySkill('start');
     await copySkill('update-memory');
     await copySkill('backlog-start');
+    await copySkill('backlog-plan');
 
     const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
     const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');
@@ -1081,6 +1098,9 @@ Immediately after closing the previous session, initialize the new working cycle
       if (!modifiedAgents.includes('Strict End-to-End Verification Before Closure')) {
         body += `\n99. **Strict End-to-End Verification Before Closure**: NEVER mark any ticket involving third-party integrations, OAuth providers, or external credentials as \`done\` until live credentials are configured on the server and a real end-to-end integration test passes. If credentials or external setup are pending, the ticket MUST remain \`in_progress\`.`;
       }
+      if (!modifiedAgents.includes('Structured Planning Mode')) {
+        body += `\n99. **Structured Planning Mode (\`Explore → Plan → Execute\`) & 3-Artifact Backlog Correlation**: When Planning Mode is triggered (\`/plan\`, \`Cmd/Ctrl + .\`, \`Shift + Tab\`, or \`[/backlog-plan](.agents/skills/backlog-plan/SKILL.md)\`), operate through the correlated **3-Artifact Lifecycle** in \`<brainDir>/\` and \`docs/planning/\`: (1) \`task.md\` (live checklist grouped into Discovery, Active Sprint, Queued & Completed tasks synced 1-to-1 with \`docs/backlog.json\`), (2) \`implementation_plan.md\` (4-section blueprint: **Goal Description**, **User Review Required** with \`IMPORTANT\`/\`WARNING\` alerts, **Proposed Changes** marked \`[NEW]\`/\`[MODIFY]\`/\`[DELETE]\`, and concrete **Verification Plan** commands), and (3) \`walkthrough.md\` (post-execution summary & verification proof).`;
+      }
 
       // Normalize sequential numbering (1, 2, 3...) across top-level mandate items
       let seq = 0;
@@ -1090,11 +1110,13 @@ Immediately after closing the previous session, initialize the new working cycle
     }
 
     if (!modifiedAgents.includes('/backlog-start')) {
-      modifiedAgents = modifiedAgents.replace(/`(?:\@)?\[\/update-memory\]\([^)]+\)`/, '`[/backlog-start](.agents/skills/backlog-start/SKILL.md)` · `[/update-memory](.agents/skills/update-memory/SKILL.md)`');
+      modifiedAgents = modifiedAgents.replace(/`(?:\@)?\[\/update-memory\]\([^)]+\)`/, '`[/backlog-plan](.agents/skills/backlog-plan/SKILL.md)` · `[/backlog-start](.agents/skills/backlog-start/SKILL.md)` · `[/update-memory](.agents/skills/update-memory/SKILL.md)`');
+    } else if (!modifiedAgents.includes('/backlog-plan')) {
+      modifiedAgents = modifiedAgents.replace(/`(?:\@)?\[\/backlog-start\]\([^)]+\)`/, '`[/backlog-plan](.agents/skills/backlog-plan/SKILL.md)` · `[/backlog-start](.agents/skills/backlog-start/SKILL.md)`');
     }
 
     await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
-    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration, decoupled backlog, and strict E2E verification mandates');
+    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration, decoupled backlog, planning mode, and strict E2E verification mandates');
   }
 
   // 5. Install scripts/lint-memory.mjs

@@ -1,10 +1,11 @@
 {
   "name": "memory-bank",
   "displayName": "Antigravity Memory Bank",
-  "version": "1.0.0",
-  "description": "Three-Tier Memory Bank system with continuous session lifecycle, line budget enforcement (<150 lines), and cluster invariant guardrails.",
+  "version": "1.4.0",
+  "description": "Three-Tier Memory Bank system with Decoupled Zero-Token Backlog Engine, 3-Artifact Planning Mode, continuous session lifecycle, and <150-line budget enforcement.",
   "suggestedPrompts": [
     "/start",
+    "/backlog-plan",
     "/backlog-start",
     "/update-memory"
   ]

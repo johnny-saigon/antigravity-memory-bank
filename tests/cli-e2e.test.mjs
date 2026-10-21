@@ -216,12 +216,25 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'start', 'SKILL.md')), true);
     assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'update-memory', 'SKILL.md')), true);
     assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'backlog-start', 'SKILL.md')), true);
+    assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'backlog-plan', 'SKILL.md')), true);
 
-    // Verify backlog adapted from docs/BACKLOG.md and Review pane HTML rendered into hermetic brain dir
+    // Verify backlog adapted from docs/BACKLOG.md and Review pane HTML + 3 Planning Mode artifacts rendered
     const backlogData = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
     assert.ok(backlogData.tasks.some((t) => t.id === 'FEAT-201'), 'Expected FEAT-201 to be adapted into docs/backlog.json');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'backlog.html')), true);
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'planning', 'task.md')), true);
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md')), true);
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'planning', 'walkthrough.md')), true);
     assert.equal(fs.existsSync(path.join(mockBrainDir, 'backlog.html')), true);
+    assert.equal(fs.existsSync(path.join(mockBrainDir, 'task.md')), true);
+    assert.equal(fs.existsSync(path.join(mockBrainDir, 'implementation_plan.md')), true);
+    assert.equal(fs.existsSync(path.join(mockBrainDir, 'walkthrough.md')), true);
+
+    const implPlan = fs.readFileSync(path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md'), 'utf8');
+    assert.match(implPlan, /## 1\. Goal Description/);
+    assert.match(implPlan, /## 2\. User Review Required/);
+    assert.match(implPlan, /## 3\. Proposed Changes/);
+    assert.match(implPlan, /## 4\. Verification Plan/);
   });
 
   test('2. upgrade: 100% preserves custom memory-bank/*.md domain files while upgrading AGENTS.md and skills', () => {

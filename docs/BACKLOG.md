@@ -264,6 +264,20 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-116: Correlated 3-Artifact Antigravity Planning Mode (task.md, implementation_plan.md, walkthrough.md) & /backlog-plan Skill
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `skills/backlog-plan/SKILL.md`, `skills/backlog-start/SKILL.md`, `templates/docs/PLANNING_GUIDE.md`, `bin/cli.mjs`, `lib/ingestion-checklist.mjs`
+- **Description:** Integrate Antigravity Planning Mode (Explore -> Plan -> Review -> Execute) across all initialized and upgraded projects, correlating the 3-Artifact Lifecycle (task.md, implementation_plan.md, walkthrough.md) directly with docs/backlog.json and memory-bank/*.md and pre-populating artifacts for existing/advanced projects.
+- **Technical Specification:**
+  Generate and synchronize task.md (4 task groups), implementation_plan.md (Goal Description, User Review Required, Proposed Changes, Verification Plan), and walkthrough.md in both docs/planning/ and session brain directories; add npm run backlog plan [ID], /api/plan bridge endpoint, and Plan button in backlog.html; install /backlog-plan skill and docs/PLANNING_GUIDE.md on init/upgrade; verify in Check #8 of lib/ingestion-checklist.mjs.
+- **Acceptance Criteria:**
+  - [x] Automatically populates and syncs task.md, implementation_plan.md, and walkthrough.md in docs/planning/ and <brainDir>/ from existing backlog and memory-bank context.
+  - [x] Installs /backlog-plan skill (.agents/skills/backlog-plan/SKILL.md) and docs/PLANNING_GUIDE.md on init and upgrade.
+  - [x] Correlates backlog.html cards (📐 Plan button + /api/plan bridge) and /backlog-start with the 3 Planning Mode artifacts.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

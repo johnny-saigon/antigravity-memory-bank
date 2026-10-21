@@ -31,6 +31,7 @@
     "backlog:add": "node scripts/backlog.mjs add",
     "backlog:attach": "node scripts/backlog.mjs attach",
     "backlog:unpack": "node scripts/backlog.mjs unpack",
+    "backlog:plan": "node scripts/backlog.mjs plan",
     "backlog:start": "node scripts/backlog.mjs start",
     "backlog:done": "node scripts/backlog.mjs done",
     "backlog:render": "node scripts/backlog.mjs render",

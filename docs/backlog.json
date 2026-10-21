@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-21T11:15:50.978Z",
+  "lastUpdated": "2026-10-21T11:31:36.818Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -420,6 +420,30 @@
         "bin/cli.mjs upgradeMemory injects the mandate into all downstream AGENTS.md formats and passes 10/10 on the Mandatory Baseline Ingestion Checklist across all 5 repositories."
       ],
       "completedAt": "2026-10-18T20:45:00.000Z"
+    },
+    {
+      "id": "FEAT-116",
+      "type": "feature",
+      "title": "Correlated 3-Artifact Antigravity Planning Mode (task.md, implementation_plan.md, walkthrough.md) & /backlog-plan Skill",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "skills/backlog-plan/SKILL.md",
+        "skills/backlog-start/SKILL.md",
+        "templates/docs/PLANNING_GUIDE.md",
+        "bin/cli.mjs",
+        "lib/ingestion-checklist.mjs"
+      ],
+      "description": "Integrate Antigravity Planning Mode (Explore -> Plan -> Review -> Execute) across all initialized and upgraded projects, correlating the 3-Artifact Lifecycle (task.md, implementation_plan.md, walkthrough.md) directly with docs/backlog.json and memory-bank/*.md and pre-populating artifacts for existing/advanced projects.",
+      "spec": "Generate and synchronize task.md (4 task groups), implementation_plan.md (Goal Description, User Review Required, Proposed Changes, Verification Plan), and walkthrough.md in both docs/planning/ and session brain directories; add npm run backlog plan [ID], /api/plan bridge endpoint, and Plan button in backlog.html; install /backlog-plan skill and docs/PLANNING_GUIDE.md on init/upgrade; verify in Check #8 of lib/ingestion-checklist.mjs.",
+      "acceptanceCriteria": [
+        "Automatically populates and syncs task.md, implementation_plan.md, and walkthrough.md in docs/planning/ and <brainDir>/ from existing backlog and memory-bank context.",
+        "Installs /backlog-plan skill (.agents/skills/backlog-plan/SKILL.md) and docs/PLANNING_GUIDE.md on init and upgrade.",
+        "Correlates backlog.html cards (📐 Plan button + /api/plan bridge) and /backlog-start with the 3 Planning Mode artifacts."
+      ],
+      "completedAt": "2026-10-21T11:30:00.000Z"
     }
   ],
   "milestones": [

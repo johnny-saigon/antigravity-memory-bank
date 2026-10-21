@@ -52,7 +52,9 @@ for (const dir of targetDirs) {
 const parityPairs = [
   ['scripts/backlog.mjs', 'templates/scripts/backlog.mjs'],
   ['scripts/sync-memory-context.mjs', 'templates/scripts/sync-memory-context.mjs'],
-  ['skills/backlog-start/SKILL.md', '.agents/skills/backlog-start/SKILL.md']
+  ['skills/backlog-start/SKILL.md', '.agents/skills/backlog-start/SKILL.md'],
+  ['skills/backlog-plan/SKILL.md', '.agents/skills/backlog-plan/SKILL.md'],
+  ['docs/PLANNING_GUIDE.md', 'templates/docs/PLANNING_GUIDE.md']
 ];
 
 let parityChecked = 0;
