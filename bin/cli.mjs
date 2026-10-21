@@ -1121,7 +1121,7 @@ Immediately after closing the previous session, initialize the new working cycle
       if (!modifiedAgents.includes('Passive Observer Invariant')) {
         body += `\n99. **Passive Observer Invariant**: The Memory Bank (\`memory-bank/*.md\`) is strictly a read-only context baseline and passive observer. All active feature tickets, development tasks, sprint boards, and bug fix records are maintained in \`docs/\` (\`docs/backlog.json\`, \`docs/MIGRATION_BOARD.md\` or \`docs/BACKLOG.md\`). Never conduct active operational ticket tracking inside \`memory-bank/*.md\`.`;
       }
-      if (!modifiedAgents.includes('Decoupled Backlog &')) {
+      if (!modifiedAgents.includes('Decoupled Backlog')) {
         body += `\n99. **Decoupled Backlog & Context-Frugal Execution**: Capture tasks and attach context files (such as UX/UI \`.zip\` bundles, mockups, or specs) offline via \`npm run backlog add\` / \`npm run backlog attach\` or directly in the Review pane (\`📎\`) with zero token cost. Execute tasks via \`[/backlog-start](.agents/skills/backlog-start/SKILL.md)\` (e.g. \`/backlog-start FEAT-101\` or \`/backlog-start FEAT-101 @ux-ui.zip\`), which loads specs from \`docs/backlog.json\`, automatically unpacks and ingests any attached \`.zip\`/context files into \`docs/attachments/<ID>/extracted/\`, verifies tests, and automatically updates the local backlog, Review pane board, and Memory Bank with a work recap. **Frugal means eliminating redundant context re-ingestion and chat overhead—never sacrificing code quality, visual UX/UI fidelity, root-cause depth, or verification rigor during execution.**`;
       }
       if (!modifiedAgents.includes('Strict End-to-End Verification Before Closure')) {
