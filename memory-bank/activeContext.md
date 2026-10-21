@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `511cdad` — "feat(planning): add correlated 3-artifact Planning Mode (task.md, implementation_plan.md, walkthrough.md) and /backlog-plan skill (FEAT-116) [skip ci]" (2026-10-21)
+- **Last Synchronized Commit**: `22472ee` — "docs(planning): expand installation and user guide for correlated 3-artifact Planning Mode [skip ci]" (2026-10-21)
 - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank, Decoupled Zero-Token Backlog Engine, and Correlated 3-Artifact Planning Mode directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 
