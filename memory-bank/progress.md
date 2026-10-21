@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(frugality): enforce Strict Credit & Token Frugality mandate across init and upgrade** (`d0ea8fb`)
 - [x] **fix(cli): untrack docs/backlog.html from git index during commit [skip ci]** (`04218b1`)
 - [x] **feat(skills): add Mandatory Dual-Test Invariant for bug fixes to backlog-start skill** (`473b9f6`)
 - [x] **feat(organize): implement FEAT-117 AI-native repository & root reorganization engine** (`d8f933d`)
