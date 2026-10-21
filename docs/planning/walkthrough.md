@@ -7,7 +7,7 @@
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
 - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
-- **Backlog Completion**: **23 / 23** tickets verified `DONE` (0 in progress, 0 queued).
+- **Backlog Completion**: **24 / 24** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
 - **feat(planning): implement FEAT-116 correlating Antigravity Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md` in `<brainDir>/` and `docs/planning/`) with `docs/backlog.json`, `/backlog-plan` skill, `backlog.html` `📐 Plan` actions, and automatic pre-population for advanced projects**
@@ -18,6 +18,10 @@
 - **feat(backlog): implement FEAT-113 automatic context file & UX/UI `.zip` bundle attachment and unpacking (`npm run backlog attach/unpack`, `backlog.html` `📎` upload + `/api/attach` bridge, and Phase 1 auto-unpacking in `/backlog-start`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
+### ✅ [FEAT-117]: AI-Native Repository & Root Reorganization Engine (organize) *(Verified 2026-10-21)*
+- **Summary**: Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.
+- **Verified Components**: [repo-organizer.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/repo-organizer.mjs), [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs), [ingestion-checklist.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/ingestion-checklist.mjs), [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs), [README.md](file:///Users/jbb/Documents/antigravity-memory-bank/README.md)
+
 ### ✅ [FEAT-116]: Correlated 3-Artifact Antigravity Planning Mode (task.md, implementation_plan.md, walkthrough.md) & /backlog-plan Skill *(Verified 2026-10-21)*
 - **Summary**: Integrate Antigravity Planning Mode (Explore -> Plan -> Review -> Execute) across all initialized and upgraded projects, correlating the 3-Artifact Lifecycle (task.md, implementation_plan.md, walkthrough.md) directly with docs/backlog.json and memory-bank/*.md and pre-populating artifacts for existing/advanced projects.
 - **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-start/SKILL.md), [PLANNING_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/templates/docs/PLANNING_GUIDE.md), [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs), [ingestion-checklist.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/ingestion-checklist.mjs)
@@ -161,7 +165,7 @@
 | :--- | :--- | :--- |
 | **Memory Bank Line Budget (`< 150 lines`)** | `npm run lint:memory` | ✅ Verified (`0` violations) |
 | **10-Point Baseline Ingestion Checklist** | `npx antigravity-memory-bank upgrade` | ✅ `10/10` Passed |
-| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (23/23 Done) |
+| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (24/24 Done) |
 | **Automated Verification Command** | `npm run lint:memory` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm test` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm run test:e2e` | ✅ Configured & Active |

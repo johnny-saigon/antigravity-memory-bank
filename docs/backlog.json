@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-21T12:04:15.268Z",
+  "lastUpdated": "2026-10-21T14:11:33.492Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -444,6 +444,25 @@
         "Correlates backlog.html cards (📐 Plan button + /api/plan bridge) and /backlog-start with the 3 Planning Mode artifacts."
       ],
       "completedAt": "2026-10-21T11:30:00.000Z"
+    },
+    {
+      "id": "FEAT-117",
+      "type": "feature",
+      "title": "AI-Native Repository & Root Reorganization Engine (organize)",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "lib/repo-organizer.mjs",
+        "bin/cli.mjs",
+        "lib/ingestion-checklist.mjs",
+        "tests/cli-e2e.test.mjs",
+        "README.md"
+      ],
+      "attachments": [],
+      "description": "Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.",
+      "spec": "Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.",
+      "acceptanceCriteria": [],
+      "completedAt": "2026-10-21T14:11:33.372Z"
     }
   ],
   "milestones": [

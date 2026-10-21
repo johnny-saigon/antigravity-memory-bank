@@ -1,6 +1,6 @@
 {
   "name": "antigravity-memory-bank",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Three-Tier Memory Bank brick and Antigravity plugin for autonomous agentic pair programming",
   "type": "module",
   "main": "./bin/cli.mjs",
@@ -23,6 +23,7 @@
     "test:e2e": "node --test tests/cli-e2e.test.mjs",
     "test": "node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs",
     "memory:sync": "node scripts/sync-memory-context.mjs",
+    "memory:organize": "node bin/cli.mjs organize",
     "memory:upgrade": "npx github:johnny-saigon/antigravity-memory-bank upgrade",
     "memory:export": "npx github:johnny-saigon/antigravity-memory-bank export",
     "memory:uninstall": "npx github:johnny-saigon/antigravity-memory-bank uninstall",

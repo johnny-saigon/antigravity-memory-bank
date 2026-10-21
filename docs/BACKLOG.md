@@ -278,6 +278,16 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-117: AI-Native Repository & Root Reorganization Engine (organize)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `lib/repo-organizer.mjs`, `bin/cli.mjs`, `lib/ingestion-checklist.mjs`, `tests/cli-e2e.test.mjs`, `README.md`
+- **Description:** Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.
+- **Technical Specification:**
+  Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

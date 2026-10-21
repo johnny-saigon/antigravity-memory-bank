@@ -13,3 +13,8 @@ docs/backlog.html
 docs/attachments/*/extracted/
 memory-backups/
 
+# Antigravity Memory Bank & AI-Native Ignores
+.env.local
+.env.*.local
+test-results/
+playwright-report/

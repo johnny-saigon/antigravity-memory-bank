@@ -519,7 +519,80 @@ Full documentation is available in [`docs/PLANNING_GUIDE.md`](templates/docs/PLA
 
 ---
 
-## 🔒 6. Dogfooding & Upstream Package Isolation Architecture
+## 🗂️ 6. AI-Native Repository Blueprint & Automatic Root Reorganization (`organize`)
+
+Modern software development with autonomous AI coding agents works best when the repository root is kept strictly limited to entrypoints (`AGENTS.md`, `README.md`, `package.json`, `.gitignore`, and compiler/framework configs), while passive memory, operational backlogs, planning artifacts, and living specifications each live in dedicated, predictable directories.
+
+Every time you run `init`, `upgrade`, or `organize`, `antigravity-memory-bank` automatically enforces this **Best-Practices AI-Native Repository Structure**—both as a fresh scaffold on a new project and as a non-destructive adapter on an existing codebase:
+
+```text
+<project-root>/
+├── AGENTS.md                        # Tier 3 AI Agent Entrypoint & Operational Mandates (<24KB expanded)
+├── README.md                        # Human & GitHub Repository Landing Page
+├── package.json                     # Lifecycle, Backlog, Planning & Memory CLI scripts
+├── .gitignore                       # Hardened AI-native ignore rules (ignores docs/backlog.html, memory-backups/, .env*, .DS_Store)
+├── .agents/                         # Antigravity IDE Customizations
+│   ├── hooks.json                   # Real-time SessionStart / PostToolUse / Stop auto-sync hooks
+│   ├── rules/                       # Tier 2 guardrails (infra.md, negative-constraints.md, <24KB memory shards)
+│   └── skills/                      # Slash commands (/start, /backlog-plan, /backlog-start, /update-memory)
+├── .github/workflows/               # CI/CD & Memory Bank line-budget enforcement (memory-bank-sync.yml)
+├── memory-bank/                     # Tier 3 Passive Context Baseline (<150 lines/file, 0 operational tickets)
+│   ├── projectbrief.md
+│   ├── productContext.md
+│   ├── systemPatterns.md
+│   ├── infrastructureInvariants.md
+│   ├── integrationsAndCustomizations.md
+│   ├── activeContext.md
+│   └── progress.md
+├── docs/                            # Operational Backlog, 3-Artifact Planning & Living Architecture/UX Specs
+│   ├── backlog.json                 # Single source of truth for sprint tickets
+│   ├── BACKLOG.md                   # Auto-rendered Markdown sprint board (or MIGRATION_BOARD.md)
+│   ├── BACKLOG_GUIDE.md             # Zero-token backlog usage guide
+│   ├── PLANNING_GUIDE.md            # Explore -> Plan -> Execute guide
+│   ├── planning/                    # Correlated 3-Artifact Planning Mode (task.md, implementation_plan.md, walkthrough.md)
+│   ├── attachments/                 # Ticket context bundles & extracted UX/UI mockups
+│   └── *.md                         # All living specs (UX_BRIEF.md, DESIGN.md, ARCHITECTURE.md, BRAND_BOOK.md, etc.)
+├── scripts/                         # Zero-dependency automation & ops scripts (backlog.mjs, lint-memory.mjs, sync-memory-context.mjs)
+├── src/ | apps/ | server/ | lib/    # Adaptive application source code (auto-detected archetype)
+└── tests/                           # Automated unit & E2E verification suites
+```
+
+### How It Works on Fresh Installs vs. Existing Projects
+
+1. **Adaptive Archetype Detection (`detectRepoArchetype`)**:
+   Automatically classifies the project into one of 5 archetypes:
+   - **`monorepo`** (`apps/*`, `packages/*`, or `workspaces` in `package.json`, e.g., `SnapCal`)
+   - **`fullstack-hybrid`** (`src/` + `server/`, e.g., `RemoveBackGround`, `Binaryday`)
+   - **`cli-library`** (`bin/` + `lib/`, e.g., `antigravity-memory-bank`)
+   - **`web-app`** (`src/`, `app/`, or `pages/`, e.g., `AntigravityRemote`)
+   - **`greenfield`** (fresh/empty project: automatically scaffolds `src/`, `tests/`, `docs/planning/`, `scripts/`, `memory-bank/`, `.agents/`, `.github/workflows/`, and a starter `README.md`)
+2. **Root Specification & Board Relocation (`*.md` at Root → `docs/`)**:
+   Any loose architecture, UX, design, or board markdown file sitting at the repository root (such as `UX_BRIEF.md`, `DESIGN.md`, `MIGRATION_BOARD.md`, `NATIVE_SHARE_SETUP.md`, `NATIVE_UI_SPEC.md`, `TESTING_AGENT_SCENARIOS.md`, `ARCHITECTURE.md`, `BRAND_BOOK.md`) is automatically moved into `docs/<FileName>` using `git mv` (preserving full Git commit blame and history).
+3. **Automatic Cross-Reference Link Rewriting**:
+   Scans `README.md`, `AGENTS.md`, `memory-bank/*.md`, `docs/*.md`, and `.agents/rules/*.md` and automatically rewrites relative and `file://` markdown links pointing to relocated root files (e.g., `[UX Brief](UX_BRIEF.md)` → `[UX Brief](docs/UX_BRIEF.md)`) so zero documentation links break.
+4. **Root Clutter & Redundant Stub Cleanup**:
+   Removes redundant 57-byte `CLAUDE.md` pointer stubs (`# See AGENTS.md`), orphaned `skills-lock.json` files, macOS `.DS_Store` files, and ephemeral `test-results/` or `playwright-report/` folders.
+5. **Hardened `.gitignore` & GitHub Index Hygiene**:
+   Ensures `.gitignore` contains canonical AI-native ignore rules (`node_modules/`, `.DS_Store`, `.env`, `.env.local`, `.env.*.local`, `docs/backlog.html`, `memory-backups/`, `test-results/`, `playwright-report/`) and runs `git rm --cached -f docs/backlog.html .DS_Store` so ephemeral files remain on disk for the Antigravity Review pane without polluting GitHub commits or `git status`.
+
+### Running the Organizer
+
+Reorganization runs **automatically** during `init` and `upgrade` (and is verified by Check `1/10` of the Mandatory Baseline Ingestion Checklist), or can be triggered standalone anytime:
+
+```bash
+# Preview proposed root relocations and link rewrites without modifying disk:
+npx github:johnny-saigon/antigravity-memory-bank organize --dry-run
+
+# Organize local repository and commit to Git:
+npx github:johnny-saigon/antigravity-memory-bank organize --commit
+
+# Or via package.json script:
+npm run memory:organize
+```
+
+---
+
+## 🔒 7. Dogfooding & Upstream Package Isolation Architecture
 
 `antigravity-memory-bank` dogfoods its own **Three-Tier Memory Bank** (`memory-bank/*.md`, `AGENTS.md`, `.agents/`) and **Decoupled Zero-Token Backlog Engine** (`docs/backlog.json`, `docs/BACKLOG.md`) directly inside this repository while guaranteeing **zero interference** with clean installations in downstream projects:
 
@@ -536,7 +609,7 @@ Full documentation is available in [`docs/PLANNING_GUIDE.md`](templates/docs/PLA
 
 ---
 
-## 🛠️ 7. Repository Scripts
+## 🛠️ 8. Repository Scripts
 
 | Script | Command | Description |
 | :--- | :--- | :--- |
@@ -549,7 +622,8 @@ Full documentation is available in [`docs/PLANNING_GUIDE.md`](templates/docs/PLA
 | **Render Board** | `npm run backlog:render` | Refreshes interactive Review pane HTML & MD artifacts |
 | **Lint Memory** | `npm run lint:memory` | Verifies all memory files adhere to the 150-line rule |
 | **Sync Context** | `npm run memory:sync` | Incrementally syncs latest git commits and fixes into memory |
-| **Upgrade Tooling** | `npm run memory:upgrade` | Non-destructively upgrades skills and linters from upstream |
+| **Organize Repo** | `npm run memory:organize` | Coherently organizes root entrypoints, `docs/`, `.gitignore`, and links |
+| **Upgrade Tooling** | `npm run memory:upgrade` | Non-destructively upgrades skills, organizer, and linters from upstream |
 | **Export Context** | `npm run memory:export` | Consolidates context into markdown and tar.gz backup |
 | **Uninstall** | `npm run memory:uninstall` | Exports context safely and cleans all memory files |
 

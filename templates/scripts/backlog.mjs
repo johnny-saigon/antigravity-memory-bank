@@ -19,9 +19,11 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_PORT = Number(process.env.BACKLOG_PORT || 4199);
 
 const BACKLOG_JSON_PATH = path.join(REPO_ROOT, 'docs', 'backlog.json');
-const MIGRATION_BOARD_MD_PATH = fs.existsSync(path.join(REPO_ROOT, 'docs', 'MIGRATION_BOARD.md'))
-  ? path.join(REPO_ROOT, 'docs', 'MIGRATION_BOARD.md')
-  : path.join(REPO_ROOT, 'docs', 'BACKLOG.md');
+const MIGRATION_BOARD_MD_PATH = fs.existsSync(path.join(REPO_ROOT, 'docs', 'BACKLOG.md'))
+  ? path.join(REPO_ROOT, 'docs', 'BACKLOG.md')
+  : (fs.existsSync(path.join(REPO_ROOT, 'docs', 'MIGRATION_BOARD.md'))
+      ? path.join(REPO_ROOT, 'docs', 'MIGRATION_BOARD.md')
+      : path.join(REPO_ROOT, 'docs', 'BACKLOG.md'));
 
 let projectName = path.basename(REPO_ROOT);
 try {
@@ -223,6 +225,9 @@ function saveBacklog(data, rootDir = REPO_ROOT) {
 }
 
 function getMigrationBoardPath(rootDir = REPO_ROOT) {
+  if (fs.existsSync(path.join(rootDir, 'docs', 'BACKLOG.md'))) {
+    return path.join(rootDir, 'docs', 'BACKLOG.md');
+  }
   return fs.existsSync(path.join(rootDir, 'docs', 'MIGRATION_BOARD.md'))
     ? path.join(rootDir, 'docs', 'MIGRATION_BOARD.md')
     : path.join(rootDir, 'docs', 'BACKLOG.md');

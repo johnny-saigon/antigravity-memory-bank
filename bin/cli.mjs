@@ -18,6 +18,7 @@ import { scrapeHistoricalContext } from '../lib/context-scraper.mjs';
 import { adaptExistingBacklog } from '../lib/backlog-adapter.mjs';
 import { syncCustomizationsToMemoryBank } from '../lib/customizations-scraper.mjs';
 import { runMandatoryIngestionChecklist } from '../lib/ingestion-checklist.mjs';
+import { organizeRepositoryStructure } from '../lib/repo-organizer.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +41,8 @@ function parseCliArgs(argv) {
     yes: false,
     commit: false,
     force: false,
+    dryRun: false,
+    noOrganize: false,
     noExport: false,
     exportDir: null,
     name: null,
@@ -65,8 +68,14 @@ function parseCliArgs(argv) {
       options.command = 'uninstall';
     } else if (a === 'upgrade' || a === 'update') {
       options.command = 'upgrade';
+    } else if (a === 'organize' || a === 'reorganize' || a === 'organise') {
+      options.command = 'organize';
     } else if (a === 'sync') {
       options.command = 'sync';
+    } else if (a === '--dry-run') {
+      options.dryRun = true;
+    } else if (a === '--no-organize') {
+      options.noOrganize = true;
     } else if ((a === '--dir' || a === '-d') && args[i + 1]) {
       options.targetDir = path.resolve(args[++i]);
     } else if (a === '--quiet' || a === '-q') {
@@ -117,15 +126,18 @@ function printHelp() {
 🧠 Antigravity Memory Bank CLI
 
 Commands:
-  init [options]         Bootstrap Memory Bank into project on the fly (default)
+  init [options]         Bootstrap Memory Bank & organize AI-native repo layout on the fly (default)
+  organize [options]     Coherently organize repository root, docs/, .gitignore, and AI-native structure
   sync [options]         Incrementally sync git history and accomplishments into context
-  upgrade [options]      Upgrade Memory Bank to v1.4 (adds zero-token backlog, adapts boards/docs, /backlog-start)
+  upgrade [options]      Upgrade Memory Bank to v1.5 (3-artifact planning mode, root organizer, zero-token backlog)
   export [options]       Export project memory & context to markdown and archive
   uninstall [options]    Cleanly uninstall Memory Bank (automatically exports context first)
 
 Options:
   -y, --yes, --non-interactive  Run without interactive prompts (headless mode)
   --commit                      Automatically git add and commit changes
+  --dry-run                     Preview repository reorganization without writing changes
+  --no-organize                 Skip root documentation & directory reorganization during init/upgrade
   --as-plugin                   Target .agents/plugins/memory-bank/ instead of root
   --export-dir <path>           Custom export/backup directory (default: ./memory-backups)
   --no-export                   Skip context export during deinstallation
@@ -477,8 +489,8 @@ async function uninstallMemory(targetDir, opts, detected) {
     const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
     if (pkg.scripts) {
       const keys = detected.isSelfRepo
-        ? ['memory:sync', 'memory:upgrade', 'memory:export', 'memory:uninstall']
-        : ['lint:memory', 'memory:sync', 'memory:upgrade', 'memory:export', 'memory:uninstall'];
+        ? ['memory:sync', 'memory:organize', 'memory:upgrade', 'memory:export', 'memory:uninstall']
+        : ['lint:memory', 'memory:sync', 'memory:organize', 'memory:upgrade', 'memory:export', 'memory:uninstall'];
       let cleaned = false;
       for (const k of keys) {
         if (pkg.scripts[k]) {
@@ -682,6 +694,7 @@ async function installSyncAndHooks(targetDir, detected) {
       console.log('  ✓ Added "memory:sync" script to package.json');
     }
     const upgradeCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank upgrade';
+    const organizeCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank organize';
     const exportCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank export';
     const uninstallCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank uninstall';
 
@@ -689,6 +702,11 @@ async function installSyncAndHooks(targetDir, detected) {
       pkg.scripts['memory:upgrade'] = upgradeCmd;
       pkgUpdated = true;
       console.log('  ✓ Configured cache-safe "memory:upgrade" script in package.json');
+    }
+    if (!detected.isSelfRepo && (!pkg.scripts['memory:organize'] || pkg.scripts['memory:organize'] === 'npx github:johnny-saigon/antigravity-memory-bank organize')) {
+      pkg.scripts['memory:organize'] = organizeCmd;
+      pkgUpdated = true;
+      console.log('  ✓ Configured cache-safe "memory:organize" script in package.json');
     }
     if (!detected.isSelfRepo && (!pkg.scripts['memory:export'] || pkg.scripts['memory:export'] === 'npx github:johnny-saigon/antigravity-memory-bank export')) {
       pkg.scripts['memory:export'] = exportCmd;
@@ -944,15 +962,26 @@ async function initMemory(targetDir, opts, detected) {
     }
 
     await installSyncAndHooks(targetDir, detected);
+    await adaptExistingBacklog(targetDir, projectName);
+    if (!opts.noOrganize) {
+      await organizeRepositoryStructure(targetDir, {
+        pkgRoot,
+        projectName,
+        dryRun: opts.dryRun,
+        quiet: opts.quiet
+      });
+    }
     const custInit = await syncCustomizationsToMemoryBank(targetDir, projectName);
     if (custInit) {
       console.log('  ✓ Configured .agents/hooks.json (SessionStart, PostToolUse, Stop on-the-fly sync)');
       console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custInit.envKeyCount} env keys, ${custInit.mcpCount} MCP servers, ${custInit.rulesCount} rules, ${custInit.skillsCount} skills)`);
     }
-    await adaptExistingBacklog(targetDir, projectName);
 
     try {
       execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'inherit' });
+      if (detected.hasGit) {
+        execSync('git rm --cached -f docs/backlog.html .DS_Store 2>/dev/null || true', { cwd: targetDir, stdio: 'pipe' });
+      }
     } catch (err) {
       console.warn('⚠️ Backlog render warning:', err.message);
     }
@@ -972,7 +1001,7 @@ async function initMemory(targetDir, opts, detected) {
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Recording Memory Bank baseline into Git...');
     try {
-      execSync('git add AGENTS.md .agents/ memory-bank/ scripts/ docs/ package.json .github/ 2>/dev/null || true', {
+      execSync('git add -A && git reset -q docs/backlog.html .DS_Store 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -1134,19 +1163,32 @@ Immediately after closing the previous session, initialize the new working cycle
   // 6. Install sync script, git hooks, package scripts, and CI workflows
   await installSyncAndHooks(targetDir, detected);
 
-  // 6b. Configure .agents/hooks.json & synchronize repo paths, API keys, MCP configs & customizations
+  // 6b. Discover, adapt, and migrate existing boards and bug records into the decoupled backlog
+  const backlogResult = await adaptExistingBacklog(targetDir, projectTitle);
+
+  // 6c. Organize repository root & AI-native directory structure (relocate loose root specs to docs/, rewrite links, harden .gitignore)
+  if (!opts.noOrganize) {
+    await organizeRepositoryStructure(targetDir, {
+      pkgRoot,
+      projectName: projectTitle,
+      dryRun: opts.dryRun,
+      quiet: opts.quiet
+    });
+  }
+
+  // 6d. Configure .agents/hooks.json & synchronize repo paths, API keys, MCP configs & customizations
   const custUpgrade = await syncCustomizationsToMemoryBank(targetDir, projectTitle);
   if (custUpgrade) {
     console.log('  ✓ Configured .agents/hooks.json (SessionStart, PostToolUse, Stop on-the-fly sync)');
     console.log(`  ✓ Synchronized memory-bank/integrationsAndCustomizations.md (${custUpgrade.envKeyCount} env keys, ${custUpgrade.mcpCount} MCP servers, ${custUpgrade.rulesCount} rules, ${custUpgrade.skillsCount} skills)`);
   }
 
-  // 6c. Discover, adapt, and migrate existing boards and bug records into the decoupled backlog
-  const backlogResult = await adaptExistingBacklog(targetDir, projectTitle);
-
   // Render initial Review pane artifacts
   try {
     execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'inherit' });
+    if (detected.hasGit) {
+      execSync('git rm --cached -f docs/backlog.html .DS_Store 2>/dev/null || true', { cwd: targetDir, stdio: 'pipe' });
+    }
   } catch (err) {
     console.warn('⚠️ Backlog render warning:', err.message);
   }
@@ -1166,11 +1208,11 @@ Immediately after closing the previous session, initialize the new working cycle
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Committing memory upgrade to Git...');
     try {
-      execSync('git add .agents/hooks.json .agents/skills/ AGENTS.md memory-bank/integrationsAndCustomizations.md scripts/ docs/ package.json .github/ 2>/dev/null || true', {
+      execSync('git add -A && git reset -q docs/backlog.html .DS_Store 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'pipe',
       });
-      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank (on-the-fly hooks, 10-point ingestion checklist, API keys & MCP sync)"', {
+      execSync('git commit -m "chore(memory): upgrade Antigravity Memory Bank (AI-native root organizer, 3-artifact planning mode & pre-auth MCP sync)"', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -1183,6 +1225,7 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
   console.log('📦 New capabilities active in this project:');
+  console.log('   - 🗂️  AI-Native Repository Organizer: Clean root entrypoints, relocated docs/, rewritten links & hardened .gitignore');
   console.log('   - ⚡ On-the-Fly Lifecycle Hooks: .agents/hooks.json (SessionStart, PostToolUse, Stop) + .git/hooks/post-commit');
   console.log('   - 📋 10-Point Baseline Ingestion Checklist: Verified repo paths, keys, MCPs, rules, skills & <24KB rule cap');
   console.log('   - 🔑 API Keys, MCP & Customizations Index: memory-bank/integrationsAndCustomizations.md');
@@ -1194,6 +1237,57 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('   - 📏 Token Budget Linter: npm run lint:memory (<150 lines/file)\n');
 }
 
+/**
+ * Standalone command to organize repository root, docs/, .gitignore, and AI-native directories
+ */
+async function organizeRepo(targetDir, opts, detected) {
+  console.log('\n🗂️  Antigravity Memory Bank — AI-Native Repository Organizer');
+  console.log(`📍 Target Directory: ${targetDir}${opts.dryRun ? ' (DRY RUN)' : ''}`);
+
+  if (!opts.dryRun && (detected.memoryBankExists || fsSync.existsSync(path.join(targetDir, 'docs/backlog.json')))) {
+    await adaptExistingBacklog(targetDir, detected.name);
+  }
+
+  const orgResult = await organizeRepositoryStructure(targetDir, {
+    pkgRoot,
+    projectName: detected.name,
+    dryRun: opts.dryRun,
+    quiet: opts.quiet
+  });
+
+  if (!opts.dryRun && detected.memoryBankExists) {
+    await syncCustomizationsToMemoryBank(targetDir, detected.name);
+    if (fsSync.existsSync(path.join(targetDir, 'scripts/backlog.mjs'))) {
+      try {
+        execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'pipe' });
+        if (detected.hasGit) {
+          execSync('git rm --cached -f docs/backlog.html .DS_Store 2>/dev/null || true', { cwd: targetDir, stdio: 'pipe' });
+        }
+      } catch {}
+    }
+    runMandatoryIngestionChecklist(targetDir, detected);
+  }
+
+  if (opts.commit && detected.hasGit && !opts.dryRun) {
+    console.log('\n🔧 Committing repository reorganization to Git...');
+    try {
+      execSync('git add -A && git reset -q docs/backlog.html .DS_Store 2>/dev/null || true', {
+        cwd: targetDir,
+        stdio: 'pipe',
+      });
+      execSync('git commit -m "chore(repo): organize AI-native repository root and docs structure"', {
+        cwd: targetDir,
+        stdio: 'inherit',
+      });
+      console.log('  ✓ Repository reorganization committed to Git.');
+    } catch {
+      console.log('  ℹ️ Working tree clean or changes already committed.');
+    }
+  }
+
+  return orgResult;
+}
+
 async function main() {
   const opts = parseCliArgs(process.argv);
   const targetDir = opts.targetDir || process.cwd();
@@ -1203,6 +1297,8 @@ async function main() {
     await exportMemory(targetDir, opts.exportDir);
   } else if (opts.command === 'uninstall') {
     await uninstallMemory(targetDir, opts, detected);
+  } else if (opts.command === 'organize') {
+    await organizeRepo(targetDir, opts, detected);
   } else if (opts.command === 'sync') {
     await syncCustomizationsToMemoryBank(targetDir, detected.name);
     await syncMemory(targetDir, opts);

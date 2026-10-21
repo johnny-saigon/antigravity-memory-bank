@@ -323,6 +323,43 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(activeContextMd, /feat\(billing\): add Stripe webhook handler/);
   });
 
+  test('3b. organize: relocates loose root specs to docs/, rewrites links, removes stubs/clutter, and hardens .gitignore', () => {
+    fs.writeFileSync(path.join(tmpRepo, 'UX_BRIEF.md'), '# Acme UX Brief\n- Glassmorphic dark mode.\n', 'utf8');
+    fs.writeFileSync(path.join(tmpRepo, 'DESIGN.md'), '# Acme Design System\n- Primary token #0EA5E9.\n', 'utf8');
+    fs.writeFileSync(path.join(tmpRepo, 'CLAUDE.md'), '# See AGENTS.md\n\nFollow the instructions in AGENTS.md.\n', 'utf8');
+    fs.writeFileSync(path.join(tmpRepo, '.DS_Store'), 'macos-clutter', 'utf8');
+    fs.writeFileSync(path.join(tmpRepo, 'skills-lock.json'), '{}', 'utf8');
+    fs.writeFileSync(
+      path.join(tmpRepo, 'README.md'),
+      '# Acme SaaS\n\nSee [UX Brief](UX_BRIEF.md) and [Design Spec](./DESIGN.md).\n',
+      'utf8'
+    );
+
+    const orgOut = execFileSync(process.execPath, [CLI_PATH, 'organize', tmpRepo], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+
+    assert.match(orgOut, /0 loose root docs/);
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'UX_BRIEF.md')), false, 'UX_BRIEF.md must be moved out of root');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'DESIGN.md')), false, 'DESIGN.md must be moved out of root');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'UX_BRIEF.md')), true, 'docs/UX_BRIEF.md must exist');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'DESIGN.md')), true, 'docs/DESIGN.md must exist');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'CLAUDE.md')), false, 'Redundant CLAUDE.md pointer stub must be removed');
+    assert.equal(fs.existsSync(path.join(tmpRepo, '.DS_Store')), false, '.DS_Store must be removed');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'skills-lock.json')), false, 'Orphaned skills-lock.json must be removed');
+
+    const updatedReadme = fs.readFileSync(path.join(tmpRepo, 'README.md'), 'utf8');
+    assert.match(updatedReadme, /\[UX Brief\]\(docs\/UX_BRIEF\.md\)/);
+    assert.match(updatedReadme, /\[Design Spec\]\(docs\/DESIGN\.md\)/);
+
+    const gitignore = fs.readFileSync(path.join(tmpRepo, '.gitignore'), 'utf8');
+    assert.match(gitignore, /docs\/backlog\.html/);
+    assert.match(gitignore, /memory-backups\//);
+    assert.equal(fs.existsSync(path.join(tmpRepo, '.github', 'workflows', 'memory-bank-sync.yml')), true);
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,
