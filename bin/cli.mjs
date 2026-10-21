@@ -1001,7 +1001,7 @@ async function initMemory(targetDir, opts, detected) {
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Recording Memory Bank baseline into Git...');
     try {
-      execSync('git add -A && git reset -q docs/backlog.html .DS_Store 2>/dev/null || true', {
+      execSync('git add -A && git rm --cached -f docs/backlog.html .DS_Store 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'inherit',
       });
@@ -1208,7 +1208,7 @@ Immediately after closing the previous session, initialize the new working cycle
   if (opts.commit && detected.hasGit) {
     console.log('\n🔧 Committing memory upgrade to Git...');
     try {
-      execSync('git add -A && git reset -q docs/backlog.html .DS_Store 2>/dev/null || true', {
+      execSync('git add -A && git rm --cached -f docs/backlog.html .DS_Store 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'pipe',
       });
@@ -1271,7 +1271,7 @@ async function organizeRepo(targetDir, opts, detected) {
   if (opts.commit && detected.hasGit && !opts.dryRun) {
     console.log('\n🔧 Committing repository reorganization to Git...');
     try {
-      execSync('git add -A && git reset -q docs/backlog.html .DS_Store 2>/dev/null || true', {
+      execSync('git add -A && git rm --cached -f docs/backlog.html .DS_Store 2>/dev/null || true', {
         cwd: targetDir,
         stdio: 'pipe',
       });
