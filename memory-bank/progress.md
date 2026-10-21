@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(planning): add correlated 3-artifact Planning Mode (task.md, implementation_plan.md, walkthrough.md) and /backlog-plan skill (FEAT-116) [skip ci]** (`511cdad`)
 - [x] **feat(qa): implement FEAT-112 template parity check and FEAT-111 E2E CLI test suite [skip ci]** (`6e2a697`)
 - [x] **feat(rules): enforce strict E2E verification before ticket closure in AGENTS.md and /backlog-start (FEAT-115) [skip ci]** (`b8f5d7f`)
 - [x] **fix(backlog): auto-render Review Pane artifacts in lifecycle hooks and add live /api/backlog auto-sync** (`9557d87`)
