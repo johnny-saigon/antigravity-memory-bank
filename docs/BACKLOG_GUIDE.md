@@ -87,15 +87,28 @@ npm run backlog attach FEAT-101 ~/Downloads/stitch-ux-ui.zip
 npm run backlog unpack FEAT-101
 ```
 
+### Generate or Focus the 3-Artifact Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md`)
+```bash
+# Synchronize all 3 Planning Mode artifacts in docs/planning/ and the Antigravity session brain (0 tokens):
+npm run backlog:plan
+
+# Focus implementation_plan.md and task.md on specific ticket(s) and copy /backlog-plan <ID> to clipboard:
+npm run backlog plan FEAT-101
+npm run backlog plan FEAT-101, BUG-102
+```
+
 ### Update Status
 ```bash
 npm run backlog:status FEAT-101 in_progress
 npm run backlog:status FEAT-101 done
 ```
 
-### Kick Off a Task with Antigravity
+### Plan or Kick Off a Task with Antigravity
 ```bash
-# Via Slash Command in Antigravity chat (automatically unpacks & ingests any attached .zip or files):
+# 1. (Optional) Draft & review the 4-section architectural blueprint in Planning Mode first:
+/backlog-plan FEAT-101
+
+# 2. Execute the ticket via Slash Command in Antigravity chat (ingests implementation_plan.md + any attached .zip/files):
 /backlog-start FEAT-101
 
 # Or pass a UX/UI .zip or context file directly inline with the command:
@@ -115,15 +128,19 @@ Whenever you run any `npm run backlog` command or click **"Save Task Offline"** 
 1. `scripts/backlog.mjs` updates:
    - `docs/backlog.json` (canonical machine-readable data)
    - `docs/MIGRATION_BOARD.md` or `docs/BACKLOG.md` (human-readable board)
-   - `backlog.html` in the active conversation brain folder
-   - `backlog-board.md` in the active conversation brain folder
-2. The Antigravity Review pane reflects these updates.
+   - `docs/planning/{task.md, implementation_plan.md, walkthrough.md}` (workspace 3-Artifact Planning Mode mirror)
+   - `backlog.html`, `backlog-board.md`, `task.md`, `implementation_plan.md`, and `walkthrough.md` in the active conversation brain folder
+2. The Antigravity Review pane reflects these updates automatically.
 
 ### Features in the Review Pane Board:
+- **3-Artifact Planning Lifecycle Bar**: Displays live links and status for `task.md`, `implementation_plan.md`, and `walkthrough.md`, plus a **`🔄 Sync 3 Planning Artifacts`** button.
 - **Interactive Kanban Columns**: `To-Do / Backlog`, `In Progress / QA`, and `Completed (Done)`.
 - **Live Search & Filter**: Filter instantly by priority (`High`, `Medium`, `Low`) or search keywords.
-- **1-Click Kickoff Prompt**: Tapping **"🤖 Kickoff Prompt"** on any card copies the 1-line prompt straight to your clipboard so you can paste it into Antigravity chat without typing.
-- **Quick Capture Form**: Click **"➕ Quick Capture Task"** at the top of the board to capture ideas directly from the pane. It suggests the next sequential ticket number (e.g. `FEAT-102`) and generates the local sync command.
+- **1-Click `📐 Plan` Action**: Tapping **"📐 Plan"** on any card focuses `implementation_plan.md` on that ticket via the local bridge (`127.0.0.1:4199`) and copies `/backlog-plan <ID>` straight to your clipboard.
+- **1-Click `🤖 Kickoff Prompt`**: Tapping **"🤖 Kickoff Prompt"** on any card copies `/backlog-start <ID>` straight to your clipboard so you can paste it into Antigravity chat without typing.
+- **Quick Capture Form & `📎` File Attachment**: Click **"➕ Quick Capture Task"** at the top of the board to capture ideas directly from the pane, or click **`📎`** on any ticket card to attach UX/UI `.zip` bundles, mockups, or specs.
+
+> See [`docs/PLANNING_GUIDE.md`](PLANNING_GUIDE.md) for the complete Planning Mode (`Explore → Plan → Review → Execute`) user guide.
 
 ---
 

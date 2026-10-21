@@ -1187,6 +1187,7 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('   - 📋 10-Point Baseline Ingestion Checklist: Verified repo paths, keys, MCPs, rules, skills & <24KB rule cap');
   console.log('   - 🔑 API Keys, MCP & Customizations Index: memory-bank/integrationsAndCustomizations.md');
   console.log('   - 📋 Decoupled Zero-Token Backlog: docs/backlog.json & npm run backlog');
+  console.log('   - 📐 Correlated 3-Artifact Planning Mode: docs/planning/{task,implementation_plan,walkthrough}.md & /backlog-plan <TICKET_ID>');
   console.log('   - 🚀 Autonomous Sprint Execution: /backlog-start <TICKET_ID> [optional_attachments]');
   console.log('   - 🖥️  Review Pane Board: backlog.html auxiliary pane Kanban board');
   console.log('   - 🔄 Continuous 2-Phase Cycle: /update-memory auto-boots the next session');

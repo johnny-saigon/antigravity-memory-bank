@@ -3,13 +3,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/johnny-saigon/antigravity-memory-bank/actions/workflows/ci.yml/badge.svg)](https://github.com/johnny-saigon/antigravity-memory-bank/actions)
 
-A production-tested **Three-Tier Memory Bank** brick and **Antigravity Plugin** for autonomous, context-aware AI pair programming.
+A production-tested **Three-Tier Memory Bank** brick, **Decoupled Zero-Token Backlog Engine**, **Correlated 3-Artifact Planning Mode**, and **Antigravity Plugin** for autonomous, context-aware AI pair programming.
 
-Eliminates context drift, prevents cross-database contamination, enforces token limits (< 150 lines per document), and enables continuous session cycling without manual restarts.
+Eliminates context drift, prevents cross-database contamination, enforces token limits (`< 150 lines` per document and `< 24 KB` expanded rule cap), correlates **Antigravity Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md`)** 1-to-1 with your local backlog (`docs/backlog.json`), and enables continuous session cycling without manual restarts.
 
 ---
 
-## 🏛️ The Three-Tier Memory Architecture
+## 🏛️ The Three-Tier Memory & Correlated Planning Architecture
 
 ```mermaid
 flowchart TD
@@ -22,10 +22,17 @@ flowchart TD
   end
 
   subgraph T3["Tier 3: Project Domain Memory Bank (memory-bank/*.md)"]
-    G3["projectbrief.md • productContext.md • systemPatterns.md • activeContext.md • progress.md"]
+    G3["projectbrief.md • productContext.md • systemPatterns.md • integrationsAndCustomizations.md • activeContext.md • progress.md"]
+  end
+
+  subgraph OPS["Decoupled Backlog & 3-Artifact Planning Mode (docs/ & <brainDir>/)"]
+    B1["docs/backlog.json & backlog.html (0-Token Capture & Kanban)"]
+    P1["task.md • implementation_plan.md • walkthrough.md (/backlog-plan & /backlog-start)"]
   end
 
   T1 --> T2 --> T3
+  T3 -. "Passive Context Baseline" .-> OPS
+  B1 <-->|"1-to-1 Correlation"| P1
 ```
 
 ---
@@ -77,20 +84,26 @@ The CLI inspects `package.json`, `.git/config`, and environment files, presentin
 - **Tech Stack**: Frontend, Backend, Database, Cache (auto-detects Fastify, React, Prisma, pg, etc.).
 - **Allocated Port & Health URL**: Internal port allocation and health probe endpoint for automated verification.
 
-It automatically scaffolds:
-- `memory-bank/*.md` (6 specialized context documents, all strictly `< 150 lines`)
-- `AGENTS.md` (Top-level agent directives and context bootstrap links)
+It automatically scaffolds and pre-populates:
+- `memory-bank/*.md` (7 specialized context documents including `integrationsAndCustomizations.md`, all strictly `< 150 lines`)
+- `AGENTS.md` (Top-level agent directives, context bootstrap links, and auto-balanced `< 24 KB` rule shards)
 - `.agents/rules/` (Tier 2 infrastructure & negative constraint deny-lists)
-- `.agents/skills/` (`/start` and `/update-memory` continuous lifecycle skills)
-- `scripts/lint-memory.mjs` (Automated line-budget enforcer, added to `package.json` as `npm run lint:memory`)
+- `.agents/skills/` (`/start`, `/backlog-plan`, `/backlog-start`, and `/update-memory` continuous lifecycle skills)
+- `.agents/hooks.json` & `.git/hooks/post-commit` (On-the-fly lifecycle hooks for `SessionStart`, `PostToolUse`, and `Stop`)
+- `docs/backlog.json`, `docs/BACKLOG.md`, & `docs/backlog.html` (Zero-token local backlog & Review Pane Kanban board)
+- `docs/planning/{task.md, implementation_plan.md, walkthrough.md}` & `<brainDir>/{task.md, implementation_plan.md, walkthrough.md}` (Correlated **3-Artifact Planning Mode**, automatically pre-populated with existing project info for advanced projects)
+- `docs/BACKLOG_GUIDE.md` & `docs/PLANNING_GUIDE.md` (Complete user guides for Backlog & Planning Mode)
+- `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`, & `scripts/backlog.mjs` (Automated line-budget enforcer, incremental context sync, and backlog/planning engine)
 
-#### 🔍 Automated Historical Context Scraping:
-During new project initialization (`init`), the installer **scrapes all prior build history, documentation, and Antigravity conversation transcripts** to construct an accurate baseline:
+#### 🔍 Automated Historical Context Scraping & Planning Pre-Population:
+During new project initialization (`init`) or upgrade (`upgrade`), the installer **scrapes all prior build history, documentation, `.env*` contracts, MCP configs, and Antigravity conversation transcripts** to construct an accurate baseline:
 1. **Antigravity Conversation Transcripts (`~/.gemini/antigravity/brain/`)**: Scans past agent transcripts for the project, extracting recent accomplishments, technical decisions, and pending backlog tasks.
-2. **Project Documentation**: Ingests `docs/**/*.md` (including `BUG_FIX_RECORDS.md`), `README.md`, `MIGRATION_BOARD.md`, and `DESIGN.md`.
-3. **Git Commit History**: Parses the commit log (`feat:`, `fix:`, releases) to populate completed milestones (`[x]`) and resolved bugs.
+2. **Project Documentation & Existing Boards**: Ingests `docs/**/*.md` (`BUG_FIX_RECORDS.md`, `MIGRATION_BOARD.md`, `BACKLOG.md`, `DESIGN.md`) and `README.md`, adapting existing tickets into `docs/backlog.json`.
+3. **API Keys, MCP Servers & Customizations**: Indexes `.env*` variable names (with secret masking), active MCP servers (`~/.gemini/config/mcp_config.json`), and workspace rules/skills into `memory-bank/integrationsAndCustomizations.md`.
+4. **Git Commit History & 3-Artifact Planning Pre-Population**: Parses commit logs (`feat:`, `fix:`, releases) and pre-populates **`task.md`**, **`implementation_plan.md`**, and **`walkthrough.md`** so already-advanced projects immediately have a structured architectural blueprint without starting from blank files.
+5. **10-Point Mandatory Baseline Ingestion Checklist**: Verifies all 10 baseline invariants (`10/10 Passed`) before completing installation.
 
-This ensures that the initialized Memory Bank is **never an empty placeholder**, but rather a rich, fully populated reflection of your codebase's real state from day one.
+This ensures that the initialized Memory Bank and Planning Mode are **never empty placeholders**, but rather a rich, fully populated reflection of your codebase's real state from day one.
 
 ---
 
@@ -111,37 +124,44 @@ git clone https://github.com/johnny-saigon/antigravity-memory-bank.git ~/.gemini
 ```
 
 Antigravity automatically loads the bundled plugin assets:
-- **Manifest**: `plugin.json` (declares `/start`, `/update-memory`, and budget audits)
-- **Bundled Skills**: `skills/start/SKILL.md` and `skills/update-memory/SKILL.md`
-- **Bundled Directives**: `rules/AGENTS.md` (Three-Tier Memory Hierarchy rules)
+- **Manifest**: `plugin.json` (declares `/start`, `/backlog-plan`, `/backlog-start`, and `/update-memory`)
+- **Bundled Skills**: `skills/start/SKILL.md`, `skills/backlog-plan/SKILL.md`, `skills/backlog-start/SKILL.md`, and `skills/update-memory/SKILL.md`
+- **Bundled Directives**: `rules/AGENTS.md` (Three-Tier Memory Hierarchy & Correlated Planning Mode rules)
 
 > [!TIP]
 > For active workspaces in ongoing pair-programming sessions, **Option A (Workspace Brick)** is recommended because its skills and rules activate **immediately on the fly** without restarting the IDE. **Option C (Plugin)** is ideal for machine-wide standardization across restarts.
 
 ---
 
-### D. Upgrading Earlier Implementations (BinaryDay, RemoveBackGround, SnapCal)
+### D. Upgrading Earlier Implementations (BinaryDay, RemoveBackGround, SnapCal, AntigravityRemote)
 
-If a project already has an earlier implementation of the Memory Bank (without the 2-phase lifecycle, linter, export, or deinstall tools), run the **in-place, non-destructive upgrade**:
+If a project already has an earlier implementation of the Memory Bank, run the **in-place, non-destructive upgrade**:
 
 ```bash
-# Inside BinaryDay, RemoveBackGround, or SnapCal root:
-npx github:johnny-saigon/antigravity-memory-bank upgrade --commit
+# Inside BinaryDay, RemoveBackGround, SnapCal, or any installed repo root:
+npx github:johnny-saigon/antigravity-memory-bank upgrade -y --commit
+
+# Or via package.json script:
+npm run memory:upgrade
 
 # Or via universal one-liner:
-curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-bank/main/install.sh | bash -s -- upgrade --commit
+curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-bank/main/install.sh | bash -s -- upgrade -y --commit
 ```
 
 #### What the Upgrade Does:
-1. **100% Domain Context Preservation**: All existing markdown documents in `memory-bank/` (`projectbrief.md`, `systemPatterns.md`, `psychometrics.md`, etc.) and Tier 2 cluster invariants (`.agents/rules/infra.md`) remain untouched.
-2. **Upgrades to Continuous 2-Phase Cycle**: Auto-detects the project's title and live health probe (e.g. `https://binaryday.app/api/health` or `http://85.10.218.46:44190/api/health`), upgrading `.agents/skills/update-memory/SKILL.md` so `/update-memory` automatically starts the next session cycle.
-3. **Upgrades `AGENTS.md`**: Updates operational mandate #4 to reference continuous cycling.
-4. **Installs the Line-Budget Linter**: Adds `scripts/lint-memory.mjs` and verifies that all existing documents comply with the `< 150 lines` rule.
-5. **Adds Lifecycle Scripts to `package.json`**:
-   - `npm run lint:memory`: Audits token line counts.
-   - `npm run memory:export`: Exports context to markdown & tarball anytime.
-   - `npm run memory:uninstall`: Safely uninstalls the brick if ever desired.
-6. **Git Synchronization**: When `--commit` is passed, commits the upgrade cleanly into version control.
+1. **100% Domain Context Preservation**: All existing custom markdown documents in `memory-bank/` (`projectbrief.md`, `systemPatterns.md`, `psychometrics.md`, etc.) and Tier 2 cluster invariants (`.agents/rules/infra.md`) remain untouched.
+2. **Installs & Pre-Populates Correlated 3-Artifact Planning Mode**: Installs `/backlog-plan` (`.agents/skills/backlog-plan/SKILL.md`), `docs/PLANNING_GUIDE.md`, and `npm run backlog:plan`, and automatically fills `docs/planning/{task.md, implementation_plan.md, walkthrough.md}` and `<brainDir>/{task.md, implementation_plan.md, walkthrough.md}` with your project's existing architecture, active `in_progress`/`todo` backlog tickets, and completed milestones.
+3. **Synchronizes Integrations & On-the-Fly Lifecycle Hooks**: Configures `.agents/hooks.json` (`SessionStart`, `PostToolUse`, `Stop`) and updates `memory-bank/integrationsAndCustomizations.md` with your latest `.env*` keys, MCP servers, and skills.
+4. **Upgrades `AGENTS.md` & Skills**: Updates operational mandates (including On-the-Fly Context Registration, Strict End-to-End Verification Before Closure, and 3-Artifact Planning Mode Correlation) and auto-balances rule shards under the `< 24 KB` cap.
+5. **Installs & Runs the 10-Point Verification Checklist & Linter**: Audits `< 150 lines` across all `memory-bank/*.md` files and verifies `10/10` on the Mandatory Baseline Ingestion Checklist.
+6. **Adds Complete Lifecycle & Backlog Scripts to `package.json`**:
+   - `npm run backlog:plan`: Generates/focuses the 3 Planning Mode artifacts (`task.md`, `implementation_plan.md`, `walkthrough.md`).
+   - `npm run backlog:render`: Refreshes the Review pane Kanban board and Planning Mode artifacts.
+   - `npm run lint:memory`: Audits token line counts (`< 150 lines`).
+   - `npm run memory:sync`: Incrementally syncs commits, env keys, and MCP configs.
+   - `npm run memory:upgrade`: Pulls the latest upstream Memory Bank & Planning Mode features.
+   - `npm run memory:export` / `npm run memory:uninstall`: Exports or cleanly uninstalls the brick with zero context loss.
+7. **Git Synchronization**: When `--commit` is passed, commits the upgrade cleanly into version control.
 
 ---
 
@@ -369,21 +389,133 @@ Full documentation is available in [`docs/BACKLOG_GUIDE.md`](templates/docs/BACK
 
 ## 📐 5. Structured Planning Mode (`Explore → Plan → Execute`) & 3-Artifact Lifecycle
 
-Every project initialized (`init`) or updated (`upgrade`) with `antigravity-memory-bank` automatically installs **Antigravity Planning Mode** prerequisites and correlates the **3-Artifact Planning Lifecycle** directly with `docs/backlog.json` and `memory-bank/*.md`:
+In Antigravity, **Planning Mode** transforms the agent from an immediate code generator into an autonomous software architect that explores your codebase, maps out dependencies, and aligns with you on an architectural blueprint *before* touching a single production file.
 
-1. **`task.md` (`docs/planning/task.md` & `<brainDir>/task.md`)**: Live 4-group checklist (**Context Discovery & Baseline**, **Active Sprint Execution**, **Queued Backlog**, and **Completed Tasks**) correlated 1-to-1 with `docs/backlog.json`.
-2. **`implementation_plan.md` (`docs/planning/implementation_plan.md` & `<brainDir>/implementation_plan.md`)**: Formal 4-section architectural blueprint (**1. Goal Description**, **2. User Review Required** with `IMPORTANT`/`WARNING` alerts, **3. Proposed Changes** marked `[NEW]`/`[MODIFY]`/`[DELETE]`, and **4. Verification Plan** with concrete terminal commands).
-3. **`walkthrough.md` (`docs/planning/walkthrough.md` & `<brainDir>/walkthrough.md`)**: Cumulative verification proof and execution summary of completed tickets and test matrices.
+Every project initialized (`init`) or updated (`upgrade`) with `antigravity-memory-bank` automatically installs all **Planning Mode** prerequisites (`/backlog-plan` skill, `docs/PLANNING_GUIDE.md`, `npm run backlog:plan`, and the `📐 Plan` Kanban actions) and correlates the **3-Artifact Lifecycle** 1-to-1 with your **Local Backlog (`docs/backlog.json`)** and **Three-Tier Memory Bank (`memory-bank/*.md`)**.
 
-For already-advanced projects, `init` and `upgrade` automatically pre-populate all 3 artifacts with existing project architecture, active sprint tickets, and historical accomplishments so the project immediately follows the unified structured blueprint.
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Dev as Developer
+  participant Board as Backlog & CLI (docs/backlog.json)
+  participant Agent as Antigravity Architect (/backlog-plan)
+  participant Brain as 3-Artifact Brain (task.md • implementation_plan.md • walkthrough.md)
 
-```bash
-# Synchronize or focus Planning Mode artifacts on specific ticket(s) (0 tokens):
-npm run backlog:plan
-npm run backlog plan FEAT-101
+  Dev->>Board: npm run backlog plan FEAT-101 (or click "📐 Plan" in backlog.html)
+  Board->>Brain: Pre-populate task.md & implementation_plan.md (0 tokens)
+  Dev->>Agent: /backlog-plan FEAT-101 (or /plan, Cmd/Ctrl+., Shift+Tab)
+  Note over Agent,Brain: Step 1 & 2: Explore & Draft Blueprint
+  Agent->>Brain: Update task.md (4 task groups) & implementation_plan.md (RequestFeedback: true)
+  Brain-->>Dev: Present Plan with "Proceed" button
+  Note over Dev,Brain: Step 3: Interactive Review & Inline Comments
+  Dev->>Brain: Highlight lines & leave inline comments (Ctrl+R / /artifact)
+  Agent->>Brain: Refine implementation_plan.md
+  Note over Dev,Agent: Step 4: Approve & Execute
+  Dev->>Agent: Click "Proceed" (or run /backlog-start FEAT-101)
+  Agent->>Board: Modify files, run Verification Plan, mark FEAT-101 done
+  Agent->>Brain: Check off task.md & write proof to walkthrough.md
 ```
 
-In Antigravity chat, trigger structured architectural planning via `/backlog-plan <ID>` (or click **`📐 Plan`** on any ticket card in `backlog.html`). Full documentation is available in [`docs/PLANNING_GUIDE.md`](templates/docs/PLANNING_GUIDE.md).
+---
+
+### 5.1 How the Planning Mode Workflow Operates
+
+When you trigger Planning Mode (by selecting **Planning** in the mode picker, pressing **`Cmd/Ctrl + .`** or **`Shift + Tab`**, typing **`/plan`**, or invoking **`/backlog-plan <TICKET_ID>`**), Antigravity moves through a structured **3-Artifact Lifecycle** stored inside its session brain (`~/.gemini/antigravity/brain/<session-id>/`) and mirrored in `docs/planning/`:
+
+1. **Context Discovery & `task.md` Creation (`docs/planning/task.md` & `<brainDir>/task.md`):**
+   The agent searches your repository, reads your project rules (`GEMINI.md` and `AGENTS.md`), ingests `memory-bank/*.md` and `docs/backlog.json`, and updates **`task.md`**—a live checklist broken into 4 correlated task groups:
+   - **1. Context Discovery & Architectural Baseline**
+   - **2. Active Sprint & Planning Focus (`In Progress`)**
+   - **3. Queued Backlog & Next Implementation Wave (`To-Do`)**
+   - **4. Completed & Verified Engineering Tasks (`Done`)**
+2. **Drafting `implementation_plan.md` (`docs/planning/implementation_plan.md` & `<brainDir>/implementation_plan.md`):**
+   Instead of writing code right away, the agent compiles its findings into a formal design document (`implementation_plan.md`). When your Artifact Review Policy is set to **Request Review** (or `RequestFeedback: true`), the agent pauses execution and presents the plan with a **Proceed** button.
+3. **Interactive Review & Iteration:**
+   You review the plan, highlight specific lines to leave **Google Docs-style inline comments**, or reply in chat. The agent re-enters Planning Mode, researches any new constraints you pointed out, and updates `implementation_plan.md`.
+4. **Execution & `walkthrough.md` (`docs/planning/walkthrough.md` & `<brainDir>/walkthrough.md`):**
+   Once you click **Proceed** (or run `/backlog-start <TICKET_ID>`), the agent switches to Execution Mode, checks off items in `task.md` in real time as it modifies files, runs verification tests, marks the ticket `done` in `docs/backlog.json`, and concludes by generating **`walkthrough.md`**—a cumulative summary of all changes made and proof of verification.
+
+---
+
+### 5.2 Automatic Pre-Population for Already-Advanced Projects (`init` & `upgrade`)
+
+If you install (`init`) or update (`upgrade`) `antigravity-memory-bank` on an **already-advanced project** (such as `SnapCal`, `RemoveBackGround`, or `BinaryDay`), you never start with empty planning templates:
+- The engine automatically extracts your **Project North Star** (`memory-bank/projectbrief.md`), **Current Phase & Sprint Objective** (`memory-bank/activeContext.md`), **Tier 2 Infrastructure Guardrails** (`.agents/rules/infra.md`), **Active & Queued Backlog Tickets** (`docs/backlog.json`), and **Completed Milestones & Test Matrix** (`memory-bank/progress.md`).
+- It immediately populates `docs/planning/{task.md, implementation_plan.md, walkthrough.md}` and `<brainDir>/{task.md, implementation_plan.md, walkthrough.md}` so all projects share the exact same structured architecture from day one.
+- **Non-Destructive Inline Edit Protection**: Auto-generated planning artifacts carry an `<!-- antigravity-planning-sync -->` header. If you or the agent manually customize `implementation_plan.md` without that marker, automatic background renders preserve your manual edits until you explicitly run `npm run backlog plan <ID>` or pass `--force`.
+
+---
+
+### 5.3 Anatomy of an `implementation_plan.md`
+
+Understanding how `antigravity-memory-bank` structures `implementation_plan.md` tells you exactly where to look when reviewing a feature or bug fix:
+
+| Section | What the Agent Puts Here | What You Should Check |
+| :--- | :--- | :--- |
+| **1. Goal Description** | Concise summary of the problem, North Star context from `memory-bank/`, and what the target backlog ticket(s) accomplish. | Verify the agent understood your core user journey and architectural constraints. |
+| **2. User Review Required** | Highlighted with `IMPORTANT` or `WARNING` callouts. Lists breaking changes, Tier 2 cluster invariants, unverified assumptions, or **Strict Live E2E Verification** warnings for OAuth/third-party integrations. | **Read this first.** If the agent had to guess on an App Group name, API payload format, or external credential, it flags it here. |
+| **3. Proposed Changes** | Files grouped logically by ticket/module (dependencies first), marked with `[NEW]`, `[MODIFY]`, or `[DELETE]`, plus targeted code diffs for key interfaces or schemas. | Check for "scope creep" (files the agent shouldn't touch) or missing edge cases (e.g., forgetting to update `Info.plist`, entitlements, or `.env.example`). |
+| **4. Verification Plan** | Concrete terminal commands (unit tests, typechecks, build scripts, live health probes) and manual/E2E testing steps the agent will run after coding. | Ensure the build/test commands match your actual local and production environment so the agent can self-heal any compiler or test errors. |
+
+---
+
+### 5.4 Step-by-Step Usage Guide (CLI, Review Pane Kanban & Chat)
+
+#### A. Offline CLI Planning (`0 AI Tokens`)
+```bash
+# Synchronize all 3 Planning Mode artifacts with docs/backlog.json and memory-bank/*.md:
+npm run backlog:plan
+
+# Focus implementation_plan.md and task.md on one or more specific tickets (and copy /backlog-plan <ID> to clipboard):
+npm run backlog plan FEAT-101
+npm run backlog plan FEAT-101, BUG-102
+
+# Force-regenerate planning artifacts even if manually edited:
+npm run backlog plan FEAT-101 --force
+```
+
+#### B. Interactive Review Pane Kanban (`backlog.html`)
+1. Open `backlog.html` in the Antigravity Review pane (or browser).
+2. At the top of the board, the **3-Artifact Planning Lifecycle Bar** displays live status badges for `task.md`, `implementation_plan.md`, and `walkthrough.md`, plus a **`🔄 Sync 3 Planning Artifacts`** button.
+3. On any active ticket card, click **`📐 Plan`**:
+   - Calls the local bridge (`POST http://127.0.0.1:4199/api/plan`) to focus `implementation_plan.md` and `task.md` on that ticket.
+   - Copies `/backlog-plan <TICKET_ID>` directly to your native OS clipboard (`pbcopy`) so you can paste it into Antigravity chat in one keystroke.
+
+#### C. In Antigravity Chat (`/backlog-plan` → Review → `/backlog-start`)
+```text
+# 1. Generate & refine the architectural plan for a ticket (pauses for review):
+/backlog-plan FEAT-101
+
+# 2. Or pass an attached UX/UI .zip bundle or @file reference into the plan:
+/backlog-plan FEAT-101 @src/services/
+```
+After reviewing `implementation_plan.md` (and leaving any inline comments), click **Proceed** or run:
+```text
+/backlog-start FEAT-101
+```
+
+---
+
+### 5.5 Best Practices for Planning Mode
+
+1. **Separate Exploration from Planning on Unfamiliar Code (`Explore → Plan → Execute`)**:
+   - **Step 1 (Explore)**: *"Explain how image uploads and deep links are currently routed in `@src/`."*
+   - **Step 2 (Plan)**: Once the agent maps the exact files into its context window, run `/backlog-plan <ID>` or `/plan` with your feature prompt. The resulting `implementation_plan.md` will be grounded in your actual architecture rather than generic boilerplate.
+2. **Anchor Context with `@`-Mentions, Visuals & UX/UI `.zip` Bundles**:
+   - Use **`@file` or `@directory` autocomplete** in your prompt to point directly to existing state managers, API clients, or configuration files.
+   - Copy UI mockups, Xcode error screenshots, or architecture diagrams and press **`Cmd+V` / `Ctrl+V`** directly into the prompt box, or attach `.zip` bundles offline via `npm run backlog attach <ID> <path>` (or the `📎` button in `backlog.html`).
+3. **Use Inline Artifact Comments Instead of Long Chat Replies**:
+   - Open the `implementation_plan.md` artifact (click it in the IDE Review panel, or press **`Ctrl+R`** / type **`/artifact`** in the CLI).
+   - **Highlight the exact file path or proposed function signature** and attach an inline comment (e.g., *"Use `UserDefaults(suiteName:)` here instead of Keychain"*). Inline comments bind your feedback to the exact line of the plan, preventing the agent from accidentally rewriting sections you already approved.
+4. **Enforce a Strict Verification Loop in the Plan**:
+   - Before clicking **Proceed**, check Section 4 (**Verification Plan**) at the bottom of `implementation_plan.md`. If it looks vague, leave an inline comment specifying the exact terminal command (e.g., *"Run `xcodebuild -scheme SnapCal -sdk iphonesimulator build`"* or *"Run `npm test`"*).
+   - For tickets involving OAuth or external APIs, Mandate #6 enforces that tickets remain `in_progress` until live server credentials and end-to-end provider HTTP requests pass.
+5. **Bake Recurring Constraints into `GEMINI.md` or `AGENTS.md`**:
+   - If you find yourself leaving the same review comments on every `implementation_plan.md` (such as *"Never use deprecated iOS APIs"* or *"Always validate external payloads with Zod"*), add them to `AGENTS.md` or `memory-bank/systemPatterns.md`. Antigravity loads these automatically at session start and applies them while drafting the initial plan.
+6. **Use `/fork` When Weighing Two Architectural Approaches**:
+   - If you aren't sure whether Approach A or Approach B is better, run **`/fork`** from your approved baseline thread to spin up a parallel branch of the session, test the execution, and run **`/resume`** to jump back to your clean baseline thread if needed.
+
+Full documentation is available in [`docs/PLANNING_GUIDE.md`](templates/docs/PLANNING_GUIDE.md).
 
 ---
 
