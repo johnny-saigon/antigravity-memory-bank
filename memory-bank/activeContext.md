@@ -6,12 +6,12 @@
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank, Decoupled Zero-Token Backlog Engine, and Correlated 3-Artifact Planning Mode directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 
 ## 2. Recent Technical Decisions & Accomplishments
-1. **feat(planning): implement FEAT-116 correlating Antigravity Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md` in `<brainDir>/` and `docs/planning/`) with `docs/backlog.json`, `/backlog-plan` skill, `backlog.html` `📐 Plan` actions, and automatic pre-population for advanced projects**
-2. **feat(qa): implement FEAT-112 & FEAT-111 (`tests/cli-e2e.test.mjs`, `scripts/lint-memory.mjs`) enforcing upstream template byte-parity (`backlog.mjs`, `sync-memory-context.mjs`, `backlog-start`, `backlog-plan`) and hermetic zero-dependency E2E CLI testing (`init`, `upgrade`, `sync`, `export`, `uninstall`)**
-3. **feat(rules): implement FEAT-115 (upstreamed from SnapCal `0f346ae`) enforcing Strict End-to-End Verification Before Closure in `AGENTS.md`, `templates/AGENTS.md.tpl`, `skills/backlog-start/SKILL.md` (Rule 4), `bin/cli.mjs`, and `lib/ingestion-checklist.mjs`**
-4. **feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks (`.agents/hooks.json` on `SessionStart`, `PostToolUse`, `Stop`), 10-Point Mandatory Baseline Ingestion Checklist (`lib/ingestion-checklist.mjs`), and automatic `< 24 KB` rule shard balancer**
-5. **fix(customizations): resolve BUG-107 by auto-scraping and syncing API keys (`.env*`, `eas.json`, `.p8`, host tokens), MCP server configs (`~/.gemini/config/mcp_config.json`), and Antigravity customizations (`.agents/rules/*`, `.agents/skills/*`, hooks) into `memory-bank/integrationsAndCustomizations.md` on `init`/`upgrade`/`sync`**
-6. **feat(backlog): implement FEAT-113 automatic context file & UX/UI `.zip` bundle attachment and unpacking (`npm run backlog attach/unpack`, `backlog.html` `📎` upload + `/api/attach` bridge, and Phase 1 auto-unpacking in `/backlog-start`)**
+1. **feat(frugality): encode Strict Credit & Token Frugality Mandate (`≤ 8 Tool Turns per Fix`, Memory-First Lookup, Zero `transcript.jsonl`/Sibling-Repo Scraping, Fresh Chat/`/compact` ~95% token reduction) in `~/.gemini/GEMINI.md`, `AGENTS.md`, `templates/AGENTS.md.tpl`, `.agents/rules/negative-constraints.md`, `skills/backlog-start/SKILL.md`, `bin/cli.mjs`, and Check #6 of `lib/ingestion-checklist.mjs`**
+2. **feat(organize): implement FEAT-117 AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`) across all 5 repositories**
+3. **feat(planning): implement FEAT-116 correlating Antigravity Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md` in `<brainDir>/` and `docs/planning/`) with `docs/backlog.json` and `/backlog-plan`**
+4. **feat(qa): implement FEAT-112 & FEAT-111 (`tests/cli-e2e.test.mjs`, `scripts/lint-memory.mjs`) enforcing upstream template byte-parity and hermetic zero-dependency E2E CLI testing**
+5. **feat(rules): implement FEAT-115 enforcing Strict End-to-End Verification Before Closure and Mandatory Dual-Test Invariant for Bug Fixes (`BUG-*`)**
+6. **feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks (`.agents/hooks.json`), 10-Point Mandatory Baseline Ingestion Checklist, and `< 24 KB` rule shard balancer**
 
 ## 3. Operational Context & Active Backlog
 - **Observer Status**: The Memory Bank acts strictly as a passive context listener and baseline reflector. Active ticket management and development execution are conducted in `docs/backlog.json` and `docs/BACKLOG.md`.

@@ -10,3 +10,7 @@ When generating code, scripts, or executing shell commands in **antigravity-memo
 3. **Database & Storage Partitioning**:
    - Scoped strictly to allocated databases and storage buckets.
    - Prohibit `FLUSHALL` on shared Redis instances.
+4. **Credit & Token Frugality Deny-List**:
+   - NEVER read `.system_generated/logs/transcript*.jsonl` or grep sibling repositories (`BinaryDay`, `SnapCal`, `RemoveBackGround`, `AntigravityRemote`) unless explicitly requested for transcript recovery.
+   - NEVER re-investigate state already recorded in `memory-bank/activeContext.md` or `docs/backlog.json`.
+   - Enforce a **Hard Turn Budget (`≤ 8 Tool Turns per Fix`)**: batch all file reads into 1 turn, all edits into 1–2 turns, and all verification/deployment commands into 1–2 chained shell calls.

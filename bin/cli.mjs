@@ -1130,6 +1130,9 @@ Immediately after closing the previous session, initialize the new working cycle
       if (!modifiedAgents.includes('Structured Planning Mode')) {
         body += `\n99. **Structured Planning Mode (\`Explore → Plan → Execute\`) & 3-Artifact Backlog Correlation**: When Planning Mode is triggered (\`/plan\`, \`Cmd/Ctrl + .\`, \`Shift + Tab\`, or \`[/backlog-plan](.agents/skills/backlog-plan/SKILL.md)\`), operate through the correlated **3-Artifact Lifecycle** in \`<brainDir>/\` and \`docs/planning/\`: (1) \`task.md\` (live checklist grouped into Discovery, Active Sprint, Queued & Completed tasks synced 1-to-1 with \`docs/backlog.json\`), (2) \`implementation_plan.md\` (4-section blueprint: **Goal Description**, **User Review Required** with \`IMPORTANT\`/\`WARNING\` alerts, **Proposed Changes** marked \`[NEW]\`/\`[MODIFY]\`/\`[DELETE]\`, and concrete **Verification Plan** commands), and (3) \`walkthrough.md\` (post-execution summary & verification proof).`;
       }
+      if (!modifiedAgents.includes('Strict Credit & Token Frugality')) {
+        body += `\n99. **Strict Credit & Token Frugality (\`≤ 8 Tool Turns per Fix\`)**:\n   - **Fresh Chat + \`/start\` (or \`/compact\`)**: Because \`memory-bank/*.md\` (\`< 400\` lines total) and \`docs/backlog.json\` hold 100% of the project state, starting a fresh thread + \`/start\` or running \`/compact\` drops per-turn input context from ~150k tokens/turn down to ~8k tokens/turn (~95% cost reduction).\n   - **Memory-First Lookup**: Always check \`memory-bank/activeContext.md\` and \`docs/backlog.json\` before running any diagnostic commands. Never re-investigate what is already recorded in \`activeContext.md\` or \`backlog.json\`.\n   - **Never Read \`transcript.jsonl\` or Sibling Repos**: Strictly forbid reading \`.system_generated/logs/transcript*.jsonl\` or grepping sibling repos (\`BinaryDay\`, \`SnapCal\`, \`RemoveBackGround\`, \`AntigravityRemote\`) unless the user explicitly asks for transcript recovery.\n   - **Hard Turn Budget (\`≤ 8 Tool Turns per Fix\`)**: Batch all file reads into 1 turn, all edits into 1–2 turns, and all verification/deployment commands into 1–2 chained shell calls.`;
+      }
 
       // Normalize sequential numbering (1, 2, 3...) across top-level mandate items
       let seq = 0;
@@ -1145,8 +1148,19 @@ Immediately after closing the previous session, initialize the new working cycle
     }
 
     await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
-    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration, decoupled backlog, planning mode, and strict E2E verification mandates');
+    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration, decoupled backlog, planning mode, credit/token frugality, and strict E2E verification mandates');
   }
+
+  // 4b. Upgrade .agents/rules/negative-constraints.md with Credit & Token Frugality Deny-List
+  const negRulePath = path.join(targetDir, '.agents/rules/negative-constraints.md');
+  try {
+    let negRuleContent = await fs.readFile(negRulePath, 'utf8');
+    if (!negRuleContent.includes('Credit & Token Frugality Deny-List')) {
+      negRuleContent = negRuleContent.trimEnd() + `\n4. **Credit & Token Frugality Deny-List**:\n   - NEVER read \`.system_generated/logs/transcript*.jsonl\` or grep sibling repositories (\`BinaryDay\`, \`SnapCal\`, \`RemoveBackGround\`, \`AntigravityRemote\`) unless explicitly requested for transcript recovery.\n   - NEVER re-investigate state already recorded in \`memory-bank/activeContext.md\` or \`docs/backlog.json\`.\n   - Enforce a **Hard Turn Budget (\`≤ 8 Tool Turns per Fix\`)**: batch all file reads into 1 turn, all edits into 1–2 turns, and all verification/deployment commands into 1–2 chained shell calls.\n`;
+      await fs.writeFile(negRulePath, negRuleContent, 'utf8');
+      console.log('  ✓ Upgraded .agents/rules/negative-constraints.md with Credit & Token Frugality Deny-List');
+    }
+  } catch {}
 
   // 5. Install scripts/lint-memory.mjs
   const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');

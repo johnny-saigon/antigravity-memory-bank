@@ -10,12 +10,12 @@
 - **Backlog Completion**: **24 / 24** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
-- **feat(planning): implement FEAT-116 correlating Antigravity Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md` in `<brainDir>/` and `docs/planning/`) with `docs/backlog.json`, `/backlog-plan` skill, `backlog.html` `📐 Plan` actions, and automatic pre-population for advanced projects**
-- **feat(qa): implement FEAT-112 & FEAT-111 (`tests/cli-e2e.test.mjs`, `scripts/lint-memory.mjs`) enforcing upstream template byte-parity (`backlog.mjs`, `sync-memory-context.mjs`, `backlog-start`, `backlog-plan`) and hermetic zero-dependency E2E CLI testing (`init`, `upgrade`, `sync`, `export`, `uninstall`)**
-- **feat(rules): implement FEAT-115 (upstreamed from SnapCal `0f346ae`) enforcing Strict End-to-End Verification Before Closure in `AGENTS.md`, `templates/AGENTS.md.tpl`, `skills/backlog-start/SKILL.md` (Rule 4), `bin/cli.mjs`, and `lib/ingestion-checklist.mjs`**
-- **feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks (`.agents/hooks.json` on `SessionStart`, `PostToolUse`, `Stop`), 10-Point Mandatory Baseline Ingestion Checklist (`lib/ingestion-checklist.mjs`), and automatic `< 24 KB` rule shard balancer**
-- **fix(customizations): resolve BUG-107 by auto-scraping and syncing API keys (`.env*`, `eas.json`, `.p8`, host tokens), MCP server configs (`~/.gemini/config/mcp_config.json`), and Antigravity customizations (`.agents/rules/*`, `.agents/skills/*`, hooks) into `memory-bank/integrationsAndCustomizations.md` on `init`/`upgrade`/`sync`**
-- **feat(backlog): implement FEAT-113 automatic context file & UX/UI `.zip` bundle attachment and unpacking (`npm run backlog attach/unpack`, `backlog.html` `📎` upload + `/api/attach` bridge, and Phase 1 auto-unpacking in `/backlog-start`)**
+- **feat(frugality): encode Strict Credit & Token Frugality Mandate (`≤ 8 Tool Turns per Fix`, Memory-First Lookup, Zero `transcript.jsonl`/Sibling-Repo Scraping, Fresh Chat/`/compact` ~95% token reduction) in `~/.gemini/GEMINI.md`, `AGENTS.md`, `templates/AGENTS.md.tpl`, `.agents/rules/negative-constraints.md`, `skills/backlog-start/SKILL.md`, `bin/cli.mjs`, and Check #6 of `lib/ingestion-checklist.mjs`**
+- **feat(organize): implement FEAT-117 AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`) across all 5 repositories**
+- **feat(planning): implement FEAT-116 correlating Antigravity Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md` in `<brainDir>/` and `docs/planning/`) with `docs/backlog.json` and `/backlog-plan`**
+- **feat(qa): implement FEAT-112 & FEAT-111 (`tests/cli-e2e.test.mjs`, `scripts/lint-memory.mjs`) enforcing upstream template byte-parity and hermetic zero-dependency E2E CLI testing**
+- **feat(rules): implement FEAT-115 enforcing Strict End-to-End Verification Before Closure and Mandatory Dual-Test Invariant for Bug Fixes (`BUG-*`)**
+- **feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks (`.agents/hooks.json`), 10-Point Mandatory Baseline Ingestion Checklist, and `< 24 KB` rule shard balancer**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
 ### ✅ [FEAT-117]: AI-Native Repository & Root Reorganization Engine (organize) *(Verified 2026-10-21)*
