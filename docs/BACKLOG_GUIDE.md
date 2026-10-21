@@ -138,6 +138,11 @@ Whenever you run any `npm run backlog` command or click **"Save Task Offline"** 
 - **Live Search & Filter**: Filter instantly by priority (`High`, `Medium`, `Low`) or search keywords.
 - **1-Click `📐 Plan` Action**: Tapping **"📐 Plan"** on any card focuses `implementation_plan.md` on that ticket via the local bridge (`127.0.0.1:4199`) and copies `/backlog-plan <ID>` straight to your clipboard.
 - **1-Click `🤖 Kickoff Prompt`**: Tapping **"🤖 Kickoff Prompt"** on any card copies `/backlog-start <ID>` straight to your clipboard so you can paste it into Antigravity chat without typing.
+- **Interactive `⏳ Action Items` Inspector on `In Progress` Tickets**: Click any **In Progress** ticket (or the **`⏳ Action Items`** button) in `backlog.html` to open the **Action Items & Blocker Inspector Modal**:
+  - See at a glance what the ticket is **Waiting On** and which action items belong to **👤 You (User)** vs **🤖 Antigravity**.
+  - Click **`🤖 Assign to AGY`** on any action item (or **"Assign All Pending to Antigravity"**) to delegate it and copy the targeted `/backlog-start <ID> — Execute action item: "..."` prompt to your clipboard.
+  - Click **`✅ Done by Me`** (or **"I Completed My Actions → Resume in Chat"**) after completing a manual step (such as configuring an OAuth secret or testing a physical device) to check off the item and copy the continuation prompt for Antigravity.
+  - Manage action items from the CLI at any time with `npm run backlog actions <ID> [--waiting "<summary>"] [--add "<item>" --owner <user|antigravity>] [--done <index>]`.
 - **Quick Capture Form & `📎` File Attachment**: Click **"➕ Quick Capture Task"** at the top of the board to capture ideas directly from the pane, or click **`📎`** on any ticket card to attach UX/UI `.zip` bundles, mockups, or specs.
 
 > See [`docs/PLANNING_GUIDE.md`](PLANNING_GUIDE.md) for the complete Planning Mode (`Explore → Plan → Review → Execute`) user guide.

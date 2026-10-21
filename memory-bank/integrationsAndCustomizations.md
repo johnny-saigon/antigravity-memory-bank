@@ -20,8 +20,8 @@
 | **`ovh`** | `~/.gemini/antigravity/bin/ovh_mcp.py` | 8 | ✅ AUTHENTICATED (`~/.ovh_credentials.json` · endpoint `ovh-eu` ready) |
 | **`stripe`** | `~/.gemini/antigravity/bin/stripe_mcp_bridge.cjs` | 9 | ✅ AUTHENTICATED (`~/.stripe_token` API key verified) |
 | **`StitchMCP`** | `npx mcp-remote` (`https://stitch.googleapis.com/mcp`) | 15 | ✅ AUTHENTICATED (Header `X-Goog-Api-Key` configured & ready) |
-| **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 9 | ✅ AUTHENTICATED (Key `Y9V6TK5R8A` · Issuer `c06bde3f...` · `credentials/AuthKey_Y9V6TK5R8A.p8` verified) |
-| **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | ✅ AUTHENTICATED (`~/.meta_credentials.json` · App `1612158530609943` (SnapCal) ready) |
+| **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 9 | ✅ AUTHENTICATED (Key `Y9V6TK5R8A` · Issuer `c06bde3f...` · `credentials/AuthKey.p8` verified) |
+| **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | ✅ AUTHENTICATED (`~/.meta_credentials.json` · App `2199060924286885` (BinaryDay) ready) |
 | **`meta_business`** | `~/.gemini/antigravity/bin/meta_business_mcp.cjs` | 18 | ✅ AUTHENTICATED (`~/.meta_token` & `~/.meta_credentials.json` · Biz `1277193594593819` (Design Engineering) ready) |
 | **`azure-mcp`** | `npx @azure/mcp@latest` | 69 | ✅ AUTHENTICATED (`~/.azure` CLI session · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
 | **`entra`** | `~/.gemini/antigravity/bin/entra_mcp.cjs` | 4 | ✅ AUTHENTICATED (`az` Graph session `~/.azure` · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |

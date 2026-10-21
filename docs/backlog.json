@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-21T16:02:38.061Z",
+  "lastUpdated": "2026-10-21T16:53:17.077Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -22,7 +22,21 @@
         "Enforces <150 lines across all memory-bank/*.md files.",
         "2-Phase /update-memory closes current milestone and auto-starts next session banner."
       ],
-      "completedAt": "2026-10-17T11:28:00.000Z"
+      "completedAt": "2026-10-17T11:28:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-101-ACT-1",
+          "text": "Enforces <150 lines across all memory-bank/*.md files.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-101-ACT-2",
+          "text": "2-Phase /update-memory closes current milestone and auto-starts next session banner.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-102",
@@ -40,7 +54,21 @@
         "Activates skills and rules in an open Antigravity IDE window with zero restart.",
         "Auto-detects frontend, backend, database, and port from package.json and .env."
       ],
-      "completedAt": "2026-10-17T11:54:00.000Z"
+      "completedAt": "2026-10-17T11:54:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-102-ACT-1",
+          "text": "Activates skills and rules in an open Antigravity IDE window with zero restart.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-102-ACT-2",
+          "text": "Auto-detects frontend, backend, database, and port from package.json and .env.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-103",
@@ -57,7 +85,21 @@
         "Generates consolidated markdown and .tar.gz archive in ./memory-backups/.",
         "Cleanly removes memory-bank artifacts while preserving custom skills/rules."
       ],
-      "completedAt": "2026-10-17T12:05:00.000Z"
+      "completedAt": "2026-10-17T12:05:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-103-ACT-1",
+          "text": "Generates consolidated markdown and .tar.gz archive in ./memory-backups/.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-103-ACT-2",
+          "text": "Cleanly removes memory-bank artifacts while preserving custom skills/rules.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-104",
@@ -74,7 +116,21 @@
         "100% preservation of existing memory-bank/*.md files.",
         "Upgrades AGENTS.md, skills, and package.json lifecycle scripts."
       ],
-      "completedAt": "2026-10-17T12:15:00.000Z"
+      "completedAt": "2026-10-17T12:15:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-104-ACT-1",
+          "text": "100% preservation of existing memory-bank/*.md files.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-104-ACT-2",
+          "text": "Upgrades AGENTS.md, skills, and package.json lifecycle scripts.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-105",
@@ -92,7 +148,21 @@
         "Scrapes git commits, docs/*.md, and Antigravity conversation transcripts.",
         "Populates activeContext.md and progress.md with real project history on day one."
       ],
-      "completedAt": "2026-10-17T12:30:00.000Z"
+      "completedAt": "2026-10-17T12:30:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-105-ACT-1",
+          "text": "Scrapes git commits, docs/*.md, and Antigravity conversation transcripts.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-105-ACT-2",
+          "text": "Populates activeContext.md and progress.md with real project history on day one.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-106",
@@ -111,7 +181,21 @@
         "Automatically updates last synchronized commit hash and accomplishments on commit.",
         "CI workflow verifies <150-line budget on every push and PR."
       ],
-      "completedAt": "2026-10-17T12:45:00.000Z"
+      "completedAt": "2026-10-17T12:45:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-106-ACT-1",
+          "text": "Automatically updates last synchronized commit hash and accomplishments on commit.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-106-ACT-2",
+          "text": "CI workflow verifies <150-line budget on every push and PR.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-107",
@@ -130,7 +214,21 @@
         "Memory Bank stays <150 lines (~1.5k tokens) as a read-only context baseline.",
         "Operational tickets and bug logs are separated into docs/."
       ],
-      "completedAt": "2026-10-17T13:15:00.000Z"
+      "completedAt": "2026-10-17T13:15:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-107-ACT-1",
+          "text": "Memory Bank stays <150 lines (~1.5k tokens) as a read-only context baseline.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-107-ACT-2",
+          "text": "Operational tickets and bug logs are separated into docs/.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-108",
@@ -150,7 +248,21 @@
         "Zero-token offline task capture via npm run backlog or Review pane UI.",
         "1-click /backlog-start <ID> prompt copy and automated sprint closure + work recap."
       ],
-      "completedAt": "2026-10-17T13:35:00.000Z"
+      "completedAt": "2026-10-17T13:35:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-108-ACT-1",
+          "text": "Zero-token offline task capture via npm run backlog or Review pane UI.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-108-ACT-2",
+          "text": "1-click /backlog-start <ID> prompt copy and automated sprint closure + work recap.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-109",
@@ -168,7 +280,21 @@
         "Automatically migrates existing markdown boards and bug records on init/upgrade.",
         "Renders synchronized docs/BACKLOG.md and backlog.html Kanban immediately."
       ],
-      "completedAt": "2026-10-17T13:50:00.000Z"
+      "completedAt": "2026-10-17T13:50:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-109-ACT-1",
+          "text": "Automatically migrates existing markdown boards and bug records on init/upgrade.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-109-ACT-2",
+          "text": "Renders synchronized docs/BACKLOG.md and backlog.html Kanban immediately.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-110",
@@ -188,7 +314,21 @@
         "npm pack --dry-run includes only the 29 distributable engine files.",
         "isSelfRepo prevents self-overwriting or deleting upstream scripts/."
       ],
-      "completedAt": "2026-10-17T21:57:00.000Z"
+      "completedAt": "2026-10-17T21:57:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-110-ACT-1",
+          "text": "npm pack --dry-run includes only the 29 distributable engine files.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-110-ACT-2",
+          "text": "isSelfRepo prevents self-overwriting or deleting upstream scripts/.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "BUG-101",
@@ -205,7 +345,21 @@
         "Existing manual notes in activeContext.md and progress.md are preserved.",
         "Commits are deduplicated by hash."
       ],
-      "completedAt": "2026-10-17T12:55:00.000Z"
+      "completedAt": "2026-10-17T12:55:00.000Z",
+      "actionItems": [
+        {
+          "id": "BUG-101-ACT-1",
+          "text": "Existing manual notes in activeContext.md and progress.md are preserved.",
+          "owner": "user",
+          "done": true
+        },
+        {
+          "id": "BUG-101-ACT-2",
+          "text": "Commits are deduplicated by hash.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "BUG-102",
@@ -221,7 +375,15 @@
       "acceptanceCriteria": [
         "post-commit hook exits cleanly as a no-op during rebase, merge, or cherry-pick."
       ],
-      "completedAt": "2026-10-17T13:05:00.000Z"
+      "completedAt": "2026-10-17T13:05:00.000Z",
+      "actionItems": [
+        {
+          "id": "BUG-102-ACT-1",
+          "text": "post-commit hook exits cleanly as a no-op during rebase, merge, or cherry-pick.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "BUG-103",
@@ -239,7 +401,21 @@
         "Accurately targets the active conversation brain directory even in brand-new sessions.",
         "Always writes docs/backlog.html in the project workspace."
       ],
-      "completedAt": "2026-10-17T14:40:00.000Z"
+      "completedAt": "2026-10-17T14:40:00.000Z",
+      "actionItems": [
+        {
+          "id": "BUG-103-ACT-1",
+          "text": "Accurately targets the active conversation brain directory even in brand-new sessions.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-103-ACT-2",
+          "text": "Always writes docs/backlog.html in the project workspace.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "BUG-104",
@@ -261,7 +437,21 @@
         "Zero downstream project names or private host IPs in bin/, skills/, rules/, or templates/.",
         "scripts/backlog.mjs and templates/scripts/backlog.mjs remain byte-identical."
       ],
-      "completedAt": "2026-10-17T14:48:00.000Z"
+      "completedAt": "2026-10-17T14:48:00.000Z",
+      "actionItems": [
+        {
+          "id": "BUG-104-ACT-1",
+          "text": "Zero downstream project names or private host IPs in bin/, skills/, rules/, or templates/.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-104-ACT-2",
+          "text": "scripts/backlog.mjs and templates/scripts/backlog.mjs remain byte-identical.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "BUG-105",
@@ -277,7 +467,15 @@
       "acceptanceCriteria": [
         "Repeated upgrade runs are 100% idempotent (0 duplicate tasks imported from MILESTONE-* bullets)."
       ],
-      "completedAt": "2026-10-17T21:56:00.000Z"
+      "completedAt": "2026-10-17T21:56:00.000Z",
+      "actionItems": [
+        {
+          "id": "BUG-105-ACT-1",
+          "text": "Repeated upgrade runs are 100% idempotent (0 duplicate tasks imported from MILESTONE-* bullets).",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "BUG-106",
@@ -296,7 +494,21 @@
         "100% accurate docs/backlog.html and <brainDir>/backlog.html generation across all 5 colocated projects on init and upgrade.",
         "Kickoff Prompt works reliably on titles with quotes and copies to clipboard inside sandboxed iframes and via native OS pbcopy."
       ],
-      "completedAt": "2026-10-18T10:48:00.000Z"
+      "completedAt": "2026-10-18T10:48:00.000Z",
+      "actionItems": [
+        {
+          "id": "BUG-106-ACT-1",
+          "text": "100% accurate docs/backlog.html and <brainDir>/backlog.html generation across all 5 colocated projects on init and upgrade.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-106-ACT-2",
+          "text": "Kickoff Prompt works reliably on titles with quotes and copies to clipboard inside sandboxed iframes and via native OS pbcopy.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-111",
@@ -315,7 +527,27 @@
         "Verifies custom memory-bank/*.md domain files are 100% preserved across upgrade.",
         "Passes via npm test."
       ],
-      "completedAt": "2026-10-21T11:15:50.977Z"
+      "completedAt": "2026-10-21T11:15:50.977Z",
+      "actionItems": [
+        {
+          "id": "FEAT-111-ACT-1",
+          "text": "Tests init, upgrade, sync, export, and uninstall in an isolated temp directory.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-111-ACT-2",
+          "text": "Verifies custom memory-bank/*.md domain files are 100% preserved across upgrade.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-111-ACT-3",
+          "text": "Passes via npm test.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-112",
@@ -333,7 +565,15 @@
       "acceptanceCriteria": [
         "npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge."
       ],
-      "completedAt": "2026-10-21T11:15:50.805Z"
+      "completedAt": "2026-10-21T11:15:50.805Z",
+      "actionItems": [
+        {
+          "id": "FEAT-112-ACT-1",
+          "text": "npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-113",
@@ -373,7 +613,27 @@
         "Never commits raw secret literals to Git while giving agents 100% visibility into key names and file paths.",
         "bin/cli.mjs supports positional target directory and upgrades all installed repositories cleanly under <150 lines."
       ],
-      "completedAt": "2026-10-18T12:20:55.753Z"
+      "completedAt": "2026-10-18T12:20:55.753Z",
+      "actionItems": [
+        {
+          "id": "BUG-107-ACT-1",
+          "text": "Automatically indexes all .env* keys, eas.json credentials, host tokens, MCP servers, rules, skills, and hooks into memory-bank/integrationsAndCustomizations.md.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-107-ACT-2",
+          "text": "Never commits raw secret literals to Git while giving agents 100% visibility into key names and file paths.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-107-ACT-3",
+          "text": "bin/cli.mjs supports positional target directory and upgrades all installed repositories cleanly under <150 lines.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-114",
@@ -396,7 +656,27 @@
         "10-Point Mandatory Baseline Ingestion Checklist runs and passes 10/10 across all installed repositories on init and upgrade.",
         "Automatic <24KB rule shard balancer ensures 100% of memory-bank/*.md files load into Antigravity rules without truncation."
       ],
-      "completedAt": "2026-10-18T13:22:00.000Z"
+      "completedAt": "2026-10-18T13:22:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-114-ACT-1",
+          "text": "Zero manual steps required when adding API keys, MCP servers, skills, rules, or repo paths (.agents/hooks.json auto-syncs on SessionStart, PostToolUse, and Stop).",
+          "owner": "user",
+          "done": true
+        },
+        {
+          "id": "FEAT-114-ACT-2",
+          "text": "10-Point Mandatory Baseline Ingestion Checklist runs and passes 10/10 across all installed repositories on init and upgrade.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-114-ACT-3",
+          "text": "Automatic <24KB rule shard balancer ensures 100% of memory-bank/*.md files load into Antigravity rules without truncation.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-115",
@@ -419,7 +699,27 @@
         "skills/backlog-start/SKILL.md Rule 4 forbids running npm run backlog done on integration tickets without live server credentials and passing provider HTTP requests.",
         "bin/cli.mjs upgradeMemory injects the mandate into all downstream AGENTS.md formats and passes 10/10 on the Mandatory Baseline Ingestion Checklist across all 5 repositories."
       ],
-      "completedAt": "2026-10-18T20:45:00.000Z"
+      "completedAt": "2026-10-18T20:45:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-115-ACT-1",
+          "text": "AGENTS.md and templates/AGENTS.md.tpl enforce Strict End-to-End Verification Before Closure.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-115-ACT-2",
+          "text": "skills/backlog-start/SKILL.md Rule 4 forbids running npm run backlog done on integration tickets without live server credentials and passing provider HTTP requests.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-115-ACT-3",
+          "text": "bin/cli.mjs upgradeMemory injects the mandate into all downstream AGENTS.md formats and passes 10/10 on the Mandatory Baseline Ingestion Checklist across all 5 repositories.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-116",
@@ -443,7 +743,27 @@
         "Installs /backlog-plan skill (.agents/skills/backlog-plan/SKILL.md) and docs/PLANNING_GUIDE.md on init and upgrade.",
         "Correlates backlog.html cards (📐 Plan button + /api/plan bridge) and /backlog-start with the 3 Planning Mode artifacts."
       ],
-      "completedAt": "2026-10-21T11:30:00.000Z"
+      "completedAt": "2026-10-21T11:30:00.000Z",
+      "actionItems": [
+        {
+          "id": "FEAT-116-ACT-1",
+          "text": "Automatically populates and syncs task.md, implementation_plan.md, and walkthrough.md in docs/planning/ and <brainDir>/ from existing backlog and memory-bank context.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-116-ACT-2",
+          "text": "Installs /backlog-plan skill (.agents/skills/backlog-plan/SKILL.md) and docs/PLANNING_GUIDE.md on init and upgrade.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-116-ACT-3",
+          "text": "Correlates backlog.html cards (📐 Plan button + /api/plan bridge) and /backlog-start with the 3 Planning Mode artifacts.",
+          "owner": "antigravity",
+          "done": true
+        }
+      ]
     },
     {
       "id": "FEAT-117",

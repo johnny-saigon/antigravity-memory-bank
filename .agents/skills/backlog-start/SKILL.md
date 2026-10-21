@@ -72,7 +72,7 @@ Execute the following 3 phases autonomously:
    - For ANY ticket involving external services, OAuth providers, APIs, or credentials (e.g. Apple, Google, Microsoft, Meta, Resend, Stripe, S3):
      - **NEVER mark the ticket as `done` (`npm run backlog done`) if required credentials, API keys, or provider configurations are missing, unpopulated, or placeholder on the server.**
      - The live end-to-end integration flow and provider HTTP requests must be tested and proven working (e.g. live OAuth authorization redirect reaches the provider with a registered client ID without an error page, and callback/API request executes successfully).
-     - If provider credentials or third-party portal setup are required, keep the ticket in `in_progress`, provide the user with the exact configuration specifications, and wait for working end-to-end verification before marking `done`.
+     - If provider credentials or third-party portal setup are required, keep the ticket in `in_progress`, record the exact pending action items (`owner: "user"` vs `owner: "antigravity"`) in `docs/backlog.json` via `npm run backlog actions <TICKET_ID> --waiting "<summary>" --add "<action_item>" --owner user`, provide the user with the exact configuration specifications, and wait for working end-to-end verification before marking `done`.
 5. **Mandatory Dual-Test Invariant for Every Bug Fix (`BUG-*`) (Non-Negotiable)**:
    - For ANY bug ticket (`type: "bug"` or `BUG-*`):
      - You MUST create or update **both**:

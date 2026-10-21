@@ -195,6 +195,129 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
   }
 }
 
+// Normalize and auto-derive Action Items & Waiting-On summary for a task
+function inferActionItemOwner(text, task = {}) {
+  const lower = String(text || '').toLowerCase();
+  const taskContext = `${task.id || ''} ${task.title || ''}`.toLowerCase();
+  if (
+    /apple developer portal|metadeveloper|facebook developer|entra portal|azure portal|google cloud console|stripe dashboard|configure .* in .*\.env|live .* app id|live .* secret|physical iphone|physical device|testflight build #\d+ on physical|manual|provide |sign in on device/i.test(lower)
+  ) {
+    return 'user';
+  }
+  if (/^qa-/i.test(task.id || '') && /physical|device|iphone|ipad|android|disappears|auto-advance|back navigation|skip for now/i.test(lower + ' ' + taskContext)) {
+    return 'user';
+  }
+  return 'antigravity';
+}
+
+function deriveWaitingOnSummary(task, actionItems = []) {
+  if (task.waitingOn && String(task.waitingOn).trim()) {
+    return String(task.waitingOn).trim();
+  }
+  const combined = `${task.title || ''} ${task.description || ''} ${task.spec || ''} ${(task.acceptanceCriteria || []).join(' ')}`;
+  if (/Services ID|Apple Developer Portal|gd\.removeback\.web|appleid\.apple\.com/i.test(combined)) {
+    return 'Apple Developer Portal Services ID registration & live Web OAuth E2E verification';
+  }
+  if (/Meta App ID|Facebook \/ Meta OAuth|META_APP_ID/i.test(combined)) {
+    return 'Live Meta App ID & Secret in server/.env + end-to-end Facebook OAuth verification';
+  }
+  if (/Physical Device|TestFlight Build/i.test(combined)) {
+    return 'Physical iOS/Android device TestFlight validation & QA checklist sign-off';
+  }
+  const pendingUser = actionItems.find(a => !a.done && a.owner === 'user');
+  if (pendingUser) return pendingUser.text;
+  const pendingAny = actionItems.find(a => !a.done);
+  if (pendingAny) return pendingAny.text;
+  return task.status === 'in_progress' || task.status === 'testing'
+    ? 'Final verification & sprint closure'
+    : '';
+}
+
+function ensureTaskActionItems(task) {
+  if (!task || typeof task !== 'object') return [];
+  if (Array.isArray(task.actionItems) && task.actionItems.length > 0) {
+    task.actionItems = task.actionItems.map((item, idx) => {
+      if (typeof item === 'string') {
+        return {
+          id: `${task.id}-ACT-${idx + 1}`,
+          text: item,
+          owner: inferActionItemOwner(item, task),
+          done: task.status === 'done'
+        };
+      }
+      return {
+        id: item.id || `${task.id}-ACT-${idx + 1}`,
+        text: String(item.text || item.title || '').trim(),
+        owner: item.owner === 'user' || item.assignee === 'user' ? 'user' : 'antigravity',
+        done: Boolean(item.done || item.completed || task.status === 'done')
+      };
+    }).filter(i => i.text);
+  } else {
+    const derived = [];
+    const criteria = Array.isArray(task.acceptanceCriteria) ? task.acceptanceCriteria : [];
+    for (let i = 0; i < criteria.length; i++) {
+      const cText = String(criteria[i] || '').trim();
+      if (!cText) continue;
+      derived.push({
+        id: `${task.id}-ACT-${derived.length + 1}`,
+        text: cText,
+        owner: inferActionItemOwner(cText, task),
+        done: task.status === 'done'
+      });
+    }
+
+    // Check if description/spec mentions a specific credential or portal blocker not already in criteria
+    const combinedText = `${task.description || ''} ${task.spec || ''}`;
+    if (
+      (task.status === 'in_progress' || task.status === 'testing') &&
+      /Services ID|Apple Developer Portal/i.test(combinedText) &&
+      !derived.some(d => /Apple Developer Portal|Services ID/i.test(d.text))
+    ) {
+      derived.unshift({
+        id: `${task.id}-ACT-PORTAL`,
+        text: 'Register & verify Web Services ID and Return URL in Apple Developer Portal (or assign to Antigravity apple MCP)',
+        owner: 'user',
+        done: false
+      });
+    }
+    if (
+      (task.status === 'in_progress' || task.status === 'testing') &&
+      /Meta App ID|Facebook \/ Meta OAuth/i.test(combinedText) &&
+      !derived.some(d => /Meta App ID|META_APP_ID/i.test(d.text))
+    ) {
+      derived.unshift({
+        id: `${task.id}-ACT-META`,
+        text: 'Configure live META_APP_ID & META_APP_SECRET in server/.env and verify Meta OAuth redirect URI',
+        owner: 'user',
+        done: false
+      });
+    }
+
+    if (derived.length === 0 && (task.status === 'in_progress' || task.status === 'testing')) {
+      derived.push(
+        {
+          id: `${task.id}-ACT-1`,
+          text: task.description || `Complete implementation and verification for ${task.title}`,
+          owner: inferActionItemOwner(task.description || task.title, task),
+          done: false
+        },
+        {
+          id: `${task.id}-ACT-2`,
+          text: `Run deterministic & live E2E verification and mark ${task.id} done`,
+          owner: 'antigravity',
+          done: false
+        }
+      );
+    }
+    task.actionItems = derived;
+  }
+
+  if (task.status === 'in_progress' || task.status === 'testing') {
+    task.waitingOn = deriveWaitingOnSummary(task, task.actionItems);
+  }
+  return task.actionItems;
+}
+
 // Load backlog JSON
 function loadBacklog(rootDir = REPO_ROOT) {
   const jsonPath = path.join(rootDir, 'docs', 'backlog.json');
@@ -209,7 +332,13 @@ function loadBacklog(rootDir = REPO_ROOT) {
     };
   }
   try {
-    return JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+    if (Array.isArray(parsed.tasks)) {
+      for (const t of parsed.tasks) {
+        ensureTaskActionItems(t);
+      }
+    }
+    return parsed;
   } catch (err) {
     console.error(`❌ Failed to parse ${jsonPath}:`, err.message);
     process.exit(1);
@@ -466,6 +595,17 @@ function renderMigrationBoard(data, rootDir = REPO_ROOT) {
         lines.push(`  - ${checked} ${ac}`);
       }
     }
+    if ((task.status === 'in_progress' || task.status === 'testing') && task.waitingOn) {
+      lines.push(`- **Waiting On:** ${task.waitingOn}`);
+    }
+    if ((task.status === 'in_progress' || task.status === 'testing') && Array.isArray(task.actionItems) && task.actionItems.length > 0) {
+      lines.push('- **Action Items (Waiting On):**');
+      for (const item of task.actionItems) {
+        const checked = item.done ? '[x]' : '[ ]';
+        const ownerTag = item.owner === 'user' ? '👤 User' : '🤖 Antigravity';
+        lines.push(`  - ${checked} **(${ownerTag})** ${item.text}`);
+      }
+    }
     lines.push('');
     lines.push('---');
     lines.push('');
@@ -537,6 +677,10 @@ function renderCardServer(task) {
   const safeTitleHtml = escapeHtmlServer(task.title);
   const safeDescHtml = escapeHtmlServer(task.description);
   const attachments = Array.isArray(task.attachments) ? task.attachments : [];
+  const actionItems = ensureTaskActionItems(task);
+  const pendingActions = actionItems.filter(a => !a.done);
+  const userPendingCount = pendingActions.filter(a => a.owner === 'user').length;
+  const agyPendingCount = pendingActions.filter(a => a.owner !== 'user').length;
 
   const prioColor = task.priority === 'high'
     ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
@@ -549,15 +693,44 @@ function renderCardServer(task) {
     : task.type === 'qa' ? 'QA'
     : 'TASK';
 
+  const cardBorder = isInProgress
+    ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
+    : 'border-[var(--border,#334155)] hover:border-slate-500';
+
+  const actionItemsPreviewHtml = isInProgress
+    ? `<div class="mb-2.5 bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 rounded-lg p-2 transition cursor-pointer" onclick="openTaskInspector('${safeIdAttr}', event)" title="Click to inspect &amp; assign Action Items being waited on">
+         <div class="flex items-center justify-between gap-1 mb-1">
+           <span class="text-xs font-bold text-amber-300 flex items-center gap-1">⏳ Waiting On (${pendingActions.length} Action Item${pendingActions.length === 1 ? '' : 's'})</span>
+           <span class="text-xs font-mono bg-amber-500/20 text-amber-200 border border-amber-500/40 px-1.5 py-0.5 rounded">Click to Manage ↗</span>
+         </div>
+         ${task.waitingOn ? `<div class="text-xs text-slate-300 mb-1.5 line-clamp-1">🎯 ${escapeHtmlServer(task.waitingOn)}</div>` : ''}
+         <div class="space-y-1">
+           ${pendingActions.slice(0, 2).map(a => `
+             <div class="text-xs flex items-start gap-1.5 text-slate-300">
+               <span class="px-1 py-0.2 rounded text-[10px] font-semibold whitespace-nowrap ${a.owner === 'user' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}">${a.owner === 'user' ? '👤 You' : '🤖 AGY'}</span>
+               <span class="line-clamp-1">${escapeHtmlServer(a.text)}</span>
+             </div>
+           `).join('')}
+           ${pendingActions.length > 2 ? `<div class="text-xs text-blue-300 font-medium">+${pendingActions.length - 2} more action item(s) — click to view &amp; assign</div>` : ''}
+         </div>
+         <div class="mt-1.5 pt-1 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+           <span>👤 ${userPendingCount} for you · 🤖 ${agyPendingCount} for Antigravity</span>
+           <span class="text-blue-300 font-semibold">Do or Assign →</span>
+         </div>
+       </div>`
+    : '';
+
   return `
-        <div class="bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] hover:border-slate-500 rounded-xl p-3 shadow-sm transition group">
+        <div onclick="handleCardClick('${safeIdAttr}', event)" class="bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl p-3 shadow-sm transition group ${isInProgress ? 'cursor-pointer' : ''}">
           <div class="flex items-start justify-between gap-2 mb-1.5">
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="font-mono text-xs font-bold text-blue-400">${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 ${prioColor}">${escapeHtmlServer(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">${typeBadge}</span>
+              ${isInProgress ? `<span onclick="openTaskInspector('${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ ${pendingActions.length} Action${pendingActions.length === 1 ? '' : 's'}</span>` : ''}
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-1">
+              <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
               ${!isDone
                 ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
                    <button onclick="updateTaskStatus('${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>`
@@ -571,6 +744,7 @@ function renderCardServer(task) {
             ${safeTitleHtml}
           </h3>
           ${safeDescHtml ? `<p class="text-xs text-[var(--muted-foreground,#94a3b8)] line-clamp-2 mb-2 leading-relaxed">${safeDescHtml}</p>` : ''}
+          ${actionItemsPreviewHtml}
           ${task.components && task.components.length > 0
             ? `<div class="flex flex-wrap gap-1 mb-2">${task.components.map(c => `<span class="text-xs font-mono bg-slate-800/80 text-slate-300 px-1.5 py-0.5 rounded">${escapeHtmlServer(String(c).split('/').pop())}</span>`).join('')}</div>`
             : ''}
@@ -580,6 +754,9 @@ function renderCardServer(task) {
           <div class="pt-2 border-t border-[var(--border,#334155)]/50 flex items-center justify-between gap-2">
             ${!isDone
               ? `<div class="flex items-center gap-1.5 flex-wrap">
+                   ${isInProgress
+                     ? `<button onclick="openTaskInspector('${safeIdAttr}', event)" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="View Action Items being waited on &amp; do or assign to Antigravity"><span>⏳</span> Action Items (${pendingActions.length})</button>`
+                     : ''}
                    <button onclick="kickoffTask('${safeIdAttr}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Execute /backlog-start ${safeIdAttr}"><span>🤖</span> Kickoff Prompt</button>
                    <button onclick="planTask('${safeIdAttr}')" class="bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/40 text-xs font-semibold px-2 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Focus implementation_plan.md &amp; task.md on ${safeIdAttr} (/backlog-plan ${safeIdAttr})"><span>📐</span> Plan</button>
                    <button onclick="triggerAttachFile('${safeIdAttr}')" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/50 text-xs px-2 py-1 rounded-md transition cursor-pointer" title="Attach UX/UI .zip or spec file">📎</button>
@@ -762,6 +939,95 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-4 right-4 bg-blue-600 text-white text-xs px-3 py-2 rounded-lg shadow-xl hidden transition-all duration-300 z-50"></div>
 
+  <!-- Ticket Action Items & Blocker Inspector Modal -->
+  <div id="taskInspectorModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 flex items-center justify-center p-4" onclick="if(event.target===this) closeTaskInspector()">
+    <div class="bg-[var(--card,#1e293b)] border border-blue-500/40 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-[var(--border,#334155)] flex items-start justify-between gap-3 bg-slate-900/60">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap mb-1">
+            <span id="inspectorTaskId" class="font-mono text-sm font-bold text-blue-400"></span>
+            <span id="inspectorStatusBadge" class="badge rounded px-2 py-0.5 text-xs"></span>
+            <span id="inspectorPriorityBadge" class="badge border rounded px-2 py-0.5 text-xs"></span>
+          </div>
+          <h2 id="inspectorTaskTitle" class="text-sm font-bold text-white leading-snug"></h2>
+          <p id="inspectorTaskDesc" class="text-xs text-slate-400 mt-1 leading-relaxed"></p>
+        </div>
+        <button onclick="closeTaskInspector()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-800">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 overflow-y-auto flex-1 space-y-4">
+        <!-- Waiting On Summary -->
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+          <label class="block text-xs font-bold text-amber-300 mb-1 flex items-center justify-between">
+            <span>⏳ Currently Waiting On / Active Blocker Summary</span>
+            <span class="text-[11px] font-normal text-amber-200/80">Auto-synced to docs/backlog.json</span>
+          </label>
+          <div class="flex gap-2">
+            <input id="inspectorWaitingOnInput" type="text" placeholder="e.g. Apple Developer Portal Services ID registration or live E2E test..." class="flex-1 bg-slate-900/90 border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400" onchange="saveInspectorWaitingOn()">
+            <button onclick="saveInspectorWaitingOn()" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer">
+              💾 Save
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Items Header & Filter Pills -->
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+            <div class="flex items-center gap-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">🎯 Action Items Being Waited On</h3>
+              <span id="inspectorActionCounts" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded"></span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button onclick="setInspectorOwnerFilter('all')" id="inspFilterAll" class="text-xs px-2 py-0.5 rounded border border-blue-500 bg-blue-500/20 text-white font-semibold cursor-pointer">All</button>
+              <button onclick="setInspectorOwnerFilter('user')" id="inspFilterUser" class="text-xs px-2 py-0.5 rounded border border-slate-700 bg-slate-800 text-amber-300 cursor-pointer">👤 My Actions</button>
+              <button onclick="setInspectorOwnerFilter('antigravity')" id="inspFilterAgy" class="text-xs px-2 py-0.5 rounded border border-slate-700 bg-slate-800 text-blue-300 cursor-pointer">🤖 Antigravity</button>
+            </div>
+          </div>
+
+          <!-- Action Items Checklist -->
+          <div id="inspectorActionList" class="space-y-2"></div>
+        </div>
+
+        <!-- Add New Action Item -->
+        <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl p-3">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">➕ Add Action Item to Wait List</label>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input id="newActionItemInput" type="text" onkeydown="if(event.key==='Enter') addInspectorActionItem()" placeholder="Describe action item (e.g. Add META_APP_SECRET to server/.env or run Playwright E2E)..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+            <select id="newActionItemOwner" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+              <option value="user">👤 Waiting on Me (User)</option>
+              <option value="antigravity">🤖 Assign to Antigravity</option>
+            </select>
+            <button onclick="addInspectorActionItem()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer">
+              ➕ Add
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3.5 border-t border-[var(--border,#334155)] bg-slate-900/80 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="assignAllPendingToAntigravity()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer" title="Assign all pending action items to Antigravity and copy the execution prompt">
+            <span>🤖</span> Assign All Pending to Antigravity (Copy Prompt)
+          </button>
+          <button onclick="notifyUserActionsCompleted()" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer" title="Mark your user action items done and copy prompt for Antigravity to verify &amp; finish">
+            <span>✅</span> I Completed My Actions → Resume in Chat
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="markInspectedTaskDone()" class="bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer">
+            ✅ Mark Ticket Done
+          </button>
+          <button onclick="closeTaskInspector()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg transition cursor-pointer">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Kanban Grid -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     
@@ -809,6 +1075,352 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     let currentFilter = 'all';
     let bridgeOnline = false;
     let activeAttachTaskId = null;
+    let activeInspectTaskId = null;
+    let inspectorOwnerFilter = 'all';
+
+    function inferClientActionOwner(text, task) {
+      const lower = String(text || '').toLowerCase();
+      const taskContext = ((task && task.id) || '') + ' ' + ((task && task.title) || '');
+      if (/apple developer portal|meta developer|facebook developer|entra portal|azure portal|google cloud console|stripe dashboard|configure .* in .*\.env|live .* app id|live .* secret|physical iphone|physical device|testflight build #\d+ on physical|manual|provide |sign in on device/i.test(lower)) {
+        return 'user';
+      }
+      if (/^qa-/i.test((task && task.id) || '') && /physical|device|iphone|ipad|android|disappears|auto-advance|back navigation|skip for now/i.test(lower + ' ' + taskContext)) {
+        return 'user';
+      }
+      return 'antigravity';
+    }
+
+    function getClientTaskActionItems(task) {
+      if (!task) return [];
+      if (Array.isArray(task.actionItems) && task.actionItems.length > 0) {
+        return task.actionItems;
+      }
+      const criteria = Array.isArray(task.acceptanceCriteria) ? task.acceptanceCriteria : [];
+      const derived = criteria.map((c, idx) => ({
+        id: task.id + '-ACT-' + (idx + 1),
+        text: String(c || '').trim(),
+        owner: inferClientActionOwner(c, task),
+        done: task.status === 'done'
+      })).filter(i => i.text);
+      if (derived.length === 0 && (task.status === 'in_progress' || task.status === 'testing')) {
+        derived.push({
+          id: task.id + '-ACT-1',
+          text: task.description || ('Complete and verify ' + task.title),
+          owner: inferClientActionOwner(task.description || task.title, task),
+          done: false
+        });
+      }
+      task.actionItems = derived;
+      return task.actionItems;
+    }
+
+    function handleCardClick(taskId, event) {
+      if (event && event.target && event.target.closest('button, a, input, select, textarea, label')) {
+        return;
+      }
+      const task = rawData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      openTaskInspector(taskId, event);
+    }
+
+    function openTaskInspector(taskId, event) {
+      if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+      }
+      const task = rawData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      activeInspectTaskId = taskId;
+      inspectorOwnerFilter = 'all';
+      getClientTaskActionItems(task);
+      renderTaskInspectorModal();
+      const modal = document.getElementById('taskInspectorModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeTaskInspector() {
+      const modal = document.getElementById('taskInspectorModal');
+      if (modal) modal.classList.add('hidden');
+      activeInspectTaskId = null;
+    }
+
+    function setInspectorOwnerFilter(filter) {
+      inspectorOwnerFilter = filter;
+      renderTaskInspectorModal();
+    }
+
+    async function persistTaskActionItems(task, toastMsg) {
+      renderBoard();
+      if (activeInspectTaskId === task.id) {
+        renderTaskInspectorModal();
+      }
+      const res = await callLocalBridge('/api/action-items', {
+        repoRoot: rawData.repoRoot,
+        id: task.id,
+        waitingOn: task.waitingOn || '',
+        actionItems: task.actionItems || []
+      });
+      if (toastMsg) {
+        showToast(toastMsg);
+      }
+      return res;
+    }
+
+    async function saveInspectorWaitingOn() {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      const input = document.getElementById('inspectorWaitingOnInput');
+      if (!task || !input) return;
+      task.waitingOn = input.value.trim();
+      await persistTaskActionItems(task, '💾 Updated "Waiting On" summary for [' + task.id + ']');
+    }
+
+    async function toggleActionItemDone(itemId) {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      const items = getClientTaskActionItems(task);
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+      item.done = !item.done;
+      await persistTaskActionItems(task, (item.done ? '✅ Marked action item done' : '↩️ Reopened action item') + ' in [' + task.id + ']');
+    }
+
+    async function toggleActionItemOwner(itemId) {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      const items = getClientTaskActionItems(task);
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+      item.owner = item.owner === 'user' ? 'antigravity' : 'user';
+      await persistTaskActionItems(
+        task,
+        item.owner === 'user'
+          ? '👤 Assigned action item to You (User)'
+          : '🤖 Assigned action item to Antigravity'
+      );
+    }
+
+    async function assignSingleActionToAntigravity(itemId) {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      const items = getClientTaskActionItems(task);
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+      item.owner = 'antigravity';
+      const prompt = '/backlog-start ' + task.id + ' — Execute action item: "' + item.text + '"';
+      copyTextToClipboard(prompt, true, task.id);
+      const titleEl = document.getElementById('kickoffBannerTitle');
+      if (titleEl) {
+        titleEl.textContent = '🤖 Assigned Action Item to Antigravity [' + task.id + '] — Press ⌘V in Chat';
+      }
+      await persistTaskActionItems(task);
+      await callLocalBridge('/api/clipboard', { text: prompt });
+      showToast('🤖 Assigned to Antigravity & copied prompt! Press ⌘V in chat.');
+    }
+
+    async function completeActionAndNotifyAntigravity(itemId) {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      const items = getClientTaskActionItems(task);
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+      item.done = true;
+      const prompt = '/backlog-start ' + task.id + ' — I completed action item: "' + item.text + '". Please verify and continue.';
+      copyTextToClipboard(prompt, true, task.id);
+      const titleEl = document.getElementById('kickoffBannerTitle');
+      if (titleEl) {
+        titleEl.textContent = '✅ Action Completed on [' + task.id + '] — Press ⌘V in Chat for Antigravity to Verify';
+      }
+      await persistTaskActionItems(task);
+      await callLocalBridge('/api/clipboard', { text: prompt });
+      showToast('✅ Marked done & copied continuation prompt for Antigravity! Press ⌘V in chat.');
+    }
+
+    async function deleteInspectorActionItem(itemId) {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      task.actionItems = getClientTaskActionItems(task).filter(i => i.id !== itemId);
+      await persistTaskActionItems(task, '🗑️ Removed action item from [' + task.id + ']');
+    }
+
+    async function addInspectorActionItem() {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      const input = document.getElementById('newActionItemInput');
+      const ownerSel = document.getElementById('newActionItemOwner');
+      if (!task || !input) return;
+      const text = input.value.trim();
+      if (!text) {
+        showToast('⚠️ Please enter an action item description');
+        return;
+      }
+      const owner = ownerSel ? ownerSel.value : 'user';
+      const items = getClientTaskActionItems(task);
+      const newItem = {
+        id: task.id + '-ACT-' + Date.now().toString(36).slice(-4).toUpperCase(),
+        text,
+        owner,
+        done: false
+      };
+      items.unshift(newItem);
+      if (!task.waitingOn) task.waitingOn = text;
+      input.value = '';
+      await persistTaskActionItems(
+        task,
+        owner === 'antigravity'
+          ? '🤖 Added action item for Antigravity on [' + task.id + ']'
+          : '👤 Added action item to your wait list on [' + task.id + ']'
+      );
+    }
+
+    async function assignAllPendingToAntigravity() {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      const items = getClientTaskActionItems(task);
+      const pending = items.filter(i => !i.done);
+      for (const item of pending) {
+        item.owner = 'antigravity';
+      }
+      const summaryList = pending.length > 0
+        ? pending.map((i, idx) => (idx + 1) + ') ' + i.text).join(' ; ')
+        : (task.waitingOn || task.title);
+      const prompt = '/backlog-start ' + task.id + ' — Execute pending action items: ' + summaryList;
+      copyTextToClipboard(prompt, true, task.id);
+      const titleEl = document.getElementById('kickoffBannerTitle');
+      if (titleEl) {
+        titleEl.textContent = '🤖 Delegated ' + pending.length + ' Action Item(s) on [' + task.id + '] to Antigravity — Press ⌘V in Chat';
+      }
+      await persistTaskActionItems(task);
+      await callLocalBridge('/api/clipboard', { text: prompt });
+      showToast('🤖 Assigned all ' + pending.length + ' pending action item(s) to Antigravity & copied prompt!');
+    }
+
+    async function notifyUserActionsCompleted() {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      const items = getClientTaskActionItems(task);
+      const userPending = items.filter(i => !i.done && i.owner === 'user');
+      for (const item of userPending) {
+        item.done = true;
+      }
+      const completedText = userPending.length > 0
+        ? userPending.map(i => i.text).join('; ')
+        : (task.waitingOn || 'user prerequisites');
+      const prompt = '/backlog-start ' + task.id + ' — User action items completed (' + completedText + '). Run live E2E verification and close ' + task.id + '.';
+      copyTextToClipboard(prompt, true, task.id);
+      const titleEl = document.getElementById('kickoffBannerTitle');
+      if (titleEl) {
+        titleEl.textContent = '✅ User Actions Completed for [' + task.id + '] — Press ⌘V in Chat to Verify & Close';
+      }
+      await persistTaskActionItems(task);
+      await callLocalBridge('/api/clipboard', { text: prompt });
+      showToast('✅ Marked your action items done & copied verification prompt for Antigravity!');
+    }
+
+    async function markInspectedTaskDone() {
+      if (!activeInspectTaskId) return;
+      const id = activeInspectTaskId;
+      closeTaskInspector();
+      await updateTaskStatus(id, 'done');
+    }
+
+    function renderTaskInspectorModal() {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+
+      const items = getClientTaskActionItems(task);
+      const pendingCount = items.filter(i => !i.done).length;
+      const userPending = items.filter(i => !i.done && i.owner === 'user').length;
+      const agyPending = items.filter(i => !i.done && i.owner !== 'user').length;
+
+      document.getElementById('inspectorTaskId').textContent = task.id;
+      document.getElementById('inspectorTaskTitle').textContent = task.title;
+      document.getElementById('inspectorTaskDesc').textContent = task.description || task.spec || '';
+      document.getElementById('inspectorWaitingOnInput').value = task.waitingOn || '';
+
+      const statusBadge = document.getElementById('inspectorStatusBadge');
+      if (task.status === 'in_progress' || task.status === 'testing') {
+        statusBadge.textContent = '⚡ IN PROGRESS';
+        statusBadge.className = 'badge rounded px-2 py-0.5 text-xs bg-blue-500/20 text-blue-300 border border-blue-500/40';
+      } else if (task.status === 'done') {
+        statusBadge.textContent = '✓ DONE';
+        statusBadge.className = 'badge rounded px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      } else {
+        statusBadge.textContent = '📋 TO-DO';
+        statusBadge.className = 'badge rounded px-2 py-0.5 text-xs bg-slate-700 text-slate-300';
+      }
+
+      const prioBadge = document.getElementById('inspectorPriorityBadge');
+      prioBadge.textContent = (task.priority || 'medium').toUpperCase();
+      prioBadge.className = 'badge border rounded px-2 py-0.5 text-xs ' + (
+        task.priority === 'high'
+          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+          : task.priority === 'medium'
+          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+          : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+      );
+
+      document.getElementById('inspectorActionCounts').textContent =
+        pendingCount + ' pending (👤 ' + userPending + ' You · 🤖 ' + agyPending + ' Antigravity)';
+
+      const btnAll = document.getElementById('inspFilterAll');
+      const btnUser = document.getElementById('inspFilterUser');
+      const btnAgy = document.getElementById('inspFilterAgy');
+      if (btnAll && btnUser && btnAgy) {
+        btnAll.className = 'text-xs px-2 py-0.5 rounded border cursor-pointer ' + (inspectorOwnerFilter === 'all' ? 'border-blue-500 bg-blue-500/20 text-white font-semibold' : 'border-slate-700 bg-slate-800 text-slate-300');
+        btnUser.className = 'text-xs px-2 py-0.5 rounded border cursor-pointer ' + (inspectorOwnerFilter === 'user' ? 'border-amber-400 bg-amber-500/20 text-amber-200 font-semibold' : 'border-slate-700 bg-slate-800 text-amber-300');
+        btnAgy.className = 'text-xs px-2 py-0.5 rounded border cursor-pointer ' + (inspectorOwnerFilter === 'antigravity' ? 'border-blue-400 bg-blue-500/20 text-blue-200 font-semibold' : 'border-slate-700 bg-slate-800 text-blue-300');
+      }
+
+      const filteredItems = items.filter(i => {
+        if (inspectorOwnerFilter === 'user') return i.owner === 'user';
+        if (inspectorOwnerFilter === 'antigravity') return i.owner !== 'user';
+        return true;
+      });
+
+      const listEl = document.getElementById('inspectorActionList');
+      if (filteredItems.length === 0) {
+        listEl.innerHTML = '<div class="text-xs text-slate-400 bg-slate-900/50 border border-slate-800 rounded-lg p-4 text-center">No action items in this filter. Add one below!</div>';
+        return;
+      }
+
+      listEl.innerHTML = filteredItems.map(item => {
+        const safeItemId = escapeAttr(item.id);
+        const isUser = item.owner === 'user';
+        const ownerBadge = isUser
+          ? \`<button onclick="toggleActionItemOwner('\${safeItemId}')" class="px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition whitespace-nowrap cursor-pointer" title="Click to switch assignee to Antigravity">👤 Waiting on Me</button>\`
+          : \`<button onclick="toggleActionItemOwner('\${safeItemId}')" class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30 transition whitespace-nowrap cursor-pointer" title="Click to switch assignee to Yourself">🤖 Antigravity</button>\`;
+
+        return \`
+          <div class="bg-slate-900/90 border \${item.done ? 'border-slate-800 opacity-65' : (isUser ? 'border-amber-500/30' : 'border-blue-500/30')} rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-start gap-2.5 flex-1">
+              <input type="checkbox" \${item.done ? 'checked' : ''} onchange="toggleActionItemDone('\${safeItemId}')" class="mt-1 h-4 w-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500 cursor-pointer">
+              <div class="flex-1">
+                <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                  \${ownerBadge}
+                  <span class="font-mono text-[10px] text-slate-500">\${escapeHtml(item.id)}</span>
+                </div>
+                <div class="text-xs text-slate-100 leading-relaxed \${item.done ? 'line-through text-slate-400' : ''}">\${escapeHtml(item.text)}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+              \${!item.done ? \`
+                <button onclick="assignSingleActionToAntigravity('\${safeItemId}')" class="bg-blue-600/25 hover:bg-blue-600/45 text-blue-200 border border-blue-500/40 text-xs font-semibold px-2 py-1 rounded-lg transition cursor-pointer whitespace-nowrap" title="Assign this action item to Antigravity &amp; copy prompt">🤖 Assign to AGY</button>
+                <button onclick="completeActionAndNotifyAntigravity('\${safeItemId}')" class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-semibold px-2 py-1 rounded-lg transition cursor-pointer whitespace-nowrap" title="Mark done by me &amp; copy continuation prompt">✅ Done by Me</button>
+              \` : ''}
+              <button onclick="deleteInspectorActionItem('\${safeItemId}')" class="text-slate-500 hover:text-rose-400 text-xs px-1.5 py-1 rounded cursor-pointer" title="Remove action item">✕</button>
+            </div>
+          </div>
+        \`;
+      }).join('');
+    }
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -1229,6 +1841,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const safeTitleHtml = escapeHtml(task.title);
       const safeDescHtml = escapeHtml(task.description);
       const attachments = Array.isArray(task.attachments) ? task.attachments : [];
+      const actionItems = getClientTaskActionItems(task);
+      const pendingActions = actionItems.filter(a => !a.done);
+      const userPendingCount = pendingActions.filter(a => a.owner === 'user').length;
+      const agyPendingCount = pendingActions.filter(a => a.owner !== 'user').length;
       
       const prioColor = task.priority === 'high' 
         ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
@@ -1241,17 +1857,46 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         : task.type === 'qa' ? 'QA'
         : 'TASK';
 
+      const cardBorder = isInProgress
+        ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
+        : 'border-[var(--border,#334155)] hover:border-slate-500';
+
+      const actionItemsPreviewHtml = isInProgress ? \`
+        <div class="mb-2.5 bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 rounded-lg p-2 transition cursor-pointer" onclick="openTaskInspector('\${safeIdAttr}', event)" title="Click to inspect &amp; assign Action Items being waited on">
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span class="text-xs font-bold text-amber-300 flex items-center gap-1">⏳ Waiting On (\${pendingActions.length} Action Item\${pendingActions.length === 1 ? '' : 's'})</span>
+            <span class="text-xs font-mono bg-amber-500/20 text-amber-200 border border-amber-500/40 px-1.5 py-0.5 rounded">Click to Manage ↗</span>
+          </div>
+          \${task.waitingOn ? \`<div class="text-xs text-slate-300 mb-1.5 line-clamp-1">🎯 \${escapeHtml(task.waitingOn)}</div>\` : ''}
+          <div class="space-y-1">
+            \${pendingActions.slice(0, 2).map(a => \`
+              <div class="text-xs flex items-start gap-1.5 text-slate-300">
+                <span class="px-1 py-0.2 rounded text-[10px] font-semibold whitespace-nowrap \${a.owner === 'user' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}">\${a.owner === 'user' ? '👤 You' : '🤖 AGY'}</span>
+                <span class="line-clamp-1">\${escapeHtml(a.text)}</span>
+              </div>
+            \`).join('')}
+            \${pendingActions.length > 2 ? \`<div class="text-xs text-blue-300 font-medium">+\${pendingActions.length - 2} more action item(s) — click to view &amp; assign</div>\` : ''}
+          </div>
+          <div class="mt-1.5 pt-1 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+            <span>👤 \${userPendingCount} for you · 🤖 \${agyPendingCount} for Antigravity</span>
+            <span class="text-blue-300 font-semibold">Do or Assign →</span>
+          </div>
+        </div>
+      \` : '';
+
       return \`
-        <div class="bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] hover:border-slate-500 rounded-xl p-3 shadow-sm transition group">
+        <div onclick="handleCardClick('\${safeIdAttr}', event)" class="bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl p-3 shadow-sm transition group \${isInProgress ? 'cursor-pointer' : ''}">
           <div class="flex items-start justify-between gap-2 mb-1.5">
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="font-mono text-xs font-bold text-blue-400">\${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 \${prioColor}">\${escapeHtml(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">\${typeBadge}</span>
+              \${isInProgress ? \`<span onclick="openTaskInspector('\${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ \${pendingActions.length} Action\${pendingActions.length === 1 ? '' : 's'}</span>\` : ''}
             </div>
             
             <!-- Quick Status Toggles -->
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-1">
+              <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
               \${!isDone ? \`
                 <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
                 <button onclick="updateTaskStatus('\${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>
@@ -1274,6 +1919,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             </p>
           \` : ''}
 
+          \${actionItemsPreviewHtml}
+
           \${task.components && task.components.length > 0 ? \`
             <div class="flex flex-wrap gap-1 mb-2">
               \${task.components.map(c => \`<span class="text-xs font-mono bg-slate-800/80 text-slate-300 px-1.5 py-0.5 rounded">\${escapeHtml(String(c).split('/').pop())}</span>\`).join('')}
@@ -1290,6 +1937,11 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           <div class="pt-2 border-t border-[var(--border,#334155)]/50 flex items-center justify-between gap-2">
             \${!isDone ? \`
               <div class="flex items-center gap-1.5 flex-wrap">
+                \${isInProgress ? \`
+                  <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="View Action Items being waited on &amp; do or assign to Antigravity">
+                    <span>⏳</span> Action Items (\${pendingActions.length})
+                  </button>
+                \` : ''}
                 <button onclick="kickoffTask('\${safeIdAttr}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Execute /backlog-start \${safeIdAttr}">
                   <span>🤖</span> Kickoff Prompt
                 </button>
@@ -1338,7 +1990,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       document.getElementById('count-done').textContent = doneTasks.length;
     }
 
-    let lastTaskSignature = JSON.stringify((rawData.tasks || []).map(t => t.id + ':' + t.status + ':' + t.title));
+    let lastTaskSignature = JSON.stringify((rawData.tasks || []).map(t => t.id + ':' + t.status + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
 
     async function syncLiveBacklogFromBridge(showNotification = false) {
       try {
@@ -1350,12 +2002,15 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           const live = await res.json();
           if (live && Array.isArray(live.tasks)) {
             setBridgeBadge(true);
-            const nextSig = JSON.stringify(live.tasks.map(t => t.id + ':' + t.status + ':' + t.title));
+            const nextSig = JSON.stringify(live.tasks.map(t => t.id + ':' + t.status + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
             if (nextSig !== lastTaskSignature || showNotification) {
               rawData.tasks = live.tasks;
               if (Array.isArray(live.milestones)) rawData.milestones = live.milestones;
               lastTaskSignature = nextSig;
               renderBoard();
+              if (activeInspectTaskId) {
+                renderTaskInspectorModal();
+              }
               if (showNotification) {
                 showToast('🔄 Synced ' + live.tasks.length + ' tickets live from docs/backlog.json!');
               }
@@ -1417,13 +2072,23 @@ function generateReviewArtifactMd(data, rootDir = REPO_ROOT) {
 
   const inProgTasks = data.tasks.filter(t => t.status === 'in_progress' || t.status === 'testing');
   if (inProgTasks.length > 0) {
-    lines.push('## 2. In Progress & Testing');
+    lines.push('## 2. In Progress & Testing (Action Items Being Waited On)');
     lines.push('');
     for (const task of inProgTasks) {
-      lines.push(`- ⚡ **${task.id}: ${task.title}** (${task.status})`);
-      if (task.description) lines.push(`  ${task.description}`);
+      lines.push(`### ⚡ ${task.id}: ${task.title} (\`${task.status.toUpperCase()}\`)`);
+      if (task.waitingOn) lines.push(`- **⏳ Waiting On:** ${task.waitingOn}`);
+      if (task.description) lines.push(`- **Summary:** ${task.description}`);
+      const items = ensureTaskActionItems(task);
+      if (items.length > 0) {
+        lines.push('- **🎯 Action Items (Do or Assign to Antigravity):**');
+        for (const item of items) {
+          const chk = item.done ? '[x]' : '[ ]';
+          const who = item.owner === 'user' ? '👤 You (User)' : '🤖 Antigravity';
+          lines.push(`  - ${chk} **${who}**: ${item.text}`);
+        }
+      }
+      lines.push('');
     }
-    lines.push('');
   }
 
   const doneTasks = data.tasks.filter(t => t.status === 'done');
@@ -1604,10 +2269,22 @@ function generatePlanningTaskMd(data, rootDir = REPO_ROOT) {
         ? ` (📎 ${t.attachments.length} attachment(s))`
         : '';
       lines.push(`- [/] **[${t.id}] ${t.title}** (\`${(t.priority || 'medium').toUpperCase()}\`)${comps}${attachNote}`);
-      lines.push(`  - [x] Context discovery & specification ingestion from \`docs/backlog.json\``);
-      lines.push(`  - [/] Architectural blueprint alignment in \`implementation_plan.md\` (\`/backlog-plan ${t.id}\`)`);
-      lines.push(`  - [ ] Implementation & unit/integration verification (\`/backlog-start ${t.id}\`)`);
-      lines.push(`  - [ ] Live E2E verification & \`walkthrough.md\` closure (\`npm run backlog done ${t.id}\`)`);
+      if (t.waitingOn) {
+        lines.push(`  - ⏳ **Waiting On**: ${t.waitingOn}`);
+      }
+      const actItems = ensureTaskActionItems(t);
+      if (actItems.length > 0) {
+        for (const item of actItems) {
+          const chk = item.done ? '[x]' : '[ ]';
+          const who = item.owner === 'user' ? '👤 User' : '🤖 Antigravity';
+          lines.push(`  - ${chk} **(${who})** ${item.text}`);
+        }
+      } else {
+        lines.push(`  - [x] Context discovery & specification ingestion from \`docs/backlog.json\``);
+        lines.push(`  - [/] Architectural blueprint alignment in \`implementation_plan.md\` (\`/backlog-plan ${t.id}\`)`);
+        lines.push(`  - [ ] Implementation & unit/integration verification (\`/backlog-start ${t.id}\`)`);
+        lines.push(`  - [ ] Live E2E verification & \`walkthrough.md\` closure (\`npm run backlog done ${t.id}\`)`);
+      }
     }
   } else if (todoTasks.length > 0) {
     const nextUp = focused.tasks[0];
@@ -1992,7 +2669,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 }
 
-const BRIDGE_VERSION = '1.4.0';
+const BRIDGE_VERSION = '1.5.0';
 
 function spawnBridgeDaemon() {
   try {
@@ -2159,12 +2836,45 @@ function startBridgeServer(port = DEFAULT_PORT) {
         }
         task.status = newStatus;
         if (newStatus === 'in_progress') {
+          ensureTaskActionItems(task);
           unpackTaskAttachments(task, targetRoot);
         }
         saveBacklog(data, targetRoot);
         renderMigrationBoard(data, targetRoot);
         writeReviewPaneArtifacts(data, targetRoot);
         return { status: 200, payload: { ok: true, id: task.id, status: task.status } };
+      }
+
+      if (endpoint === '/api/action-items') {
+        const id = String(body.id || '').trim();
+        const data = loadBacklog(targetRoot);
+        const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
+        if (!task) {
+          return { status: 404, payload: { ok: false, error: 'Task not found' } };
+        }
+        if (typeof body.waitingOn === 'string') {
+          task.waitingOn = body.waitingOn.trim();
+        }
+        if (Array.isArray(body.actionItems)) {
+          task.actionItems = body.actionItems.map((item, idx) => ({
+            id: String(item.id || `${task.id}-ACT-${idx + 1}`),
+            text: String(item.text || '').trim(),
+            owner: item.owner === 'user' ? 'user' : 'antigravity',
+            done: Boolean(item.done)
+          })).filter(i => i.text);
+        }
+        saveBacklog(data, targetRoot);
+        renderMigrationBoard(data, targetRoot);
+        writeReviewPaneArtifacts(data, targetRoot, true);
+        return {
+          status: 200,
+          payload: {
+            ok: true,
+            id: task.id,
+            waitingOn: task.waitingOn || '',
+            actionItems: task.actionItems || []
+          }
+        };
       }
 
       if (endpoint === '/api/add') {
@@ -2353,6 +3063,7 @@ Usage:
   npm run backlog add "<title>" [--id <ID>] [--type <feature|bug|qa|refactor>] [--priority <high|medium|low>] [--desc "<desc>"] [--components "<file1,file2>"] [--attach "<ux-ui.zip,spec.md>"]
   npm run backlog attach <id> <file1> [file2 ...] [--no-copy]
   npm run backlog unpack <id> [optional_extra_files...]
+  npm run backlog actions <id> [--waiting "<summary>"] [--add "<item>" --owner <user|antigravity>] [--done <item_id_or_index>]
   npm run backlog plan [<id> ...]
   npm run backlog status <id> <todo|in_progress|testing|done>
   npm run backlog start <id>
@@ -2403,6 +3114,17 @@ function main() {
       }
       if (t.attachments && t.attachments.length > 0) {
         console.log(`   └─ Attachments: 📎 ${t.attachments.join(', ')}`);
+      }
+      if ((t.status === 'in_progress' || t.status === 'testing') && t.waitingOn) {
+        console.log(`   └─ ⏳ Waiting On: ${t.waitingOn}`);
+      }
+      if ((t.status === 'in_progress' || t.status === 'testing') && Array.isArray(t.actionItems) && t.actionItems.length > 0) {
+        const pending = t.actionItems.filter(a => !a.done);
+        console.log(`   └─ 🎯 Action Items (${pending.length} pending / ${t.actionItems.length} total):`);
+        for (const a of t.actionItems) {
+          const who = a.owner === 'user' ? '👤 You' : '🤖 AGY';
+          console.log(`      ${a.done ? '[x]' : '[ ]'} (${who}) ${a.text}`);
+        }
       }
     }
     console.log('='.repeat(70));
@@ -2636,6 +3358,80 @@ function main() {
     const idList = matchedTasks.map(t => t.id).join(', ');
     console.log(`\n✅ Task(s) [${idList}] marked COMPLETED (DONE)!`);
     console.log(`💡 Next step: Run /update-memory to close the memory cycle and commit.\n`);
+    return;
+  }
+
+  if (command === 'actions') {
+    const id = args[1];
+    if (!id) {
+      console.error('❌ Usage: npm run backlog actions <id> [--waiting "<summary>"] [--add "<item>" --owner <user|antigravity>] [--done <item_id_or_index>]');
+      process.exit(1);
+    }
+
+    const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
+    if (!task) {
+      console.error(`❌ Task ${id} not found in backlog.`);
+      process.exit(1);
+    }
+
+    ensureTaskActionItems(task);
+    let mutated = false;
+    let owner = 'user';
+    const itemsToAdd = [];
+
+    for (let i = 2; i < args.length; i++) {
+      if (args[i] === '--owner' && args[i + 1]) {
+        owner = args[++i].toLowerCase() === 'antigravity' ? 'antigravity' : 'user';
+      } else if (args[i] === '--waiting' && args[i + 1]) {
+        task.waitingOn = args[++i].trim();
+        mutated = true;
+      } else if (args[i] === '--add' && args[i + 1]) {
+        itemsToAdd.push(args[++i].trim());
+      } else if (args[i] === '--done' && args[i + 1]) {
+        const target = args[++i].trim();
+        const idx = Number(target) - 1;
+        const found = (!Number.isNaN(idx) && task.actionItems[idx])
+          ? task.actionItems[idx]
+          : task.actionItems.find(a => a.id.toLowerCase() === target.toLowerCase());
+        if (found) {
+          found.done = true;
+          mutated = true;
+        }
+      }
+    }
+
+    for (const text of itemsToAdd) {
+      if (!text) continue;
+      task.actionItems.unshift({
+        id: `${task.id}-ACT-${task.actionItems.length + 1}`,
+        text,
+        owner,
+        done: false
+      });
+      if (!task.waitingOn) task.waitingOn = text;
+      mutated = true;
+    }
+
+    if (mutated) {
+      saveBacklog(data);
+      renderMigrationBoard(data);
+      writeReviewPaneArtifacts(data, REPO_ROOT, true);
+      ensureDaemonRunning();
+    }
+
+    console.log(`\n🎯 Action Items for [${task.id}] ${task.title} (${task.status.toUpperCase()}):`);
+    if (task.waitingOn) {
+      console.log(`   ⏳ Waiting On: ${task.waitingOn}`);
+    }
+    if (task.actionItems.length === 0) {
+      console.log('   (No action items recorded)');
+    } else {
+      task.actionItems.forEach((item, idx) => {
+        const who = item.owner === 'user' ? '👤 You (User)' : '🤖 Antigravity';
+        console.log(`   ${idx + 1}. ${item.done ? '[x]' : '[ ]'} [${item.id}] (${who}) ${item.text}`);
+      });
+    }
+    console.log('');
     return;
   }
 
