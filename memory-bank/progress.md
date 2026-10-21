@@ -17,9 +17,10 @@
 - [x] Resolve `BUG-107`: Auto-scrape and synchronize API keys (`.env*`, `eas.json`, `.p8`), MCP server configs (`~/.gemini/config/mcp_config.json`), and Antigravity customizations (`.agents/rules/*`, `.agents/skills/*`, hooks) into `memory-bank/integrationsAndCustomizations.md`
 - [x] Implement `FEAT-114`: On-the-fly lifecycle hooks (`.agents/hooks.json` for `SessionStart`, `PostToolUse`, `Stop`), 10-Point Mandatory Baseline Ingestion Checklist (`lib/ingestion-checklist.mjs`), and `< 24 KB` rule shard balancer
 - [x] Implement `FEAT-115`: Upstream Strict Live End-to-End Verification Before Ticket Closure rule (`AGENTS.md`, `templates/AGENTS.md.tpl`, `skills/backlog-start/SKILL.md` Rule 4, `bin/cli.mjs` upgrade propagation, and Check #6 verification) across all 5 repositories
+- [x] Implement `FEAT-112` & `FEAT-111`: Automated Template Byte-Parity Audit (`scripts/lint-memory.mjs`) and Zero-Dependency Hermetic E2E CLI Test Suite (`tests/cli-e2e.test.mjs` covering `init`, `upgrade` with 100% custom domain preservation, `sync` with secret masking, `export`, and `uninstall`)
 
 ## 2. Test Matrix & Verification Status
-- **Test & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs`) — 14/14 files passing (`< 150 lines`), 10/10 Mandatory Baseline Ingestion Checklist passing across all 5 repositories.
+- **Test, Parity & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs`) — 14/14 memory files (`< 150 lines`), 3/3 template parity pairs, 7/7 E2E & parity tests passing (`0` violations), and 10/10 Mandatory Baseline Ingestion Checklist passing.
 - **Package Whitelist Audit**: `npm pack --dry-run` — excludes `memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`, and `.github/`.
 - **Backlog Renderer & Live Bridge**: `npm run backlog:render` + `http://127.0.0.1:4199/api/health` (v1.2.0) — synchronizes `docs/BACKLOG.md`, `docs/backlog.html`, and exact project `<brainDir>/backlog.html` with native OS clipboard copy and `.zip` attachment unpacking.
 

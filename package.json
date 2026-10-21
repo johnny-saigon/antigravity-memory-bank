@@ -20,7 +20,8 @@
   ],
   "scripts": {
     "lint:memory": "node scripts/lint-memory.mjs",
-    "test": "node scripts/lint-memory.mjs && echo \"All memory templates pass line budget!\"",
+    "test:e2e": "node --test tests/cli-e2e.test.mjs",
+    "test": "node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs",
     "memory:sync": "node scripts/sync-memory-context.mjs",
     "memory:upgrade": "npx github:johnny-saigon/antigravity-memory-bank upgrade",
     "memory:export": "npx github:johnny-saigon/antigravity-memory-bank export",

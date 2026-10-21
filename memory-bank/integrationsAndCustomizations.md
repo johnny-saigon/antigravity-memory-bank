@@ -7,7 +7,7 @@
 - **Directory Layout**: `lib/`, `bin/`, `scripts/`, `docs/`, `templates/`, `memory-bank/`, `.agents/`
 
 ## 2. Environment Files, API Keys & Credentials Inventory
-- **Host Token Files**: `~/.github_token` (GitHub PAT) · `~/.stripe_token` (Stripe API Token) · `~/.stitch_token` (Google Stitch Token) · `~/.ovh_credentials.json` (OVHcloud API)
+- **Host Token Files**: `~/.github_token` (GitHub PAT) · `~/.stripe_token` (Stripe API Token) · `~/.stitch_token` (Google Stitch Token) · `~/.ovh_credentials.json` (OVHcloud API) · `~/.meta_credentials.json` (Meta Graph API)
 - **Workspace `.env` Files**: None detected (uses host environment & `~/.gemini/config/mcp_config.json`).
 
 ## 3. Active MCP Servers (`~/.gemini/config/mcp_config.json`)
@@ -22,8 +22,11 @@
 | **`StitchMCP`** | `npx mcp-remote` (`https://stitch.googleapis.com/mcp`) | 15 | Header `X-Goog-Api-Key` (configured) |
 | **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 9 | `ASC_KEY_ID`=`Y9V6TK5R8A`, `ASC_ISSUER_ID`=`c06bde3f-875e-492e-a1fc-235a6f305e3e`, `ASC_PRIVATE_KEY_PATH` -> `credentials/AuthKey_Y9V6TK5R8A.p8` |
 | **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | `META_CREDENTIALS_PATH` -> `~/.meta_credentials.json` |
+| **`meta_business`** | `~/.gemini/antigravity/bin/meta_business_mcp.cjs` | 18 | Default / CLI auth |
 | **`azure-mcp`** | `npx @azure/mcp@latest` | 69 | Default / CLI auth |
 | **`entra`** | `~/.gemini/antigravity/bin/entra_mcp.cjs` | 4 | `ENTRA_CREDENTIALS_PATH` -> `~/.entra_credentials.json` |
+| **`linkedin`** | `~/.local/bin/linkedin-mcp` | 29 | `LINKEDIN_MCP_DATA_DIR` -> `~/.linkedin_mcp`, `LINKEDIN_BROWSER_EXECUTABLE_PATH` -> `/Applications/Brave Browser.app/Contents/MacOS/Brave Browser` |
+| **`midjourney`** | `~/.gemini/antigravity/bin/midjourney_mcp.sh` | 25 | Default / CLI auth |
 
 ## 4. Antigravity Customizations & Lifecycle Hooks
 - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`

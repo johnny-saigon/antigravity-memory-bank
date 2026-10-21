@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-18T20:45:09.968Z",
+  "lastUpdated": "2026-10-21T11:15:50.978Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -302,7 +302,7 @@
       "id": "FEAT-111",
       "type": "qa",
       "title": "Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)",
-      "status": "todo",
+      "status": "done",
       "priority": "high",
       "components": [
         "bin/cli.mjs",
@@ -314,13 +314,14 @@
         "Tests init, upgrade, sync, export, and uninstall in an isolated temp directory.",
         "Verifies custom memory-bank/*.md domain files are 100% preserved across upgrade.",
         "Passes via npm test."
-      ]
+      ],
+      "completedAt": "2026-10-21T11:15:50.977Z"
     },
     {
       "id": "FEAT-112",
       "type": "qa",
       "title": "Automated Byte-Parity Check Between scripts/backlog.mjs and templates/scripts/backlog.mjs",
-      "status": "todo",
+      "status": "done",
       "priority": "medium",
       "components": [
         "scripts/lint-memory.mjs",
@@ -331,7 +332,8 @@
       "spec": "Add a byte-identity assertion between scripts/backlog.mjs and templates/scripts/backlog.mjs during npm test.",
       "acceptanceCriteria": [
         "npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge."
-      ]
+      ],
+      "completedAt": "2026-10-21T11:15:50.805Z"
     },
     {
       "id": "FEAT-113",
@@ -434,7 +436,7 @@
     {
       "id": "MILESTONE-3",
       "title": "v1.5 Automated E2E CLI Verification & Template Parity Suite",
-      "status": "todo"
+      "status": "done"
     }
   ]
 }

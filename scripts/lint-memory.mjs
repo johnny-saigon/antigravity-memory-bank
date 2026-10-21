@@ -48,17 +48,45 @@ for (const dir of targetDirs) {
   await checkDir(path.resolve(process.cwd(), dir));
 }
 
-if (totalFilesChecked === 0) {
+// Template Byte-Parity Audit (FEAT-112): runs when upstream templates/ directory is present
+const parityPairs = [
+  ['scripts/backlog.mjs', 'templates/scripts/backlog.mjs'],
+  ['scripts/sync-memory-context.mjs', 'templates/scripts/sync-memory-context.mjs'],
+  ['skills/backlog-start/SKILL.md', '.agents/skills/backlog-start/SKILL.md']
+];
+
+let parityChecked = 0;
+for (const [relA, relB] of parityPairs) {
+  const fullA = path.resolve(process.cwd(), relA);
+  const fullB = path.resolve(process.cwd(), relB);
+  try {
+    const [statA, statB] = await Promise.all([fs.stat(fullA), fs.stat(fullB)]);
+    if (statA.isFile() && statB.isFile()) {
+      parityChecked++;
+      const [bufA, bufB] = await Promise.all([fs.readFile(fullA), fs.readFile(fullB)]);
+      if (Buffer.compare(bufA, bufB) !== 0) {
+        console.error(`❌ Template parity violation: ${relA} (${bufA.length}B) and ${relB} (${bufB.length}B) have diverged!`);
+        violations++;
+      } else {
+        console.log(`✅ Template parity: ${relA} === ${relB} (${bufA.length} bytes)`);
+      }
+    }
+  } catch {
+    // Downstream consumer repositories do not have templates/ or upstream skills/
+  }
+}
+
+if (totalFilesChecked === 0 && parityChecked === 0) {
   console.log('ℹ️ No markdown memory files found to audit.');
   process.exit(0);
 }
 
-console.log(`\nSummary: Checked ${totalFilesChecked} files. ${violations} violations found.\n`);
+console.log(`\nSummary: Checked ${totalFilesChecked} memory files${parityChecked > 0 ? ` and ${parityChecked} template parity pairs` : ''}. ${violations} violations found.\n`);
 
 if (violations > 0) {
-  console.error('❌ Memory Bank line budget violated! Split large domain files into linked sub-files using @[Name](path.md).');
+  console.error('❌ Memory Bank audit failed! Fix line-budget (<150 lines) or template byte-parity violations.');
   process.exit(1);
 } else {
-  console.log('✨ All Memory Bank files comply with the 150-line limit!');
+  console.log('✨ All Memory Bank files comply with the 150-line limit and template parity invariants!');
   process.exit(0);
 }

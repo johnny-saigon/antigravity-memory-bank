@@ -267,24 +267,24 @@ This board tracks active development tickets, feature backlogs, architecture ini
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)
-- **Status:** Backlog (`TODO`)
+- **Status:** Completed (`DONE`)
 - **Platform:** bin/cli.mjs, scripts/lint-memory.mjs
 - **Scope:**
   Add an automated smoke test script using node:test and node:assert that exercises init, upgrade, sync, export, and uninstall inside an isolated temporary directory.
 - **Acceptance Criteria:**
-  - [ ] Tests init, upgrade, sync, export, and uninstall in an isolated temp directory.
-  - [ ] Verifies custom memory-bank/*.md domain files are 100% preserved across upgrade.
-  - [ ] Passes via npm test.
+  - [x] Tests init, upgrade, sync, export, and uninstall in an isolated temp directory.
+  - [x] Verifies custom memory-bank/*.md domain files are 100% preserved across upgrade.
+  - [x] Passes via npm test.
 
 ---
 
 ### FEAT-112: Automated Byte-Parity Check Between scripts/backlog.mjs and templates/scripts/backlog.mjs
-- **Status:** Backlog (`TODO`)
+- **Status:** Completed (`DONE`)
 - **Platform:** scripts/lint-memory.mjs, scripts/backlog.mjs, templates/scripts/backlog.mjs
 - **Scope:**
   Ensure upstream bug fixes to scripts/backlog.mjs never drift from templates/scripts/backlog.mjs distributed to downstream projects.
 - **Acceptance Criteria:**
-  - [ ] npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge.
+  - [x] npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge.
 
 ---
 
@@ -292,5 +292,5 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 - [x] **MILESTONE-1**: v1.0–v1.3 Three-Tier Memory Bank, Auto-Scraper, Git Hooks & In-Place Upgrade
 - [x] **MILESTONE-2**: v1.4 Zero-Token Backlog Engine, Review Pane Kanban & Isolated Dogfooding
-- [ ] **MILESTONE-3**: v1.5 Automated E2E CLI Verification & Template Parity Suite
+- [x] **MILESTONE-3**: v1.5 Automated E2E CLI Verification & Template Parity Suite
 
