@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(customizations): ensure <24KB rule shard balance and pre-auth mandate across all repos [skip ci]** (`611658d`)
 - [x] **feat(customizations): verify and store pre-authenticated MCP & customization state to prevent redundant access prompts [skip ci]** (`825487f`)
 - [x] **feat(planning): add correlated 3-artifact Planning Mode (task.md, implementation_plan.md, walkthrough.md) and /backlog-plan skill (FEAT-116) [skip ci]** (`511cdad`)
 - [x] **feat(qa): implement FEAT-112 template parity check and FEAT-111 E2E CLI test suite [skip ci]** (`6e2a697`)
