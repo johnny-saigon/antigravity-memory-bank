@@ -40,8 +40,13 @@
   - `.agents/rules/memory-integrations.md`: Apply whenever calling MCP tools, checking pre-authenticated API keys, .env contracts, OAuth credentials, or w
   - `.agents/rules/memory-sprint-context.md`: Apply when checking active sprint state, recent commits, known pitfalls, backlog status, or milestone progress
   - `.agents/rules/negative-constraints.md`: Apply whenever executing shell commands, managing processes or Docker containers, querying databases, or enfor
-- **Workspace Skills (4)**:
+- **Workspace Skills (9)**:
   - `/backlog-plan` (`.agents/skills/backlog-plan/SKILL.md`): Structured Antigravity Planning Mode workflow (/backlog-plan FEAT-101 or /backlog-plan) correlated with docs/b
   - `/backlog-start` (`.agents/skills/backlog-start/SKILL.md`): Automated, frugal execution of backlog tickets (e.g. /backlog-start FEAT-101 or /backlog-start FEAT-101, BUG-1
+  - `/clear` (`.agents/skills/clear/SKILL.md`): Persist current session state to memory-bank/*.md and docs/backlog.json and prepare a clean zero-bloat context
+  - `/context` (`.agents/skills/context/SKILL.md`): Audit active Antigravity rules (.agents/rules/*.md), progressive disclosure status, loaded memory-bank files, 
+  - `/credits` (`.agents/skills/credits/SKILL.md`): Inspect per-turn token drain, session history cost, progressive disclosure savings, and Google One / Antigravi
+  - `/effort` (`.agents/skills/effort/SKILL.md`): Throttle or elevate reasoning effort (/effort low, /effort medium, /effort high) and tool-turn budget to match
   - `/start` (`.agents/skills/start/SKILL.md`): Context bootstrap workflow run on session start (/start) to load the Memory Bank.
   - `/update-memory` (`.agents/skills/update-memory/SKILL.md`): Memory synchronization workflow triggered via /update-memory or after major milestones.
+  - `/usage` (`.agents/skills/usage/SKILL.md`): Analyze session token usage, active brain transcript growth, tool-turn efficiency, and model tier recommendati

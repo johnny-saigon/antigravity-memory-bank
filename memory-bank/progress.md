@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(memory): enforce Always-On Credit & Token Optimization Footer Tip on every response [skip ci]** (`23bc2b6`)
 - [x] **feat(memory): implement Stop-the-Credit-Bleed controls (/plan gate, /effort, /clear, overage hard-stop) (FEAT-119)** (`cc5f372`)
 - [x] **feat(memory): implement native model_decision progressive disclosure and <50-line root AGENTS.md (FEAT-118)** (`b25e2d6`)
 - [x] **feat(backlog): add clickable In Progress Action Items inspector & assignment modal [skip ci]** (`dd5f758`)

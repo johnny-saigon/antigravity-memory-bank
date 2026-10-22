@@ -258,12 +258,19 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       assert.match(ruleContent, /^---\n[\s\S]*?trigger:\s*model_decision[\s\S]*?description:\s*".+"[\s\S]*?\n---/, `.agents/rules/${ruleFile} must have valid model_decision frontmatter`);
     }
 
-    // Verify skills & lifecycle hooks installed
+    // Verify skills & lifecycle hooks installed (including /context, /clear, /effort, /credits, /usage)
     assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'hooks.json')), true);
-    assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'start', 'SKILL.md')), true);
-    assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'update-memory', 'SKILL.md')), true);
-    assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'backlog-start', 'SKILL.md')), true);
-    assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', 'backlog-plan', 'SKILL.md')), true);
+    for (const sk of ['start', 'update-memory', 'backlog-start', 'backlog-plan', 'context', 'clear', 'effort', 'credits', 'usage']) {
+      assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'skills', sk, 'SKILL.md')), true, `Expected .agents/skills/${sk}/SKILL.md to exist`);
+    }
+
+    // Verify CLI flags for --context, --credits, --usage, --effort, --clear work deterministically
+    const ctxOut = execFileSync(process.execPath, [path.join(tmpRepo, 'scripts', 'lint-memory.mjs'), '--context'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    assert.match(ctxOut, /Antigravity Active Context & Rule Discovery Inspector/);
+    const credOut = execFileSync(process.execPath, [path.join(tmpRepo, 'scripts', 'lint-memory.mjs'), '--credits'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    assert.match(credOut, /Antigravity Credit Drain & Overage Protection Audit/);
+    const effOut = execFileSync(process.execPath, [path.join(tmpRepo, 'scripts', 'lint-memory.mjs'), '--effort', 'low'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    assert.match(effOut, /Reasoning Effort Profile Set: LOW/);
 
     // Verify backlog adapted from docs/BACKLOG.md and Review pane HTML + 3 Planning Mode artifacts rendered
     const backlogData = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));

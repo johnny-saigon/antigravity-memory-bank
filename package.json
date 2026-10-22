@@ -36,7 +36,12 @@
     "backlog:start": "node scripts/backlog.mjs start",
     "backlog:done": "node scripts/backlog.mjs done",
     "backlog:render": "node scripts/backlog.mjs render",
-    "backlog:serve": "node scripts/backlog.mjs serve"
+    "backlog:serve": "node scripts/backlog.mjs serve",
+    "memory:context": "node scripts/lint-memory.mjs --context",
+    "memory:credits": "node scripts/lint-memory.mjs --credits",
+    "memory:usage": "node scripts/lint-memory.mjs --usage",
+    "memory:effort": "node scripts/lint-memory.mjs --effort",
+    "memory:clear": "node scripts/lint-memory.mjs --clear"
   },
   "keywords": [
     "antigravity",

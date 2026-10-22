@@ -405,8 +405,8 @@ async function uninstallMemory(targetDir, opts, detected) {
     console.log('  ✓ Removed memory-bank/');
   } catch {}
 
-  // 3. Remove skills: start, update-memory, backlog-start, and backlog-plan
-  const skillsToRemove = ['start', 'update-memory', 'backlog-start', 'backlog-plan'];
+  // 3. Remove skills: start, update-memory, backlog-start, backlog-plan, context, clear, effort, credits, and usage
+  const skillsToRemove = ['start', 'update-memory', 'backlog-start', 'backlog-plan', 'context', 'clear', 'effort', 'credits', 'usage'];
   for (const s of skillsToRemove) {
     try {
       await fs.rm(path.join(targetDir, '.agents/skills', s), { recursive: true, force: true });
@@ -672,18 +672,24 @@ async function installSyncAndHooks(targetDir, detected) {
     console.log('  ✓ Created docs/backlog.json (local task store)');
   }
 
-  // 6. Install .agents/skills/backlog-start/SKILL.md and .agents/skills/backlog-plan/SKILL.md
-  const backlogSkillSrc = path.join(pkgRoot, 'skills/backlog-start/SKILL.md');
-  const backlogSkillDest = path.join(targetDir, '.agents/skills/backlog-start/SKILL.md');
-  await fs.mkdir(path.dirname(backlogSkillDest), { recursive: true });
-  await fs.copyFile(backlogSkillSrc, backlogSkillDest);
-  console.log('  ✓ Installed skill: backlog-start (/backlog-start)');
-
-  const backlogPlanSkillSrc = path.join(pkgRoot, 'skills/backlog-plan/SKILL.md');
-  const backlogPlanSkillDest = path.join(targetDir, '.agents/skills/backlog-plan/SKILL.md');
-  await fs.mkdir(path.dirname(backlogPlanSkillDest), { recursive: true });
-  await fs.copyFile(backlogPlanSkillSrc, backlogPlanSkillDest);
-  console.log('  ✓ Installed skill: backlog-plan (/backlog-plan)');
+  // 6. Install .agents/skills/ (and global ~/.gemini/config/skills/ if present) for backlog & credit/context controls
+  const allManagedSkills = ['backlog-start', 'backlog-plan', 'context', 'clear', 'effort', 'credits', 'usage'];
+  const globalSkillsRoot = path.join(process.env.HOME || process.env.USERPROFILE || '', '.gemini', 'config', 'skills');
+  const hasGlobalConfig = fsSync.existsSync(path.join(process.env.HOME || process.env.USERPROFILE || '', '.gemini', 'config'));
+  for (const skName of allManagedSkills) {
+    const skSrc = path.join(pkgRoot, 'skills', skName, 'SKILL.md');
+    const skDest = path.join(targetDir, '.agents/skills', skName, 'SKILL.md');
+    await fs.mkdir(path.dirname(skDest), { recursive: true });
+    await fs.copyFile(skSrc, skDest);
+    if (hasGlobalConfig) {
+      try {
+        const globalDest = path.join(globalSkillsRoot, skName, 'SKILL.md');
+        await fs.mkdir(path.dirname(globalDest), { recursive: true });
+        await fs.copyFile(skSrc, globalDest);
+      } catch {}
+    }
+    console.log(`  ✓ Installed skill: ${skName} (/${skName})`);
+  }
 
   // 7. Update package.json scripts with lint, sync, upgrade, export, uninstall, and backlog commands
   const pkgPath = path.join(targetDir, 'package.json');
@@ -701,6 +707,19 @@ async function installSyncAndHooks(targetDir, detected) {
       pkg.scripts['memory:sync'] = 'node scripts/sync-memory-context.mjs';
       pkgUpdated = true;
       console.log('  ✓ Added "memory:sync" script to package.json');
+    }
+    const creditScripts = {
+      'memory:context': 'node scripts/lint-memory.mjs --context',
+      'memory:credits': 'node scripts/lint-memory.mjs --credits',
+      'memory:usage': 'node scripts/lint-memory.mjs --usage',
+      'memory:effort': 'node scripts/lint-memory.mjs --effort',
+      'memory:clear': 'node scripts/lint-memory.mjs --clear'
+    };
+    for (const [k, v] of Object.entries(creditScripts)) {
+      if (!pkg.scripts[k]) {
+        pkg.scripts[k] = v;
+        pkgUpdated = true;
+      }
     }
     const upgradeCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank upgrade';
     const organizeCmd = 'rm -rf ~/.npm/_npx/*/node_modules/antigravity-memory-bank 2>/dev/null; npx -y github:johnny-saigon/antigravity-memory-bank organize';
@@ -943,6 +962,11 @@ async function initMemory(targetDir, opts, detected) {
     await copySkill('update-memory');
     await copySkill('backlog-start');
     await copySkill('backlog-plan');
+    await copySkill('context');
+    await copySkill('clear');
+    await copySkill('effort');
+    await copySkill('credits');
+    await copySkill('usage');
   } else {
     await processTemplate('AGENTS.md.tpl', 'AGENTS.md');
     await processTemplate('rules/infra.md.tpl', '.agents/rules/infra.md');
@@ -958,6 +982,11 @@ async function initMemory(targetDir, opts, detected) {
     await copySkill('update-memory');
     await copySkill('backlog-start');
     await copySkill('backlog-plan');
+    await copySkill('context');
+    await copySkill('clear');
+    await copySkill('effort');
+    await copySkill('credits');
+    await copySkill('usage');
 
     const linterSrc = path.join(pkgRoot, 'scripts/lint-memory.mjs');
     const linterDest = path.join(targetDir, 'scripts/lint-memory.mjs');

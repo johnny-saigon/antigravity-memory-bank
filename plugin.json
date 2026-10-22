@@ -1,12 +1,17 @@
 {
   "name": "memory-bank",
   "displayName": "Antigravity Memory Bank",
-  "version": "1.4.0",
-  "description": "Three-Tier Memory Bank system with Decoupled Zero-Token Backlog Engine, 3-Artifact Planning Mode, continuous session lifecycle, and <150-line budget enforcement.",
+  "version": "1.6.0",
+  "description": "Three-Tier Memory Bank system with Progressive Disclosure rules, Decoupled Zero-Token Backlog Engine, 3-Artifact Planning Mode, and Credit/Token Optimization skills (/context, /clear, /effort, /credits, /usage).",
   "suggestedPrompts": [
     "/start",
     "/backlog-plan",
     "/backlog-start",
-    "/update-memory"
+    "/update-memory",
+    "/context",
+    "/effort",
+    "/credits",
+    "/usage",
+    "/clear"
   ]
 }
