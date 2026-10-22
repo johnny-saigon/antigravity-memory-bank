@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-22T16:07:30.987Z",
+  "lastUpdated": "2026-10-22T21:56:58.739Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -788,11 +788,16 @@
     },
     {
       "id": "FEAT-118",
-      "type": "FEAT",
-      "title": "--id",
+      "type": "feature",
+      "title": "Antigravity Native Rule Discovery & model_decision Progressive Disclosure",
       "status": "done",
       "priority": "P0",
-      "components": [],
+      "components": [
+        "AGENTS.md",
+        ".agents/rules/",
+        "scripts/lint-memory.mjs",
+        "bin/cli.mjs"
+      ],
       "attachments": [],
       "description": "Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.",
       "spec": "Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.",
@@ -802,17 +807,81 @@
     },
     {
       "id": "FEAT-119",
-      "type": "FEAT",
-      "title": "--id",
+      "type": "feature",
+      "title": "Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)",
       "status": "done",
       "priority": "P0",
-      "components": [],
+      "components": [
+        "skills/",
+        ".agents/skills/",
+        "scripts/lint-memory.mjs",
+        "bin/cli.mjs"
+      ],
       "attachments": [],
       "description": "Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.",
       "spec": "Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.",
       "acceptanceCriteria": [],
       "actionItems": [],
-      "completedAt": "2026-10-22T13:34:06.486Z"
+      "completedAt": "2026-10-22T16:07:30.987Z"
+    },
+    {
+      "id": "FEAT-120",
+      "type": "feature",
+      "title": "Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)",
+      "status": "done",
+      "priority": "P0",
+      "components": [
+        "bricks/user-profile/brick.json",
+        "bricks/user-profile/core/",
+        "bricks/user-profile/platforms/web/",
+        "bricks/user-profile/platforms/ios/",
+        "bricks/user-profile/platforms/android/",
+        "bricks/user-profile/adapters/templates/",
+        "bricks/user-profile/schemas/",
+        "bricks/user-profile/testing/contract.spec.ts",
+        "bin/cli.mjs",
+        "package.json",
+        ".agents/rules/brick-governance.md"
+      ],
+      "attachments": [
+        "docs/PHASE_1_EXTRACT_SNAPCAL_AUTH_PROFILE_BRICK.md"
+      ],
+      "description": "Extract User Profile Management and 4-Provider Social Login (Google, Facebook, Apple, Microsoft) from ../SnapCal into bricks/user-profile/ as a shared, platform-adaptive Hexagonal Brick with a Headless + Design-Token/Slot Theming Engine (ProfileBrandThemePort & ProfileUISlotsPort) across Web, iOS, and Android.",
+      "spec": "Implement bricks/user-profile/ (core ports, 4 OAuth verifiers, account linking, GDPR/App Store 5.1.1(v) revocation & Meta data-deletion, ProfileLifecycleEventPort, i18n dictionary, canonical SQL/Prisma schemas, Day-1 mock OAuth adapter, headless + themed-ui for Web/iOS/Android, contract.spec.ts) and add brick list/install/upgrade/doctor commands (--platforms web,ios,android | --platforms web, --with-schema) to bin/cli.mjs.",
+      "acceptanceCriteria": [
+        "Zero hardcoded SnapCal brand styles, hex colors, logos, bundle IDs (com.snapcal), or DB calls inside bricks/user-profile/.",
+        "Complete separation of platforms/{web,ios,android}/headless/ and platforms/{web,ios,android}/themed-ui/ powered by ProfileBrandThemePort (--ag-profile-* tokens) and ProfileUISlotsPort.",
+        "bin/cli.mjs supports brick list, brick install user-profile [--platforms web,ios,android | --platforms web] [--with-schema], brick upgrade user-profile (preserving repo-local adapters), and brick doctor user-profile.",
+        "npm test passes contract.spec.ts for all 4 OAuth providers, profile CRUD, account linking, and theme token injection, and npm run lint:memory passes with 0 violations."
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-120-ACT-1",
+          "text": "Review and approve implementation_plan.md before executing Phase 1 code extraction.",
+          "owner": "user",
+          "done": true
+        },
+        {
+          "id": "FEAT-120-ACT-2",
+          "text": "Extract core/ports.ts, core/schemas.ts, core/profile.service.ts, and core/oauth/{google,facebook,apple,microsoft,account-linking}.ts from ../SnapCal with zero brand/DB coupling.",
+          "owner": "antigravity",
+          "done": false
+        },
+        {
+          "id": "FEAT-120-ACT-3",
+          "text": "Build platforms/{web,ios,android}/{headless,themed-ui}/ using ProfileBrandThemePort (--ag-profile-*) and ProfileUISlotsPort.",
+          "owner": "antigravity",
+          "done": false
+        },
+        {
+          "id": "FEAT-120-ACT-4",
+          "text": "Add schemas/, adapters/templates/, testing/contract.spec.ts, .agents/rules/brick-governance.md, and bin/cli.mjs brick commands (list, install, upgrade, doctor).",
+          "owner": "antigravity",
+          "done": false
+        }
+      ],
+      "waitingOn": "Review and approve implementation_plan.md before executing Phase 1 code extraction.",
+      "completedAt": "2026-10-22T21:56:58.738Z"
     }
   ],
   "milestones": [
@@ -833,7 +902,8 @@
     }
   ],
   "meta": {
-    "effortLevel": "medium",
-    "effortUpdatedAt": "2026-10-22T16:07:33.602Z"
-  }
+    "effortLevel": "high",
+    "effortUpdatedAt": "2026-10-22T21:33:54.110Z"
+  },
+  "activePlanTaskIds": []
 }

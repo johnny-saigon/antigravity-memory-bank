@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Decoupled Zero-Token Backlog Engine, and Correlated 3-Artifact Planning Mode directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 - **Planning Scope (`BASELINE`)**:
-  - **[FEAT-119] --id** (`P0` · Status: `done`): Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
-  - **[FEAT-118] --id** (`P0` · Status: `done`): Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
+  - **[FEAT-120] Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)** (`P0` · Status: `done`): Extract User Profile Management and 4-Provider Social Login (Google, Facebook, Apple, Microsoft) from ../SnapCal into bricks/user-profile/ as a shared, platform-adaptive Hexagonal Brick with a Headless + Design-Token/Slot Theming Engine (ProfileBrandThemePort & ProfileUISlotsPort) across Web, iOS, and Android.
+  - **[FEAT-119] Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)** (`P0` · Status: `done`): Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
+  - **[FEAT-118] Antigravity Native Rule Discovery & model_decision Progressive Disclosure** (`P0` · Status: `done`): Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
   - **[FEAT-117] AI-Native Repository & Root Reorganization Engine (organize)** (`HIGH` · Status: `done`): Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.
-  - **[FEAT-116] Correlated 3-Artifact Antigravity Planning Mode (task.md, implementation_plan.md, walkthrough.md) & /backlog-plan Skill** (`HIGH` · Status: `done`): Integrate Antigravity Planning Mode (Explore -> Plan -> Review -> Execute) across all initialized and upgraded projects, correlating the 3-Artifact Lifecycle (task.md, implementation_plan.md, walkthrough.md) directly with docs/backlog.json and memory-bank/*.md and pre-populating artifacts for existing/advanced projects.
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -25,17 +25,43 @@
 > One or more planned tickets involve third-party integrations, OAuth providers, or external credentials. **NEVER mark these tickets as `done` (`npm run backlog done`) until live server credentials are configured and real end-to-end provider HTTP requests pass.** If external credentials are pending, keep the ticket `in_progress`.
 
 ## 3. Proposed Changes
-### [FEAT-119] --id *(Completed & Verified Baseline)*
+### [FEAT-120] Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/) *(Completed & Verified Baseline)*
+- **Specification**: Implement bricks/user-profile/ (core ports, 4 OAuth verifiers, account linking, GDPR/App Store 5.1.1(v) revocation & Meta data-deletion, ProfileLifecycleEventPort, i18n dictionary, canonical SQL/Prisma schemas, Day-1 mock OAuth adapter, headless + themed-ui for Web/iOS/Android, contract.spec.ts) and add brick list/install/upgrade/doctor commands (--platforms web,ios,android | --platforms web, --with-schema) to bin/cli.mjs.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [brick.json](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/brick.json) (`bricks/user-profile/brick.json`)
+  - `[VERIFIED]` [core](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/core) (`bricks/user-profile/core/`)
+  - `[VERIFIED]` [web](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/platforms/web) (`bricks/user-profile/platforms/web/`)
+  - `[VERIFIED]` [ios](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/platforms/ios) (`bricks/user-profile/platforms/ios/`)
+  - `[VERIFIED]` [android](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/platforms/android) (`bricks/user-profile/platforms/android/`)
+  - `[VERIFIED]` [templates](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/adapters/templates) (`bricks/user-profile/adapters/templates/`)
+  - `[VERIFIED]` [schemas](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/schemas) (`bricks/user-profile/schemas/`)
+  - `[VERIFIED]` [contract.spec.ts](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/testing/contract.spec.ts) (`bricks/user-profile/testing/contract.spec.ts`)
+  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
+  - `[VERIFIED]` [package.json](file:///Users/jbb/Documents/antigravity-memory-bank/package.json) (`package.json`)
+  - `[VERIFIED]` [brick-governance.md](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/rules/brick-governance.md) (`.agents/rules/brick-governance.md`)
+- **Attached UX/UI & Context Bundles**:
+  - 📎 [PHASE_1_EXTRACT_SNAPCAL_AUTH_PROFILE_BRICK.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/PHASE_1_EXTRACT_SNAPCAL_AUTH_PROFILE_BRICK.md) (`docs/PHASE_1_EXTRACT_SNAPCAL_AUTH_PROFILE_BRICK.md` → unpacked in `docs/attachments/FEAT-120/extracted/`)
+- **Acceptance Criteria**:
+  - Zero hardcoded SnapCal brand styles, hex colors, logos, bundle IDs (com.snapcal), or DB calls inside bricks/user-profile/.
+  - Complete separation of platforms/{web,ios,android}/headless/ and platforms/{web,ios,android}/themed-ui/ powered by ProfileBrandThemePort (--ag-profile-* tokens) and ProfileUISlotsPort.
+  - bin/cli.mjs supports brick list, brick install user-profile [--platforms web,ios,android | --platforms web] [--with-schema], brick upgrade user-profile (preserving repo-local adapters), and brick doctor user-profile.
+  - npm test passes contract.spec.ts for all 4 OAuth providers, profile CRUD, account linking, and theme token injection, and npm run lint:memory passes with 0 violations.
+
+### [FEAT-119] Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage) *(Completed & Verified Baseline)*
 - **Specification**: Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
 - **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
-  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
+  - `[VERIFIED]` [skills](file:///Users/jbb/Documents/antigravity-memory-bank/skills) (`skills/`)
+  - `[VERIFIED]` [skills](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/skills) (`.agents/skills/`)
+  - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
+  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
 
-### [FEAT-118] --id *(Completed & Verified Baseline)*
+### [FEAT-118] Antigravity Native Rule Discovery & model_decision Progressive Disclosure *(Completed & Verified Baseline)*
 - **Specification**: Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
 - **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
-  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
+  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md) (`AGENTS.md`)
+  - `[VERIFIED]` [rules](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/rules) (`.agents/rules/`)
+  - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
+  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
 
 ### [FEAT-117] AI-Native Repository & Root Reorganization Engine (organize) *(Completed & Verified Baseline)*
 - **Specification**: Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.
@@ -45,21 +71,6 @@
   - `[VERIFIED]` [ingestion-checklist.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/ingestion-checklist.mjs) (`lib/ingestion-checklist.mjs`)
   - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
   - `[VERIFIED]` [README.md](file:///Users/jbb/Documents/antigravity-memory-bank/README.md) (`README.md`)
-
-### [FEAT-116] Correlated 3-Artifact Antigravity Planning Mode (task.md, implementation_plan.md, walkthrough.md) & /backlog-plan Skill *(Completed & Verified Baseline)*
-- **Specification**: Generate and synchronize task.md (4 task groups), implementation_plan.md (Goal Description, User Review Required, Proposed Changes, Verification Plan), and walkthrough.md in both docs/planning/ and session brain directories; add npm run backlog plan [ID], /api/plan bridge endpoint, and Plan button in backlog.html; install /backlog-plan skill and docs/PLANNING_GUIDE.md on init/upgrade; verify in Check #8 of lib/ingestion-checklist.mjs.
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
-  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md) (`skills/backlog-plan/SKILL.md`)
-  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-start/SKILL.md) (`skills/backlog-start/SKILL.md`)
-  - `[VERIFIED]` [PLANNING_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/templates/docs/PLANNING_GUIDE.md) (`templates/docs/PLANNING_GUIDE.md`)
-  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
-  - `[VERIFIED]` [ingestion-checklist.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/ingestion-checklist.mjs) (`lib/ingestion-checklist.mjs`)
-- **Acceptance Criteria**:
-  - Automatically populates and syncs task.md, implementation_plan.md, and walkthrough.md in docs/planning/ and <brainDir>/ from existing backlog and memory-bank context.
-  - Installs /backlog-plan skill (.agents/skills/backlog-plan/SKILL.md) and docs/PLANNING_GUIDE.md on init and upgrade.
-  - Correlates backlog.html cards (📐 Plan button + /api/plan bridge) and /backlog-start with the 3 Planning Mode artifacts.
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

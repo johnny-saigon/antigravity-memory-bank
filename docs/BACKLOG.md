@@ -288,6 +288,42 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-118: Antigravity Native Rule Discovery & model_decision Progressive Disclosure
+- **Status:** Completed (`DONE`)
+- **Priority:** P0
+- **Components:** `AGENTS.md`, `.agents/rules/`, `scripts/lint-memory.mjs`, `bin/cli.mjs`
+- **Description:** Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
+- **Technical Specification:**
+  Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
+
+---
+
+### FEAT-119: Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)
+- **Status:** Completed (`DONE`)
+- **Priority:** P0
+- **Components:** `skills/`, `.agents/skills/`, `scripts/lint-memory.mjs`, `bin/cli.mjs`
+- **Description:** Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
+- **Technical Specification:**
+  Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
+
+---
+
+### FEAT-120: Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)
+- **Status:** Completed (`DONE`)
+- **Priority:** P0
+- **Components:** `bricks/user-profile/brick.json`, `bricks/user-profile/core/`, `bricks/user-profile/platforms/web/`, `bricks/user-profile/platforms/ios/`, `bricks/user-profile/platforms/android/`, `bricks/user-profile/adapters/templates/`, `bricks/user-profile/schemas/`, `bricks/user-profile/testing/contract.spec.ts`, `bin/cli.mjs`, `package.json`, `.agents/rules/brick-governance.md`
+- **Attachments:** `docs/PHASE_1_EXTRACT_SNAPCAL_AUTH_PROFILE_BRICK.md`
+- **Description:** Extract User Profile Management and 4-Provider Social Login (Google, Facebook, Apple, Microsoft) from ../SnapCal into bricks/user-profile/ as a shared, platform-adaptive Hexagonal Brick with a Headless + Design-Token/Slot Theming Engine (ProfileBrandThemePort & ProfileUISlotsPort) across Web, iOS, and Android.
+- **Technical Specification:**
+  Implement bricks/user-profile/ (core ports, 4 OAuth verifiers, account linking, GDPR/App Store 5.1.1(v) revocation & Meta data-deletion, ProfileLifecycleEventPort, i18n dictionary, canonical SQL/Prisma schemas, Day-1 mock OAuth adapter, headless + themed-ui for Web/iOS/Android, contract.spec.ts) and add brick list/install/upgrade/doctor commands (--platforms web,ios,android | --platforms web, --with-schema) to bin/cli.mjs.
+- **Acceptance Criteria:**
+  - [x] Zero hardcoded SnapCal brand styles, hex colors, logos, bundle IDs (com.snapcal), or DB calls inside bricks/user-profile/.
+  - [x] Complete separation of platforms/{web,ios,android}/headless/ and platforms/{web,ios,android}/themed-ui/ powered by ProfileBrandThemePort (--ag-profile-* tokens) and ProfileUISlotsPort.
+  - [x] bin/cli.mjs supports brick list, brick install user-profile [--platforms web,ios,android | --platforms web] [--with-schema], brick upgrade user-profile (preserving repo-local adapters), and brick doctor user-profile.
+  - [x] npm test passes contract.spec.ts for all 4 OAuth providers, profile CRUD, account linking, and theme token injection, and npm run lint:memory passes with 0 violations.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

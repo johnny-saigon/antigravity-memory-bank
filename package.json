@@ -10,6 +10,7 @@
   },
   "files": [
     "bin/",
+    "bricks/",
     "lib/",
     "rules/",
     "scripts/",
@@ -21,7 +22,8 @@
   "scripts": {
     "lint:memory": "node scripts/lint-memory.mjs",
     "test:e2e": "node --test tests/cli-e2e.test.mjs",
-    "test": "node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs",
+    "test:bricks": "node --test bricks/user-profile/testing/contract.spec.ts",
+    "test": "node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs bricks/user-profile/testing/contract.spec.ts",
     "memory:sync": "node scripts/sync-memory-context.mjs",
     "memory:organize": "node bin/cli.mjs organize",
     "memory:upgrade": "npx github:johnny-saigon/antigravity-memory-bank upgrade",

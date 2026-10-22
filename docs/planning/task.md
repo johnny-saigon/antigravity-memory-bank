@@ -4,7 +4,7 @@
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
 > - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
-> - **Backlog Progress**: `26/26` tickets completed (`0` in progress, `0` queued).
+> - **Backlog Progress**: `27/27` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline
 - [x] Ingest Three-Tier Memory Hierarchy (`~/.gemini/GEMINI.md`, `.agents/rules/infra.md`, `memory-bank/*.md`)
@@ -43,5 +43,6 @@
 - [x] **[FEAT-115]** Enforce Strict Live End-to-End Verification Before Ticket Closure Across AGENTS.md & /backlog-start
 - [x] **[FEAT-116]** Correlated 3-Artifact Antigravity Planning Mode (task.md, implementation_plan.md, walkthrough.md) & /backlog-plan Skill
 - [x] **[FEAT-117]** AI-Native Repository & Root Reorganization Engine (organize)
-- [x] **[FEAT-118]** --id
-- [x] **[FEAT-119]** --id
+- [x] **[FEAT-118]** Antigravity Native Rule Discovery & model_decision Progressive Disclosure
+- [x] **[FEAT-119]** Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)
+- [x] **[FEAT-120]** Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)

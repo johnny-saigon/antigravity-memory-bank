@@ -414,6 +414,63 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.equal(fs.existsSync(path.join(tmpRepo, '.github', 'workflows', 'memory-bank-sync.yml')), true);
   });
 
+  test('3c. brick: list, platform-conditional install (--platforms web --with-schema), non-destructive upgrade, and doctor', () => {
+    const listOut = execFileSync(process.execPath, [CLI_PATH, 'brick', 'list'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    assert.match(listOut, /user-profile@1\.0\.0/);
+    assert.match(listOut, /google, facebook, apple, microsoft/);
+
+    const installOut = execFileSync(
+      process.execPath,
+      [CLI_PATH, 'brick', 'install', 'user-profile', tmpRepo, '--platforms', 'web', '--with-schema'],
+      {
+        cwd: tmpRepo,
+        env: testEnv,
+        encoding: 'utf8'
+      }
+    );
+    assert.match(installOut, /Selected Platforms: web/);
+
+    // Verify web platform was installed, and ios/android were excluded for --platforms web
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'bricks', 'user-profile', 'platforms', 'web', 'headless', 'index.ts')), true);
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'bricks', 'user-profile', 'platforms', 'web', 'themed-ui', 'index.tsx')), true);
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'bricks', 'user-profile', 'platforms', 'ios')), false, 'ios should not be installed when --platforms web is used');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'bricks', 'user-profile', 'platforms', 'android')), false, 'android should not be installed when --platforms web is used');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'bricks', 'user-profile', 'schemas', '001_user_profile_oauth.sql')), true);
+
+    // Customize host theme adapter and verify brick upgrade preserves it 100%
+    const themeAdapterPath = path.join(tmpRepo, 'src', 'adapters', 'user-profile-theme.adapter.ts');
+    assert.equal(fs.existsSync(themeAdapterPath), true);
+    const customTheme = '// Custom Acme Brand Tokens (#FF007F)\nexport const userProfileBrandTheme = { custom: true };\n';
+    fs.writeFileSync(themeAdapterPath, customTheme, 'utf8');
+
+    const upgradeOut = execFileSync(
+      process.execPath,
+      [CLI_PATH, 'brick', 'upgrade', 'user-profile', tmpRepo],
+      {
+        cwd: tmpRepo,
+        env: testEnv,
+        encoding: 'utf8'
+      }
+    );
+    assert.match(upgradeOut, /Preserved existing host adapter: src\/adapters\/user-profile-theme\.adapter\.ts/);
+    assert.equal(fs.readFileSync(themeAdapterPath, 'utf8'), customTheme);
+
+    const doctorOut = execFileSync(
+      process.execPath,
+      [CLI_PATH, 'brick', 'doctor', 'user-profile', tmpRepo],
+      {
+        cwd: tmpRepo,
+        env: testEnv,
+        encoding: 'utf8'
+      }
+    );
+    assert.match(doctorOut, /Brick Doctor passed with 0 structural issues/);
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

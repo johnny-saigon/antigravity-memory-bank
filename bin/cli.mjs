@@ -19,6 +19,11 @@ import { adaptExistingBacklog } from '../lib/backlog-adapter.mjs';
 import { syncCustomizationsToMemoryBank } from '../lib/customizations-scraper.mjs';
 import { runMandatoryIngestionChecklist } from '../lib/ingestion-checklist.mjs';
 import { organizeRepositoryStructure } from '../lib/repo-organizer.mjs';
+import {
+  printBrickList,
+  installOrUpgradeBrick,
+  runBrickDoctor,
+} from '../lib/brick-engine.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +41,9 @@ if (pkgRoot.includes('_npx')) {
 function parseCliArgs(argv) {
   const options = {
     command: 'init',
+    brickAction: null,
+    brickName: null,
+    withSchema: false,
     targetDir: null,
     asPlugin: false,
     yes: false,
@@ -59,7 +67,23 @@ function parseCliArgs(argv) {
   const args = argv.slice(2);
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === 'init' || a === 'install' || a === 'install-plugin') {
+    if (a === 'brick' || a === 'bricks') {
+      options.command = 'brick';
+      const sub = args[i + 1];
+      if (sub && ['list', 'install', 'upgrade', 'update', 'doctor'].includes(sub)) {
+        options.brickAction = sub === 'update' ? 'upgrade' : sub;
+        i++;
+        const nextArg = args[i + 1];
+        if (nextArg && !nextArg.startsWith('-')) {
+          options.brickName = nextArg;
+          i++;
+        }
+      } else {
+        options.brickAction = 'list';
+      }
+    } else if (a === '--with-schema') {
+      options.withSchema = true;
+    } else if (a === 'init' || a === 'install' || a === 'install-plugin') {
       options.command = 'init';
       if (a === 'install-plugin') options.asPlugin = true;
     } else if (a === 'export' || a === 'backup') {
@@ -1337,6 +1361,27 @@ async function main() {
   const opts = parseCliArgs(process.argv);
   const targetDir = opts.targetDir || process.cwd();
   const detected = await detectProjectContext(targetDir);
+
+  if (opts.command === 'brick') {
+    const action = opts.brickAction || 'list';
+    const brickName = opts.brickName || 'user-profile';
+    if (action === 'list') {
+      printBrickList(pkgRoot);
+    } else if (action === 'doctor') {
+      const res = runBrickDoctor({ pkgRoot, targetDir, brickName });
+      if (!res.ok) process.exit(1);
+    } else if (action === 'install' || action === 'upgrade') {
+      await installOrUpgradeBrick({
+        pkgRoot,
+        targetDir,
+        brickName,
+        platformsArg: opts.platforms,
+        withSchema: opts.withSchema,
+        isUpgrade: action === 'upgrade',
+      });
+    }
+    return;
+  }
 
   if (opts.command === 'export') {
     await exportMemory(targetDir, opts.exportDir);

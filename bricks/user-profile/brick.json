@@ -1,0 +1,87 @@
+{
+  "name": "user-profile",
+  "version": "1.0.0",
+  "title": "Multi-Platform OAuth 2.0, User Profile & Pluggable Token/Slot UX Brick",
+  "description": "Hexagonal User Profile Management and 4-Provider Social Login (Google, Facebook, Apple, Microsoft) extracted from SnapCal with Headless + ProfileBrandThemePort (--ag-profile-*) and ProfileUISlotsPort across Web, iOS, and Android.",
+  "architecture": "hexagonal",
+  "theming": "tokens+slots+headless",
+  "providers": [
+    "google",
+    "facebook",
+    "apple",
+    "microsoft"
+  ],
+  "platforms": [
+    "web",
+    "ios",
+    "android"
+  ],
+  "entrypoints": {
+    "core": "core/index.ts",
+    "ports": "core/ports.ts",
+    "webHeadless": "platforms/web/headless/index.ts",
+    "webThemedUi": "platforms/web/themed-ui/index.tsx",
+    "iosHeadless": "platforms/ios/headless/NativeSocialOAuthCoordinator.swift",
+    "iosThemedUi": "platforms/ios/themed-ui/ProfileThemeConfiguration.swift",
+    "androidHeadless": "platforms/android/headless/CredentialManagerOAuthBridge.kt",
+    "androidThemedUi": "platforms/android/themed-ui/ProfileThemeTokens.kt",
+    "contractTests": "testing/contract.spec.ts"
+  },
+  "schemas": {
+    "sql": "schemas/001_user_profile_oauth.sql",
+    "prisma": "schemas/user-profile.prisma"
+  },
+  "adapterTemplates": {
+    "storage": {
+      "source": "adapters/templates/postgres-prisma.adapter.ts",
+      "target": "src/adapters/user-profile.adapter.ts"
+    },
+    "oauthConfig": {
+      "source": "adapters/templates/oauth-env.config.ts",
+      "target": "src/adapters/oauth-config.adapter.ts"
+    },
+    "theme": {
+      "source": "adapters/templates/theme.adapter.template.ts",
+      "target": "src/adapters/user-profile-theme.adapter.ts"
+    },
+    "mockOAuth": {
+      "source": "adapters/templates/dev-mock-oauth.adapter.ts",
+      "target": "src/adapters/dev-mock-oauth.adapter.ts"
+    }
+  },
+  "envContract": {
+    "common": [
+      "PUBLIC_URL",
+      "APP_SCHEME",
+      "SYNTHETIC_EMAIL_DOMAIN",
+      "JWT_SECRET",
+      "USE_MOCK_OAUTH"
+    ],
+    "google": [
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "GOOGLE_IOS_CLIENT_ID",
+      "GOOGLE_ANDROID_CLIENT_ID",
+      "GOOGLE_EXTRA_SCOPES_VERIFIED"
+    ],
+    "apple": [
+      "APPLE_SERVICE_ID",
+      "APPLE_BUNDLE_ID",
+      "APPLE_TEAM_ID",
+      "APPLE_KEY_ID",
+      "APPLE_PRIVATE_KEY",
+      "APPLE_REDIRECT_URI"
+    ],
+    "facebook": [
+      "META_APP_ID",
+      "META_APP_SECRET",
+      "META_OAUTH_SCOPES"
+    ],
+    "microsoft": [
+      "MICROSOFT_WEB_CLIENT_ID",
+      "MICROSOFT_WEB_CLIENT_SECRET",
+      "MICROSOFT_MOBILE_CLIENT_ID",
+      "MICROSOFT_TENANT_ID"
+    ]
+  }
+}
