@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-22T13:18:51.107Z",
+  "lastUpdated": "2026-10-22T13:34:06.488Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -799,6 +799,20 @@
       "acceptanceCriteria": [],
       "actionItems": [],
       "completedAt": "2026-10-22T13:18:51.106Z"
+    },
+    {
+      "id": "FEAT-119",
+      "type": "FEAT",
+      "title": "--id",
+      "status": "done",
+      "priority": "P0",
+      "components": [],
+      "attachments": [],
+      "description": "Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.",
+      "spec": "Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.",
+      "acceptanceCriteria": [],
+      "actionItems": [],
+      "completedAt": "2026-10-22T13:34:06.486Z"
     }
   ],
   "milestones": [

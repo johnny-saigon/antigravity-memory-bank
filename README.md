@@ -57,6 +57,13 @@ Traditional `memory-bank/` setups fail in Antigravity because of three native di
    - **Fix**: Root `AGENTS.md` and `~/.gemini/GEMINI.md` are kept strictly **under 50 lines** (tech stack, build commands, repo structure, core mandates, and standard markdown links), while `memory-bank/*.md` is disclosed on demand via `trigger: model_decision` in `.agents/rules/memory-*.md`.
    - **Verify Anytime with `/context`**: Run `/context` inside an Antigravity session to explicitly list which rule files are active and how many tokens they consume. Convert repetitive multi-step tasks (like generating boilerplate or running test suites) into Skills (`.agents/skills/<name>/SKILL.md`) rather than rules.
 
+### 💰 4 Built-In Controls to Stop the Credit Bleed
+
+1. **Lock Down `/plan` Before Coding**: Never jump straight into editing files for complex features or multi-file bugs. Run `/plan` or `/backlog-plan <ID>` first to review and approve `implementation_plan.md`—correcting a text plan costs a fraction of a credit; reverting 5 broken file edits costs 10x more.
+2. **Throttle Reasoning with `/effort`**: Use `/effort` (`low` or `medium`) for boilerplate UI, routing, or simple CRUD endpoints, and only switch to `high` effort (or frontier reasoning models) for complex state, concurrency, or architecture logic.
+3. **Prune Context Aggressively with `/clear`, `/compact` & `/context`**: Every time you finish a sub-task or fix a bug, run `/clear` (then `/start`) or `/compact` so you never pay for a 50,000-token history of old build errors on subsequent keystrokes. Use `/context` to inspect loaded files and active rules.
+4. **Disable the Overage Toggle & Audit `/credits` / `/usage`**: In your Google One / Antigravity settings, turn **OFF** the **"Toggle for overage"** so Antigravity hits a hard stop at your 20x baseline limit instead of silently burning paid top-up credits. Run `/credits` and `/usage` to inspect which models are draining your pool.
+
 ---
 
 ## 🛡️ Core Invariant: Passive Observer & Listener Only

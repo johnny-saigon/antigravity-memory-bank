@@ -10,8 +10,8 @@ When `/start` is executed or a new session begins:
 2. Inspect `docs/backlog.json` to identify `in_progress` tickets, pending Action Items (`waitingOn`), and top `todo` priorities.
 3. Check `git status -s` and the last 3 commit messages (`git log -n 3 --oneline`) to detect recent codebase updates.
 4. If configured, run a non-invasive live health probe against the target service.
-5. Output a concise 3-bullet status summary:
+5. Output a concise status summary:
    - **Current Phase**
    - **Immediate Task**
-   - **Proposed Next Step**
-   *(Tip: Run `/context` anytime in Antigravity to verify active `model_decision` rule files in `.agents/rules/*.md` and inspect per-rule token consumption.)*
+   - **Proposed Next Step** (including recommended `/effort` level: `low`/`medium` for routine UI/CRUD vs `high` + `/plan` for complex multi-file architecture/bugs)
+   - **Credit & Context Controls**: Remind the user to run `/context` to inspect loaded files/rules, `/effort` to match reasoning depth, `/clear` (or `/compact`) after each sub-task/bug fix, and `/credits` · `/usage` (with Google One / Antigravity **Overage Toggle disabled**).

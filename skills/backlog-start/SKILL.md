@@ -32,12 +32,16 @@ Execute the following 3 phases autonomously:
        - **UX/UI `.zip` Bundles**: Read extracted design tokens (`DESIGN.md`, `tokens.json`, `tailwind.config.*`, CSS variables), HTML/JSX/TSX markup, and SVG/image assets. View reference screenshots using `view_file` so layout, spacing, typography, states, and color tokens are implemented with 100% visual and structural fidelity.
        - **Direct Attachments (Images, PDFs, Markdown/JSON Specs)**: Read or view each attached file via `view_file` to incorporate all visual and technical requirements.
    - Do **NOT** ask the user to re-explain the task; trust the specification in `docs/backlog.json` and the ingested attachments.
-3. **Activate Task Locally & Correlate Planning Artifacts (`task.md` & `implementation_plan.md`)**:
+3. **Activate Task Locally, Enforce Pre-Edit `/plan` Gate & Correlate Planning Artifacts (`task.md` & `implementation_plan.md`)**:
    - Mark the ticket(s) as `in_progress` and synchronize the correlated 3-Artifact Planning Mode files (`task.md`, `implementation_plan.md`, `walkthrough.md`):
      ```bash
      npm run backlog status <TICKET_ID> in_progress
      ```
-   - If an approved `implementation_plan.md` exists in `<brainDir>/implementation_plan.md` or `docs/planning/implementation_plan.md`, ingest its **Proposed Changes**, **User Review Required** notes, and **Verification Plan** as the authoritative blueprint.
+   - **Lock Down `/plan` Before Coding (Complex Features & Multi-File Bugs)**:
+     - If an approved `implementation_plan.md` exists in `<brainDir>/implementation_plan.md` or `docs/planning/implementation_plan.md`, ingest its **Proposed Changes**, **User Review Required** notes, and **Verification Plan** as the authoritative blueprint.
+     - If the ticket is a complex feature or multi-file bug and no concrete plan has been locked down yet, update `<brainDir>/implementation_plan.md` and `docs/planning/implementation_plan.md` first (via `npm run backlog plan <TICKET_ID>`) before editing production files—reviewing a text plan costs a fraction of a credit compared to reverting broken file edits.
+   - **Match Reasoning Effort (`/effort`)**:
+     - Recommend `/effort low` or `/effort medium` for boilerplate UI, routing, or simple CRUD endpoints, and `/effort high` only for complex state, concurrency, or architecture logic.
    - This automatically refreshes the Antigravity Review pane Kanban board (`backlog.html`) and marks `<TICKET_ID>` as `[/]` in `task.md`.
 4. **Output Activation Banner**:
    - Output a brief acknowledgment:
@@ -105,10 +109,11 @@ Execute the following 3 phases autonomously:
      git add -A && git commit -m "feat(<scope>): implement <TICKET_ID> <brief_title>"
      git push origin main
      ```
-4. **User-Friendly Work Recap Banner**:
+4. **User-Friendly Work Recap Banner & Credit Hygiene Prompt**:
    - Present a clear, human-readable recap to the user:
      - 🎉 **Sprint Complete**: `[TICKET_ID]: Title`
      - **Key Changes**: 2–3 concise bullet points with clickable file links.
      - **Verification**: Test pass count and status.
      - **Board Status**: Review pane Kanban board updated to `DONE`.
-     - **Next Up**: List the next recommended ticket from `docs/backlog.json`.
+     - **Next Up**: List the next recommended ticket from `docs/backlog.json` and its recommended `/effort` level.
+     - **💡 Stop the Credit Bleed**: Recommend running `/clear` (then `/start`) or `/compact` now so this task's token history is not carried into the next task, `/context` to inspect loaded files, and `/credits` or `/usage` to monitor model usage (with the Google One / Antigravity **Overage Toggle disabled**).
