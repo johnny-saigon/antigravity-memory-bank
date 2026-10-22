@@ -39,30 +39,111 @@ flowchart TD
   B1 <-->|"1-to-1 Correlation"| P1
 ```
 
-### 🛡️ Defeating the 3 Antigravity Memory Traps (Native Discovery Protocol)
+### 🛡️ Feature Guide 1: Using Native Rule Discovery & `model_decision` Progressive Disclosure (`FEAT-118`)
 
-Traditional `memory-bank/` setups fail in Antigravity because of three native discovery traps—all of which `antigravity-memory-bank` automatically prevents and lints via `npm run lint:memory`:
+Traditional `memory-bank/` setups fail in Antigravity because of three native discovery traps—all of which `antigravity-memory-bank` automatically prevents, heals, and lints:
 
-1. **Silent Discard Trap**: Antigravity only scans `AGENTS.md`, `GEMINI.md`, or immediate `.md` children inside `.agents/rules/*.md`. It ignores standalone `memory-bank/*.md` files unless bridged into `.agents/rules/*.md`, and ignores nested subdirectories (like `.agents/rules/ios/swift.md`) unless registered in `.agents/rules.json`.
-   - **Fix**: `antigravity-memory-bank` automatically generates top-level progressive-disclosure rule bridges in `.agents/rules/` (`memory-architecture.md`, `memory-integrations.md`, `memory-sprint-context.md`) and auto-registers any nested `.agents/rules/<subdir>/` in `.agents/rules.json`.
-2. **Broken Frontmatter Trap**: If a file in `.agents/rules/*.md` is missing YAML frontmatter or uses camelCase (`modelDecision` instead of `model_decision`), Antigravity silently discards the file.
-   - **Fix**: Every `.agents/rules/*.md` file is generated, auto-healed, and linted with strict snake_case YAML frontmatter:
+| Trap | Why It Happens in Antigravity | How `antigravity-memory-bank` Fixes It Automatically |
+| :--- | :--- | :--- |
+| **1. Silent Discard Trap** | Antigravity only scans `AGENTS.md`, `GEMINI.md`, or immediate `.md` children inside `.agents/rules/*.md`. It ignores standalone `memory-bank/*.md` files and nested subdirectories (like `.agents/rules/ios/swift.md`) unless registered in `.agents/rules.json`. | Automatically generates top-level progressive-disclosure rule bridges in `.agents/rules/` (`memory-architecture.md`, `memory-integrations.md`, `memory-sprint-context.md`) and auto-registers any nested `.agents/rules/<subdir>/` in `.agents/rules.json`. |
+| **2. Broken Frontmatter Trap** | If a file in `.agents/rules/*.md` is missing YAML frontmatter or uses camelCase (`modelDecision` instead of `model_decision`), Antigravity silently discards the file. | Generates, auto-heals, and lints every `.agents/rules/*.md` file with strict snake_case `trigger: model_decision` + `description: "..."` YAML frontmatter. |
+| **3. Token Bloat Trap** | Dumping project memory into `GEMINI.md` or using `@[...](memory-bank/...)` inline expansions inside root `AGENTS.md` injects 15KB+ of memory on every single turn. | Enforces a strict **`< 50 lines`** cap on root `AGENTS.md` and `~/.gemini/GEMINI.md` (with `0` inline `@`-expansions), loading `memory-bank/*.md` on demand via `trigger: model_decision`. |
+
+#### Step-by-Step: How to Use Progressive Disclosure Rules & Verify with `/context`
+
+1. **Keep Root `AGENTS.md` & `~/.gemini/GEMINI.md` Under 50 Lines**:
+   - Only place your tech stack, build/test commands, repo structure, core operational mandates, and standard markdown links (`[Project Brief](memory-bank/projectbrief.md)`) in `AGENTS.md`.
+   - **Never** use `@[Label](memory-bank/...)` inside root `AGENTS.md`.
+2. **Add Domain or Platform Rules in `.agents/rules/*.md` with `model_decision` Frontmatter**:
+   - Create or edit `.md` files in `.agents/rules/` using snake_case `trigger: model_decision` and a clear `description` telling Antigravity when to activate the rule:
      ```markdown
      ---
      trigger: model_decision
-     description: "Apply when designing features, modifying system architecture, schemas, APIs, or UX flows."
+     description: "Apply whenever fixing bugs, handling API errors, or updating state management in iOS or Android."
      ---
+     # Known Project Pitfalls & Architectural Decisions
+     - Never use synchronous network calls in view controllers.
+     - Auth tokens refresh via `AuthInterceptor.ts`; do not write custom retry loops in UI components.
      ```
-3. **Token Bloat Trap**: If you dump your entire project memory into `GEMINI.md` or use `@[...](memory-bank/...)` inline expansions inside root `AGENTS.md`, it is injected on every single turn—burning credits continuously.
-   - **Fix**: Root `AGENTS.md` and `~/.gemini/GEMINI.md` are kept strictly **under 50 lines** (tech stack, build commands, repo structure, core mandates, and standard markdown links), while `memory-bank/*.md` is disclosed on demand via `trigger: model_decision` in `.agents/rules/memory-*.md`.
-   - **Verify Anytime with `/context`**: Run `/context` inside an Antigravity session to explicitly list which rule files are active and how many tokens they consume. Convert repetitive multi-step tasks (like generating boilerplate or running test suites) into Skills (`.agents/skills/<name>/SKILL.md`) rather than rules.
+   - Convert repetitive multi-step workflows (like generating boilerplate or running test suites) into **Skills** (`.agents/skills/<name>/SKILL.md`) rather than rules.
+3. **Auto-Bridge & Auto-Heal Custom Rules (`npm run memory:sync`)**:
+   - Whenever you add a new domain file in `memory-bank/*.md` or a rule in `.agents/rules/`, run:
+     ```bash
+     npm run memory:sync
+     ```
+   - This automatically links custom `memory-bank/*.md` files into `.agents/rules/memory-architecture.md`, fixes any missing/camelCase frontmatter in `.agents/rules/*.md`, and registers any nested `.agents/rules/<subdir>/` folders in `.agents/rules.json`.
+4. **Verify Active Rules & Token Footprint in Chat (`/context`)**:
+   - Inside any Antigravity session, type:
+     ```text
+     /context
+     ```
+   - Antigravity will explicitly list which `.agents/rules/*.md` files are active and how many tokens each rule consumes.
+5. **Audit via the CLI Linter (`npm run lint:memory`)**:
+   ```bash
+   npm run lint:memory
+   ```
+   Verifies `< 150 lines` per `memory-bank/*.md` file, `<= 50 lines` on root `AGENTS.md` (0 inline `@`-expansions), valid `trigger: model_decision` YAML frontmatter across all `.agents/rules/*.md` files, and `0` unindexed rule subdirectories.
 
-### 💰 4 Built-In Controls to Stop the Credit Bleed
+---
 
-1. **Lock Down `/plan` Before Coding**: Never jump straight into editing files for complex features or multi-file bugs. Run `/plan` or `/backlog-plan <ID>` first to review and approve `implementation_plan.md`—correcting a text plan costs a fraction of a credit; reverting 5 broken file edits costs 10x more.
-2. **Throttle Reasoning with `/effort`**: Use `/effort` (`low` or `medium`) for boilerplate UI, routing, or simple CRUD endpoints, and only switch to `high` effort (or frontier reasoning models) for complex state, concurrency, or architecture logic.
-3. **Prune Context Aggressively with `/clear`, `/compact` & `/context`**: Every time you finish a sub-task or fix a bug, run `/clear` (then `/start`) or `/compact` so you never pay for a 50,000-token history of old build errors on subsequent keystrokes. Use `/context` to inspect loaded files and active rules.
-4. **Disable the Overage Toggle & Audit `/credits` / `/usage`**: In your Google One / Antigravity settings, turn **OFF** the **"Toggle for overage"** so Antigravity hits a hard stop at your 20x baseline limit instead of silently burning paid top-up credits. Run `/credits` and `/usage` to inspect which models are draining your pool.
+### 💰 Feature Guide 2: How to Use the "Stop the Credit Bleed" Controls (`FEAT-119`)
+
+Treat Antigravity as your hands-on execution engineer rather than an unconstrained researcher. Follow this 5-step workflow on every task to cap per-turn token and credit consumption:
+
+#### 1. One-Time Setup: Disable the Overage Toggle & Check `/credits` / `/usage`
+- Open your **Google One / Antigravity Settings** and turn **OFF** the **"Toggle for overage"**. This ensures Antigravity hits a hard stop at your 20x baseline limit instead of silently burning paid top-up credits.
+- Anytime during a session, inspect which models are draining your pool by running:
+  ```text
+  /credits
+  /usage
+  ```
+
+#### 2. Lock Down `/plan` Before Coding Complex Features or Multi-File Bugs
+- Never let Antigravity jump straight into editing production files on complex features or multi-file bugs. Reviewing and correcting a text plan costs a fraction of a credit; reverting 5 broken file edits costs 10x more.
+- **In Chat**:
+  ```text
+  /backlog-plan FEAT-101
+  # Or use native Planning Mode:
+  /plan
+  ```
+- **In Terminal (`0 Tokens`)**:
+  ```bash
+  npm run backlog plan FEAT-101
+  ```
+- Review `<brainDir>/implementation_plan.md` (or click **`📐 Plan`** in `backlog.html`), leave inline comments on specific lines if needed, and click **Proceed** (or run `/backlog-start FEAT-101`) only after the plan is locked down.
+
+#### 3. Throttle Reasoning Depth with `/effort`
+- You do not need maximum frontier reasoning for boilerplate UI, routing, CSS tweaks, or simple CRUD endpoints.
+- Before kicking off a task, set thinking effort to match the task complexity:
+  ```text
+  # For boilerplate UI, routing, copy updates, or simple CRUD endpoints:
+  /effort low
+  /effort medium
+
+  # Reserve high effort ONLY for complex state machines, concurrency, or multi-service architecture:
+  /effort high
+  ```
+
+#### 4. Execute Within the Hard Turn Budget (`≤ 8 Tool Turns per Fix`)
+- When you run `/backlog-start <TICKET_ID>`, Mandate #8 enforces:
+  1. **Memory-First Lookup**: Reads `memory-bank/activeContext.md` and `docs/backlog.json` first—never re-investigating already recorded state.
+  2. **Zero `transcript.jsonl` or Sibling Repo Scraping**: Never reads `.system_generated/logs/transcript*.jsonl` or greps colocated sibling repos (`BinaryDay`, `SnapCal`, `RemoveBackGround`, `AntigravityRemote`) unless explicitly asked.
+  3. **Batched Execution (`≤ 8 Tool Turns`)**: Batches all file reads into `1` turn, all edits into `1–2` turns, and all verification/deployment commands into `1–2` chained shell calls.
+
+#### 5. Prune Context Aggressively After Every Sub-Task (`/clear`, `/compact` & `/context`)
+- Carrying a 50,000-token history of an old build error into a new task means paying for those 50,000 tokens on every subsequent keystroke.
+- Immediately after finishing a sub-task or bug fix (when `/backlog-start` or `/update-memory` prints the completion banner):
+  ```text
+  # Option A (Recommended): Clear thread history completely and re-anchor in ~8k tokens (~95% cost reduction):
+  /clear
+  /start
+
+  # Option B: Compress current conversation history in place:
+  /compact
+
+  # Inspect currently loaded files and active rules anytime:
+  /context
+  ```
 
 ---
 

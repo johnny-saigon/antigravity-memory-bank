@@ -167,3 +167,23 @@ When you are ready to have Antigravity implement a feature or fix a bug:
 3. **Closing the Cycle Automatically**:
    - The agent completes implementation, runs full verification and test suites, marks the ticket `done` in the local backlog, updates `memory-bank/progress.md`, audits line limits, commits to Git, pushes to origin, and prints a comprehensive Work Recap banner.
 
+---
+
+## 5. Stopping the Credit Bleed & Progressive Disclosure Controls (`FEAT-118` & `FEAT-119`)
+
+To keep per-turn input tokens minimal (~8k tokens/turn instead of ~150k tokens/turn) and prevent unexpected credit drain:
+
+1. **Native `model_decision` Progressive Disclosure (`< 50 Lines` Root `AGENTS.md`)**:
+   - Root `AGENTS.md` and `~/.gemini/GEMINI.md` are kept strictly **under 50 lines** with zero `@[...](memory-bank/...)` inline expansions.
+   - Detailed project memory (`memory-bank/*.md`) is bridged via `.agents/rules/memory-architecture.md`, `memory-integrations.md`, and `memory-sprint-context.md` using `trigger: model_decision` YAML frontmatter so Antigravity only loads a memory domain when relevant.
+   - Run **`/context`** in chat anytime to inspect active rules and their token footprint, or **`npm run lint:memory`** in the terminal to audit all rules and line budgets.
+2. **Lock Down `/plan` Before Coding**:
+   - Never jump straight into editing files on complex features or multi-file bugs. Run **`/backlog-plan <ID>`** (or **`/plan`**) first to review and approve `implementation_plan.md` before modifying code.
+3. **Throttle Reasoning with `/effort`**:
+   - Run **`/effort low`** or **`/effort medium`** for boilerplate UI, routing, CSS, or simple CRUD endpoints; reserve **`/effort high`** only for complex state, concurrency, or architecture logic.
+4. **Prune Context Aggressively with `/clear`, `/compact` & `/context`**:
+   - Immediately after finishing a sub-task or bug fix, run **`/clear`** (then **`/start`**) or **`/compact`** so 50,000-token build histories never carry into your next task.
+5. **Disable Overage Toggle & Monitor `/credits` / `/usage`**:
+   - Turn **OFF** the **"Toggle for overage"** in Google One / Antigravity settings so Antigravity hits a hard stop at your 20x baseline limit, and check **`/credits`** and **`/usage`** to see which models are draining your pool.
+
+
