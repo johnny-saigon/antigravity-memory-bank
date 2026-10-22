@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(bricks): extract user-profile Hexagonal Brick with 4-provider OAuth and Token/Slot UI (FEAT-120)** (`e5aa0c2`)
 - [x] **feat(skills): implement executable /context, /clear, /effort, /credits, and /usage skills and CLI inspectors (FEAT-120)** (`bd13565`)
 - [x] **feat(memory): enforce Always-On Credit & Token Optimization Footer Tip on every response [skip ci]** (`23bc2b6`)
 - [x] **feat(memory): implement Stop-the-Credit-Bleed controls (/plan gate, /effort, /clear, overage hard-stop) (FEAT-119)** (`cc5f372`)
