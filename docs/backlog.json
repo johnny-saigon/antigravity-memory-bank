@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-21T16:53:17.077Z",
+  "lastUpdated": "2026-10-22T13:18:51.107Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -590,7 +590,8 @@
       "description": "Automatically detect, copy, and unpack attached files (such as UX/UI .zip exports containing DESIGN.md, tokens.json, HTML/Tailwind screens, and mockups) via CLI, Review pane UI, or inline /backlog-start prompts.",
       "spec": "Automatically detect, copy, and unpack attached files (such as UX/UI .zip exports containing DESIGN.md, tokens.json, HTML/Tailwind screens, and mockups) via CLI, Review pane UI, or inline /backlog-start prompts.",
       "acceptanceCriteria": [],
-      "completedAt": "2026-10-18T11:19:10.760Z"
+      "completedAt": "2026-10-18T11:19:10.760Z",
+      "actionItems": []
     },
     {
       "id": "BUG-107",
@@ -782,7 +783,22 @@
       "description": "Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.",
       "spec": "Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.",
       "acceptanceCriteria": [],
-      "completedAt": "2026-10-21T14:11:33.372Z"
+      "completedAt": "2026-10-21T14:11:33.372Z",
+      "actionItems": []
+    },
+    {
+      "id": "FEAT-118",
+      "type": "FEAT",
+      "title": "--id",
+      "status": "done",
+      "priority": "P0",
+      "components": [],
+      "attachments": [],
+      "description": "Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.",
+      "spec": "Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.",
+      "acceptanceCriteria": [],
+      "actionItems": [],
+      "completedAt": "2026-10-22T13:18:51.106Z"
     }
   ],
   "milestones": [

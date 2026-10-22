@@ -422,8 +422,17 @@ async function uninstallMemory(targetDir, opts, detected) {
     }
   } catch {}
 
-  // 4. Remove rules: infra.md and negative-constraints.md
-  for (const r of ['infra.md', 'negative-constraints.md']) {
+  // 4. Remove rules: infra.md, negative-constraints.md, and progressive-disclosure memory-*.md rules
+  for (const r of [
+    'infra.md',
+    'negative-constraints.md',
+    'memory-architecture.md',
+    'memory-integrations.md',
+    'memory-sprint-context.md',
+    'memory-context.md',
+    'memory-context-2.md',
+    'memory-context-3.md'
+  ]) {
     try {
       await fs.rm(path.join(targetDir, '.agents/rules', r), { force: true });
       console.log(`  ✓ Removed .agents/rules/${r}`);
@@ -1100,66 +1109,58 @@ Immediately after closing the previous session, initialize the new working cycle
   await fs.writeFile(updateSkillDest, upgradedSkill, 'utf8');
   console.log('  ✓ Upgraded .agents/skills/update-memory/SKILL.md (2-phase continuous lifecycle)');
 
-  // 4. Upgrade Operational Mandates in AGENTS.md
+  // 4. Upgrade Operational Mandates in AGENTS.md and enforce < 50 lines Progressive Disclosure root architecture
   if (agentsContent) {
-    let modifiedAgents = agentsContent;
-    const oldMandatePattern = /\d+\.\s+\*\*(?:Session State Updates & (?:Line Budget|Continuous Cycling)|On-the-Fly Pertinent Context Registration[^*]*)\*\*:[^\n]*(?:\n\s+-\s+[^\n]+)*/g;
-    const onTheFlyMandateBody = `**On-the-Fly Pertinent Context Registration, Pre-Authenticated Access & Continuous Cycling (\`< 150 Lines\`)**:\n   - **Pre-Authenticated MCP & Customizations Access (Zero Redundant Prompts)**: All MCP servers, host token files (\`~/.github_token\`, \`~/.stripe_token\`, \`~/.stitch_token\`, \`~/.ovh_credentials.json\`, \`~/.meta_credentials.json\`, \`~/.meta_token\`), CLI/OAuth sessions (\`~/.azure/\`, \`~/.linkedin_mcp/\`, \`~/Library/Application Support/mj/\`, \`~/.mcp-auth/\`), workspace \`.env*\` keys, and Antigravity customizations marked \`✅ AUTHENTICATED\` in \`memory-bank/integrationsAndCustomizations.md\` are **already authenticated and pre-authorized** (\`AGENT_PERMISSION_PRESET_TURBO\`). **NEVER redundantly ask the user for API keys, tokens, logins, or permission, and NEVER pause waiting for access—invoke \`call_mcp_tool\` or read the indexed credential paths directly.**\n   - **Zero-Manual-Step On-the-Fly Registration**: Whenever the user provides pertinent architectural decisions, API keys/credentials, MCP configs, customizations, repo paths, or domain rules in a message—or whenever your ensuing work adds/modifies integrations, env keys, skills, rules, schemas, or endpoints—**immediately distill and register the pertinent structured facts** (never raw conversation logs) into the appropriate \`memory-bank/*.md\` file in the same turn without waiting for manual user commands.\n   - **Real-Time Lifecycle Hooks**: \`.agents/hooks.json\` (\`SessionStart\`, \`PostToolUse\`, \`Stop\`) and \`.git/hooks/post-commit\` automatically run \`node scripts/sync-memory-context.mjs --quiet\` on the fly to keep \`memory-bank/integrationsAndCustomizations.md\`, \`activeContext.md\`, and \`progress.md\` synchronized.\n   - **Line Budget & 2-Phase Cycling**: Keep every \`memory-bank/*.md\` file strictly **under 150 lines** (split deep domains into linked sub-files using \`@\`). When a major milestone completes or upon \`/update-memory\`, execute Phase 1 (Closure & Sync) followed immediately by Phase 2 (Explicit Auto-Start banner).`;
-    if (oldMandatePattern.test(modifiedAgents)) {
-      modifiedAgents = modifiedAgents.replace(oldMandatePattern, `3. ${onTheFlyMandateBody}`);
+    let customSection = '';
+    const customIdx = agentsContent.indexOf('### PROJECT_CUSTOM_DIRECTIVES');
+    if (customIdx !== -1) {
+      customSection = '\n' + agentsContent.slice(customIdx).trim() + '\n';
     }
 
-    const mandateSectionRegex = /^(##\s+(?:\d+\.\s+)?(?:Operational Mandates|Operating Principles)[^\n]*\n)([\s\S]*?)(?=\n+(?:```|---|##\s))/m;
-    const sectionMatch = modifiedAgents.match(mandateSectionRegex);
-    if (sectionMatch) {
-      const heading = sectionMatch[1];
-      let body = sectionMatch[2].trimEnd();
-
-      if (!modifiedAgents.includes('On-the-Fly Pertinent Context Registration')) {
-        body += `\n99. ${onTheFlyMandateBody}`;
-      }
-      if (!modifiedAgents.includes('Passive Observer Invariant')) {
-        body += `\n99. **Passive Observer Invariant**: The Memory Bank (\`memory-bank/*.md\`) is strictly a read-only context baseline and passive observer. All active feature tickets, development tasks, sprint boards, and bug fix records are maintained in \`docs/\` (\`docs/backlog.json\`, \`docs/MIGRATION_BOARD.md\` or \`docs/BACKLOG.md\`). Never conduct active operational ticket tracking inside \`memory-bank/*.md\`.`;
-      }
-      if (!modifiedAgents.includes('Decoupled Backlog')) {
-        body += `\n99. **Decoupled Backlog & Context-Frugal Execution**: Capture tasks and attach context files (such as UX/UI \`.zip\` bundles, mockups, or specs) offline via \`npm run backlog add\` / \`npm run backlog attach\` or directly in the Review pane (\`📎\`) with zero token cost. Execute tasks via \`[/backlog-start](.agents/skills/backlog-start/SKILL.md)\` (e.g. \`/backlog-start FEAT-101\` or \`/backlog-start FEAT-101 @ux-ui.zip\`), which loads specs from \`docs/backlog.json\`, automatically unpacks and ingests any attached \`.zip\`/context files into \`docs/attachments/<ID>/extracted/\`, verifies tests, and automatically updates the local backlog, Review pane board, and Memory Bank with a work recap. **Frugal means eliminating redundant context re-ingestion and chat overhead—never sacrificing code quality, visual UX/UI fidelity, root-cause depth, or verification rigor during execution.**`;
-      }
-      if (!modifiedAgents.includes('Strict End-to-End Verification Before Closure')) {
-        body += `\n99. **Strict End-to-End Verification Before Closure**: NEVER mark any ticket involving third-party integrations, OAuth providers, or external credentials as \`done\` until live credentials are configured on the server and a real end-to-end integration test passes. If credentials or external setup are pending, the ticket MUST remain \`in_progress\`.`;
-      }
-      if (!modifiedAgents.includes('Structured Planning Mode')) {
-        body += `\n99. **Structured Planning Mode (\`Explore → Plan → Execute\`) & 3-Artifact Backlog Correlation**: When Planning Mode is triggered (\`/plan\`, \`Cmd/Ctrl + .\`, \`Shift + Tab\`, or \`[/backlog-plan](.agents/skills/backlog-plan/SKILL.md)\`), operate through the correlated **3-Artifact Lifecycle** in \`<brainDir>/\` and \`docs/planning/\`: (1) \`task.md\` (live checklist grouped into Discovery, Active Sprint, Queued & Completed tasks synced 1-to-1 with \`docs/backlog.json\`), (2) \`implementation_plan.md\` (4-section blueprint: **Goal Description**, **User Review Required** with \`IMPORTANT\`/\`WARNING\` alerts, **Proposed Changes** marked \`[NEW]\`/\`[MODIFY]\`/\`[DELETE]\`, and concrete **Verification Plan** commands), and (3) \`walkthrough.md\` (post-execution summary & verification proof).`;
-      }
-      if (!modifiedAgents.includes('Strict Credit & Token Frugality')) {
-        body += `\n99. **Strict Credit & Token Frugality (\`≤ 8 Tool Turns per Fix\`)**:\n   - **Fresh Chat + \`/start\` (or \`/compact\`)**: Because \`memory-bank/*.md\` (\`< 400\` lines total) and \`docs/backlog.json\` hold 100% of the project state, starting a fresh thread + \`/start\` or running \`/compact\` drops per-turn input context from ~150k tokens/turn down to ~8k tokens/turn (~95% cost reduction).\n   - **Memory-First Lookup**: Always check \`memory-bank/activeContext.md\` and \`docs/backlog.json\` before running any diagnostic commands. Never re-investigate what is already recorded in \`activeContext.md\` or \`backlog.json\`.\n   - **Never Read \`transcript.jsonl\` or Sibling Repos**: Strictly forbid reading \`.system_generated/logs/transcript*.jsonl\` or grepping sibling repos (\`BinaryDay\`, \`SnapCal\`, \`RemoveBackGround\`, \`AntigravityRemote\`) unless the user explicitly asks for transcript recovery.\n   - **Hard Turn Budget (\`≤ 8 Tool Turns per Fix\`)**: Batch all file reads into 1 turn, all edits into 1–2 turns, and all verification/deployment commands into 1–2 chained shell calls.`;
-      }
-
-      // Normalize sequential numbering (1, 2, 3...) across top-level mandate items
-      let seq = 0;
-      body = body.replace(/^\d+\.\s+(?=\*\*)/gm, () => `${++seq}. `);
-
-      modifiedAgents = modifiedAgents.replace(mandateSectionRegex, `${heading}${body}`);
+    const tplPath = path.join(pkgRoot, 'templates/AGENTS.md.tpl');
+    let cleanAgents = await fs.readFile(tplPath, 'utf8');
+    const replacements = {
+      '{{PROJECT_NAME}}': projectTitle,
+      '{{PROJECT_TAGLINE}}': detected.description || detected.tagline || 'AI-native application',
+      '{{FRONTEND_TECH}}': detected.frontend || 'Frontend',
+      '{{BACKEND_TECH}}': detected.backend || 'Backend',
+      '{{DATABASE_TECH}}': detected.db || 'Database',
+      '{{PORT}}': detected.port || '3000',
+      '{{HEALTH_URL}}': detected.health || `http://localhost:${detected.port || '3000'}/health`
+    };
+    for (const [k, v] of Object.entries(replacements)) {
+      cleanAgents = cleanAgents.replaceAll(k, v);
+    }
+    if (customSection) {
+      cleanAgents = cleanAgents.trimEnd() + '\n' + customSection;
     }
 
-    if (!modifiedAgents.includes('/backlog-start')) {
-      modifiedAgents = modifiedAgents.replace(/`(?:\@)?\[\/update-memory\]\([^)]+\)`/, '`[/backlog-plan](.agents/skills/backlog-plan/SKILL.md)` · `[/backlog-start](.agents/skills/backlog-start/SKILL.md)` · `[/update-memory](.agents/skills/update-memory/SKILL.md)`');
-    } else if (!modifiedAgents.includes('/backlog-plan')) {
-      modifiedAgents = modifiedAgents.replace(/`(?:\@)?\[\/backlog-start\]\([^)]+\)`/, '`[/backlog-plan](.agents/skills/backlog-plan/SKILL.md)` · `[/backlog-start](.agents/skills/backlog-start/SKILL.md)`');
-    }
-
-    await fs.writeFile(agentsPath, modifiedAgents, 'utf8');
-    console.log('  ✓ Upgraded AGENTS.md with on-the-fly registration, decoupled backlog, planning mode, credit/token frugality, and strict E2E verification mandates');
+    await fs.writeFile(agentsPath, cleanAgents, 'utf8');
+    console.log('  ✓ Upgraded AGENTS.md (<50 lines progressive-disclosure root, /context verification, credit/token frugality & strict E2E verification)');
   }
 
-  // 4b. Upgrade .agents/rules/negative-constraints.md with Credit & Token Frugality Deny-List
+  // 4b. Upgrade .agents/rules/infra.md & .agents/rules/negative-constraints.md with valid YAML frontmatter (trigger: model_decision) & Frugality Deny-List
+  const infraRulePath = path.join(targetDir, '.agents/rules/infra.md');
+  try {
+    let infraRuleContent = await fs.readFile(infraRulePath, 'utf8');
+    if (!infraRuleContent.startsWith('---\n') && !infraRuleContent.startsWith('---\r\n')) {
+      infraRuleContent = `---\ntrigger: model_decision\ndescription: "Apply whenever configuring ports, databases, Redis caches, process daemons, supervisor/systemd workers, or deployment infrastructure."\n---\n` + infraRuleContent;
+      await fs.writeFile(infraRulePath, infraRuleContent, 'utf8');
+      console.log('  ✓ Added trigger: model_decision YAML frontmatter to .agents/rules/infra.md');
+    }
+  } catch {}
+
   const negRulePath = path.join(targetDir, '.agents/rules/negative-constraints.md');
   try {
     let negRuleContent = await fs.readFile(negRulePath, 'utf8');
+    if (!negRuleContent.startsWith('---\n') && !negRuleContent.startsWith('---\r\n')) {
+      negRuleContent = `---\ntrigger: model_decision\ndescription: "Apply whenever executing shell commands, managing processes or Docker containers, querying databases, or enforcing the <= 8 tool turns credit and token frugality budget."\n---\n` + negRuleContent;
+    }
     if (!negRuleContent.includes('Credit & Token Frugality Deny-List')) {
       negRuleContent = negRuleContent.trimEnd() + `\n4. **Credit & Token Frugality Deny-List**:\n   - NEVER read \`.system_generated/logs/transcript*.jsonl\` or grep sibling repositories (\`BinaryDay\`, \`SnapCal\`, \`RemoveBackGround\`, \`AntigravityRemote\`) unless explicitly requested for transcript recovery.\n   - NEVER re-investigate state already recorded in \`memory-bank/activeContext.md\` or \`docs/backlog.json\`.\n   - Enforce a **Hard Turn Budget (\`≤ 8 Tool Turns per Fix\`)**: batch all file reads into 1 turn, all edits into 1–2 turns, and all verification/deployment commands into 1–2 chained shell calls.\n`;
-      await fs.writeFile(negRulePath, negRuleContent, 'utf8');
-      console.log('  ✓ Upgraded .agents/rules/negative-constraints.md with Credit & Token Frugality Deny-List');
     }
+    await fs.writeFile(negRulePath, negRuleContent, 'utf8');
+    console.log('  ✓ Upgraded .agents/rules/negative-constraints.md with model_decision frontmatter & Credit/Token Frugality Deny-List');
   } catch {}
 
   // 5. Install scripts/lint-memory.mjs

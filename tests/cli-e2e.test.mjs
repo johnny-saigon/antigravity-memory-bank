@@ -74,6 +74,43 @@ describe('FEAT-112: Upstream Template Byte-Parity Verification', () => {
       fs.rmSync(tmpAuditDir, { recursive: true, force: true });
     }
   });
+
+  test('scripts/lint-memory.mjs fails on Broken Frontmatter Trap (camelCase modelDecision or missing frontmatter) and Token Bloat Trap (>50 line AGENTS.md)', () => {
+    const tmpTrapDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-trap-test-'));
+    try {
+      fs.mkdirSync(path.join(tmpTrapDir, 'memory-bank'), { recursive: true });
+      fs.mkdirSync(path.join(tmpTrapDir, '.agents', 'rules'), { recursive: true });
+
+      fs.writeFileSync(path.join(tmpTrapDir, 'memory-bank', 'activeContext.md'), '# Active Context\n- Clean\n');
+      fs.writeFileSync(
+        path.join(tmpTrapDir, '.agents', 'rules', 'broken-rule.md'),
+        '---\ntrigger: modelDecision\ndescription: "CamelCase trigger trap"\n---\n# Broken Rule\n'
+      );
+      fs.writeFileSync(
+        path.join(tmpTrapDir, 'AGENTS.md'),
+        '# Root AGENTS\n- Inline bloat: @[Brief](memory-bank/activeContext.md)\n'
+      );
+
+      let failed = false;
+      let combinedOut = '';
+      try {
+        execFileSync(process.execPath, [LINTER_PATH], {
+          cwd: tmpTrapDir,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
+      } catch (err) {
+        failed = true;
+        combinedOut = String(err.stderr || '') + String(err.stdout || '');
+      }
+
+      assert.equal(failed, true, 'lint-memory.mjs must fail on Broken Frontmatter Trap and Token Bloat Trap');
+      assert.match(combinedOut, /Broken Frontmatter Trap/);
+      assert.match(combinedOut, /Token Bloat Trap/);
+    } finally {
+      fs.rmSync(tmpTrapDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, export, uninstall)', () => {
@@ -207,9 +244,19 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       assert.ok(lines < 150, `memory-bank/${file} exceeded 150 lines (${lines})`);
     }
 
-    // Verify AGENTS.md includes Strict End-to-End Verification Before Closure
+    // Verify AGENTS.md includes Strict End-to-End Verification Before Closure, is <= 50 lines, and has 0 inline @[...](memory-bank/...) bloat
     const agentsMd = fs.readFileSync(path.join(tmpRepo, 'AGENTS.md'), 'utf8');
     assert.match(agentsMd, /Strict End-to-End Verification Before Closure/);
+    assert.ok(agentsMd.trimEnd().split('\n').length <= 50, 'Root AGENTS.md must be strictly <= 50 lines');
+    assert.equal(/@\[[^\]]+\]\(memory-bank\/[^)]+\)/.test(agentsMd), false, 'Root AGENTS.md must not inline @[...](memory-bank/...)');
+
+    // Verify progressive-disclosure .agents/rules/*.md files exist with valid snake_case trigger: model_decision frontmatter
+    for (const ruleFile of ['infra.md', 'negative-constraints.md', 'memory-architecture.md', 'memory-integrations.md', 'memory-sprint-context.md']) {
+      const rulePath = path.join(tmpRepo, '.agents', 'rules', ruleFile);
+      assert.equal(fs.existsSync(rulePath), true, `Expected .agents/rules/${ruleFile} to exist`);
+      const ruleContent = fs.readFileSync(rulePath, 'utf8');
+      assert.match(ruleContent, /^---\n[\s\S]*?trigger:\s*model_decision[\s\S]*?description:\s*".+"[\s\S]*?\n---/, `.agents/rules/${ruleFile} must have valid model_decision frontmatter`);
+    }
 
     // Verify skills & lifecycle hooks installed
     assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'hooks.json')), true);

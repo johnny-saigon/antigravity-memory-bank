@@ -1,3 +1,7 @@
+---
+trigger: model_decision
+description: "Apply whenever configuring ports, databases, Redis caches, process daemons, supervisor/systemd workers, or deployment infrastructure."
+---
 # Tier 2: Shared Cluster & Infrastructure Guardrails
 
 Machine-enforceable safety contract for **{{PROJECT_NAME}}**:

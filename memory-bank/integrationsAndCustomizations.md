@@ -14,16 +14,16 @@
 | MCP Server | Bridge / Package | Tools | Live Authentication Status & Identity (Pre-Authorized) |
 | :--- | :--- | :---: | :--- |
 | **`github`** | `@modelcontextprotocol/server-github` | 26 | ✅ AUTHENTICATED (`~/.github_token` PAT verified) |
-| **`stitch`** | `~/.gemini/antigravity/bin/stitch_mcp_bridge.cjs` | 15 | ✅ AUTHENTICATED (`~/.stitch_token` token verified) |
+| **`stitch`** | `~/.gemini/antigravity/bin/stitch_mcp_bridge.cjs` | 16 | ✅ AUTHENTICATED (`~/.stitch_token` token verified) |
 | **`resend`** | `npx resend-mcp` | 136 | ✅ AUTHENTICATED (`RESEND_API_KEY` (`re_***` (configured)) ready) |
 | **`cloudflare`** | `npx @cloudflare/mcp-server-cloudflare` (acct `aae01ca564...`) | 89 | ✅ AUTHENTICATED (`CLOUDFLARE_API_TOKEN` (configured (secret)) ready) |
 | **`ovh`** | `~/.gemini/antigravity/bin/ovh_mcp.py` | 8 | ✅ AUTHENTICATED (`~/.ovh_credentials.json` · endpoint `ovh-eu` ready) |
 | **`stripe`** | `~/.gemini/antigravity/bin/stripe_mcp_bridge.cjs` | 9 | ✅ AUTHENTICATED (`~/.stripe_token` API key verified) |
-| **`StitchMCP`** | `npx mcp-remote` (`https://stitch.googleapis.com/mcp`) | 15 | ✅ AUTHENTICATED (Header `X-Goog-Api-Key` configured & ready) |
-| **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 9 | ✅ AUTHENTICATED (Key `Y9V6TK5R8A` · Issuer `c06bde3f...` · `credentials/AuthKey.p8` verified) |
+| **`StitchMCP`** | `npx mcp-remote` (`https://stitch.googleapis.com/mcp`) | 16 | ✅ AUTHENTICATED (Header `X-Goog-Api-Key` configured & ready) |
+| **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 10 | ✅ AUTHENTICATED (Key `Y9V6TK5R8A` · Issuer `c06bde3f...` · `credentials/AuthKey.p8` verified) |
 | **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | ✅ AUTHENTICATED (`~/.meta_credentials.json` · App `2199060924286885` (BinaryDay) ready) |
 | **`meta_business`** | `~/.gemini/antigravity/bin/meta_business_mcp.cjs` | 18 | ✅ AUTHENTICATED (`~/.meta_token` & `~/.meta_credentials.json` · Biz `1277193594593819` (Design Engineering) ready) |
-| **`azure-mcp`** | `npx @azure/mcp@latest` | 69 | ✅ AUTHENTICATED (`~/.azure` CLI session · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
+| **`azure-mcp`** | `npx @azure/mcp@latest` | 70 | ✅ AUTHENTICATED (`~/.azure` CLI session · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
 | **`entra`** | `~/.gemini/antigravity/bin/entra_mcp.cjs` | 4 | ✅ AUTHENTICATED (`az` Graph session `~/.azure` · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
 | **`linkedin`** | `~/.local/bin/linkedin-mcp` | 29 | ✅ AUTHENTICATED (`~/.linkedin_mcp` · `jean-baptiste-bouquet` · browser session ready) |
 | **`midjourney`** | `~/.gemini/antigravity/bin/midjourney_mcp.sh` | 25 | ✅ AUTHENTICATED (`~/Library/Application Support/mj` · Camoufox profile & `user_id` ready) |
@@ -33,11 +33,13 @@
 - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`
 - **Global Agent Policy (`~/.gemini/config/config.json`)**: Preset: `AGENT_PERMISSION_PRESET_TURBO` · Execution: `CASCADE_COMMANDS_AUTO_EXECUTION_EAGER` (✅ Pre-Authorized — Do Not Prompt User)
 - **On-the-Fly Lifecycle Hooks**: Workspace `.agents/hooks.json`: `antigravity-memory-bank` (enabled: SessionStart, PostToolUse, Stop) · Git `.git/hooks/post-commit`: auto-sync enabled · Global `~/.gemini/config/hooks.json`: `antigravity-remote-bridge` (enabled: PreToolUse, PostToolUse, Stop)
-- **Built-in Antigravity Skills (`~/.gemini/antigravity/builtin/skills/`)**: `agy-customizations`, `antigravity_guide`, `automation`, `generative_ui`, `migrate-workflows`, `permissioned-github`, `plugin`, `ui-plugin-navigation`
-- **Workspace Rules (3)**:
-  - `.agents/rules/infra.md`: Tier 2: Shared Cluster & Infrastructure Guardrails
-  - `.agents/rules/memory-context.md`: antigravity-memory-bank — Extended Memory Bank Context (Auto-Partitioned <24KB Rule Shard #1)
-  - `.agents/rules/negative-constraints.md`: Tier 2: Negative Constraints & Execution Deny-List
+- **Built-in Antigravity Skills (`~/.gemini/antigravity/builtin/skills/`)**: `agy-customizations`, `antigravity_guide`, `automation`, `generative_ui`, `migrate-workflows`, `permissioned-github`, `plugin`, `run-workflow`, `ui-plugin-navigation`
+- **Workspace Rules (5)**:
+  - `.agents/rules/infra.md`: Apply whenever configuring ports, databases, Redis caches, process daemons, supervisor/systemd workers, or dep
+  - `.agents/rules/memory-architecture.md`: Apply when designing features, modifying system architecture, schemas, APIs, UX flows, or checking domain and 
+  - `.agents/rules/memory-integrations.md`: Apply whenever calling MCP tools, checking pre-authenticated API keys, .env contracts, OAuth credentials, or w
+  - `.agents/rules/memory-sprint-context.md`: Apply when checking active sprint state, recent commits, known pitfalls, backlog status, or milestone progress
+  - `.agents/rules/negative-constraints.md`: Apply whenever executing shell commands, managing processes or Docker containers, querying databases, or enfor
 - **Workspace Skills (4)**:
   - `/backlog-plan` (`.agents/skills/backlog-plan/SKILL.md`): Structured Antigravity Planning Mode workflow (/backlog-plan FEAT-101 or /backlog-plan) correlated with docs/b
   - `/backlog-start` (`.agents/skills/backlog-start/SKILL.md`): Automated, frugal execution of backlog tickets (e.g. /backlog-start FEAT-101 or /backlog-start FEAT-101, BUG-1

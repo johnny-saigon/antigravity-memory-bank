@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Decoupled Zero-Token Backlog Engine, and Correlated 3-Artifact Planning Mode directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 - **Planning Scope (`BASELINE`)**:
+  - **[FEAT-118] --id** (`P0` · Status: `done`): Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
   - **[FEAT-117] AI-Native Repository & Root Reorganization Engine (organize)** (`HIGH` · Status: `done`): Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.
   - **[FEAT-116] Correlated 3-Artifact Antigravity Planning Mode (task.md, implementation_plan.md, walkthrough.md) & /backlog-plan Skill** (`HIGH` · Status: `done`): Integrate Antigravity Planning Mode (Explore -> Plan -> Review -> Execute) across all initialized and upgraded projects, correlating the 3-Artifact Lifecycle (task.md, implementation_plan.md, walkthrough.md) directly with docs/backlog.json and memory-bank/*.md and pre-populating artifacts for existing/advanced projects.
   - **[FEAT-115] Enforce Strict Live End-to-End Verification Before Ticket Closure Across AGENTS.md & /backlog-start** (`HIGH` · Status: `done`): Upstreamed from SnapCal (commit 0f346ae): enforce non-negotiable Strict End-to-End Verification Before Closure in AGENTS.md and .agents/skills/backlog-start/SKILL.md (Rule 4 + Phase 3 guard) so tickets involving third-party integrations, OAuth providers, or external credentials can NEVER be marked done until live credentials are configured on the server and real provider HTTP requests pass.
-  - **[FEAT-114] On-the-Fly Lifecycle Hooks (.agents/hooks.json), Zero-Manual-Step Memory Registration & 10-Point Mandatory Ingestion Checklist** (`HIGH` · Status: `done`): Eliminate manual memory:sync / memory:upgrade actions when new API keys, MCP servers, skills, rules, repo paths, or architectural decisions are added. Enforce a 10-Point Mandatory Baseline Ingestion Checklist on every init and upgrade, auto-partition AGENTS.md @[...] includes under the 24KB per-rule cap, and wire .agents/hooks.json (SessionStart, PostToolUse, Stop) for real-time on-the-fly synchronization.
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -25,6 +25,12 @@
 > One or more planned tickets involve third-party integrations, OAuth providers, or external credentials. **NEVER mark these tickets as `done` (`npm run backlog done`) until live server credentials are configured and real end-to-end provider HTTP requests pass.** If external credentials are pending, keep the ticket `in_progress`.
 
 ## 3. Proposed Changes
+### [FEAT-118] --id *(Completed & Verified Baseline)*
+- **Specification**: Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
+  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
+
 ### [FEAT-117] AI-Native Repository & Root Reorganization Engine (organize) *(Completed & Verified Baseline)*
 - **Specification**: Automatically organize repository root entrypoints, relocate loose root specs/boards into docs/ with git mv and link rewriting, remove redundant CLAUDE.md stubs and clutter, harden .gitignore, and scaffold canonical AI-native directories on fresh and existing projects.
 - **Component Modifications (Dependencies First)**:
@@ -62,20 +68,6 @@
   - AGENTS.md and templates/AGENTS.md.tpl enforce Strict End-to-End Verification Before Closure.
   - skills/backlog-start/SKILL.md Rule 4 forbids running npm run backlog done on integration tickets without live server credentials and passing provider HTTP requests.
   - bin/cli.mjs upgradeMemory injects the mandate into all downstream AGENTS.md formats and passes 10/10 on the Mandatory Baseline Ingestion Checklist across all 5 repositories.
-
-### [FEAT-114] On-the-Fly Lifecycle Hooks (.agents/hooks.json), Zero-Manual-Step Memory Registration & 10-Point Mandatory Ingestion Checklist *(Completed & Verified Baseline)*
-- **Specification**: Create lib/ingestion-checklist.mjs to verify all 10 baseline pillars at init/upgrade time, install .agents/hooks.json (SessionStart, PostToolUse, Stop -> scripts/sync-memory-context.mjs --quiet --hook), update AGENTS.md Mandate #3 for immediate on-the-fly registration of pertinent facts, and balance @[...] includes across AGENTS.md and .agents/rules/memory-context.md (<24KB).
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [ingestion-checklist.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/ingestion-checklist.mjs) (`lib/ingestion-checklist.mjs`)
-  - `[VERIFIED]` [customizations-scraper.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/customizations-scraper.mjs) (`lib/customizations-scraper.mjs`)
-  - `[VERIFIED]` [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs) (`scripts/sync-memory-context.mjs`)
-  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
-  - `[VERIFIED]` [AGENTS.md.tpl](file:///Users/jbb/Documents/antigravity-memory-bank/templates/AGENTS.md.tpl) (`templates/AGENTS.md.tpl`)
-  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/rules/AGENTS.md) (`rules/AGENTS.md`)
-- **Acceptance Criteria**:
-  - Zero manual steps required when adding API keys, MCP servers, skills, rules, or repo paths (.agents/hooks.json auto-syncs on SessionStart, PostToolUse, and Stop).
-  - 10-Point Mandatory Baseline Ingestion Checklist runs and passes 10/10 across all installed repositories on init and upgrade.
-  - Automatic <24KB rule shard balancer ensures 100% of memory-bank/*.md files load into Antigravity rules without truncation.
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

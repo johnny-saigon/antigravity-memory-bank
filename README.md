@@ -13,27 +13,49 @@ Eliminates context drift, prevents cross-database contamination, enforces token 
 
 ```mermaid
 flowchart TD
-  subgraph T1["Tier 1: Global Developer Standard (~/.gemini/GEMINI.md)"]
-    G1["Conventional Commits • TypeScript Strict Mode • Zod Contracts"]
+  subgraph T1["Tier 1: Global Developer Standard (~/.gemini/GEMINI.md, <50 Lines)"]
+    G1["Conventional Commits • TypeScript Strict Mode • <=8-Turn Token Frugality"]
   end
 
-  subgraph T2["Tier 2: Cluster & Infrastructure Guardrails (.agents/rules/infra.md)"]
-    G2["Port Isolation • Multi-Tenant DB Partitioning • GPU VRAM Exclusivity • Deny-Lists"]
+  subgraph ROOT["Lean Root Entrypoint (AGENTS.md, <50 Lines, 0 Inline Bloat)"]
+    R1["Tech Stack • Build Commands • Core Mandates • Standard Links"]
   end
 
-  subgraph T3["Tier 3: Project Domain Memory Bank (memory-bank/*.md)"]
+  subgraph T2["Tier 2 & Progressive Disclosure Rules (.agents/rules/*.md, trigger: model_decision)"]
+    G2["infra.md • negative-constraints.md • memory-architecture.md • memory-integrations.md • memory-sprint-context.md"]
+  end
+
+  subgraph T3["Tier 3: Project Domain Memory Bank (memory-bank/*.md, <150 Lines)"]
     G3["projectbrief.md • productContext.md • systemPatterns.md • integrationsAndCustomizations.md • activeContext.md • progress.md"]
   end
 
   subgraph OPS["Decoupled Backlog & 3-Artifact Planning Mode (docs/ & <brainDir>/)"]
-    B1["docs/backlog.json & backlog.html (0-Token Capture & Kanban)"]
+    B1["docs/backlog.json & backlog.html (0-Token Capture, Kanban & Action Items)"]
     P1["task.md • implementation_plan.md • walkthrough.md (/backlog-plan & /backlog-start)"]
   end
 
-  T1 --> T2 --> T3
+  T1 --> ROOT --> T2 --> T3
   T3 -. "Passive Context Baseline" .-> OPS
   B1 <-->|"1-to-1 Correlation"| P1
 ```
+
+### 🛡️ Defeating the 3 Antigravity Memory Traps (Native Discovery Protocol)
+
+Traditional `memory-bank/` setups fail in Antigravity because of three native discovery traps—all of which `antigravity-memory-bank` automatically prevents and lints via `npm run lint:memory`:
+
+1. **Silent Discard Trap**: Antigravity only scans `AGENTS.md`, `GEMINI.md`, or immediate `.md` children inside `.agents/rules/*.md`. It ignores standalone `memory-bank/*.md` files unless bridged into `.agents/rules/*.md`, and ignores nested subdirectories (like `.agents/rules/ios/swift.md`) unless registered in `.agents/rules.json`.
+   - **Fix**: `antigravity-memory-bank` automatically generates top-level progressive-disclosure rule bridges in `.agents/rules/` (`memory-architecture.md`, `memory-integrations.md`, `memory-sprint-context.md`) and auto-registers any nested `.agents/rules/<subdir>/` in `.agents/rules.json`.
+2. **Broken Frontmatter Trap**: If a file in `.agents/rules/*.md` is missing YAML frontmatter or uses camelCase (`modelDecision` instead of `model_decision`), Antigravity silently discards the file.
+   - **Fix**: Every `.agents/rules/*.md` file is generated, auto-healed, and linted with strict snake_case YAML frontmatter:
+     ```markdown
+     ---
+     trigger: model_decision
+     description: "Apply when designing features, modifying system architecture, schemas, APIs, or UX flows."
+     ---
+     ```
+3. **Token Bloat Trap**: If you dump your entire project memory into `GEMINI.md` or use `@[...](memory-bank/...)` inline expansions inside root `AGENTS.md`, it is injected on every single turn—burning credits continuously.
+   - **Fix**: Root `AGENTS.md` and `~/.gemini/GEMINI.md` are kept strictly **under 50 lines** (tech stack, build commands, repo structure, core mandates, and standard markdown links), while `memory-bank/*.md` is disclosed on demand via `trigger: model_decision` in `.agents/rules/memory-*.md`.
+   - **Verify Anytime with `/context`**: Run `/context` inside an Antigravity session to explicitly list which rule files are active and how many tokens they consume. Convert repetitive multi-step tasks (like generating boilerplate or running test suites) into Skills (`.agents/skills/<name>/SKILL.md`) rather than rules.
 
 ---
 

@@ -473,8 +473,55 @@ function syncIntegrationsAndCustomizations(rootDir) {
   const rulesDir = path.join(resolvedRoot, '.agents', 'rules');
   if (fsSync.existsSync(rulesDir)) {
     try {
+      // Remove legacy frontmatter-less memory-context*.md shards and ensure progressive-disclosure memory-*.md rules exist
+      for (const legacyShard of ['memory-context.md', 'memory-context-2.md', 'memory-context-3.md']) {
+        const lp = path.join(rulesDir, legacyShard);
+        if (fsSync.existsSync(lp)) fsSync.rmSync(lp, { force: true });
+      }
+      if (fsSync.existsSync(memoryBankDir)) {
+        const infraRel = fsSync.existsSync(path.join(memoryBankDir, 'infrastructureInvariants.md'))
+          ? 'memory-bank/infrastructureInvariants.md'
+          : fsSync.existsSync(path.join(memoryBankDir, 'infrastructure.md'))
+            ? 'memory-bank/infrastructure.md'
+            : null;
+        const archLinks = [];
+        if (fsSync.existsSync(path.join(memoryBankDir, 'projectbrief.md'))) archLinks.push('- **Project Brief & North Star**: @[Project Brief](memory-bank/projectbrief.md)');
+        if (fsSync.existsSync(path.join(memoryBankDir, 'productContext.md'))) archLinks.push('- **Product Context & UX Flows**: @[Product Context](memory-bank/productContext.md)');
+        if (fsSync.existsSync(path.join(memoryBankDir, 'systemPatterns.md'))) archLinks.push('- **System Patterns & Architecture**: @[System Patterns](memory-bank/systemPatterns.md)');
+        if (infraRel) archLinks.push(`- **Infrastructure Invariants**: @[Infrastructure Invariants](${infraRel})`);
+        const coreSet = new Set(['projectbrief.md', 'productContext.md', 'systemPatterns.md', 'infrastructureInvariants.md', 'infrastructure.md', 'integrationsAndCustomizations.md', 'activeContext.md', 'progress.md']);
+        for (const ef of fsSync.readdirSync(memoryBankDir).filter(x => x.endsWith('.md') && !coreSet.has(x)).sort()) {
+          const label = ef.replace(/\.md$/, '');
+          archLinks.push(`- **Domain Memory (${label})**: @[${label}](memory-bank/${ef})`);
+        }
+        writeFileIfChangedSync(
+          path.join(rulesDir, 'memory-architecture.md'),
+          `---\ntrigger: model_decision\ndescription: "Apply when designing features, modifying system architecture, schemas, APIs, UX flows, or checking domain and infrastructure invariants in ${displayProject}."\n---\n# ${displayProject} — Architecture, UX & Domain Memory (Progressive Disclosure)\n\n${archLinks.join('\n')}\n`
+        );
+        writeFileIfChangedSync(
+          path.join(rulesDir, 'memory-integrations.md'),
+          `---\ntrigger: model_decision\ndescription: "Apply whenever calling MCP tools, checking pre-authenticated API keys, .env contracts, OAuth credentials, or workspace skills and hooks in ${displayProject}."\n---\n# ${displayProject} — Pre-Authenticated MCP Servers, API Keys & Customizations\n\n- **Integrations & Customizations**: @[Integrations & Customizations](memory-bank/integrationsAndCustomizations.md)\n`
+        );
+        const sprintLinks = [];
+        if (fsSync.existsSync(path.join(memoryBankDir, 'activeContext.md'))) sprintLinks.push('- **Active Sprint Context**: @[Active Context](memory-bank/activeContext.md)');
+        if (fsSync.existsSync(path.join(memoryBankDir, 'progress.md'))) sprintLinks.push('- **Milestone & Progress Tracker**: @[Progress Tracker](memory-bank/progress.md)');
+        writeFileIfChangedSync(
+          path.join(rulesDir, 'memory-sprint-context.md'),
+          `---\ntrigger: model_decision\ndescription: "Apply when checking active sprint state, recent commits, known pitfalls, backlog status, or milestone progress in ${displayProject}."\n---\n# ${displayProject} — Active Sprint State & Milestone Progress\n\n${sprintLinks.join('\n')}\n`
+        );
+      }
       for (const f of fsSync.readdirSync(rulesDir).filter(x => x.endsWith('.md')).sort()) {
-        workspaceRules.push({ relPath: `.agents/rules/${f}`, summary: extractMarkdownSummary(path.join(rulesDir, f)) });
+        const fullRulePath = path.join(rulesDir, f);
+        let rawRule = fsSync.readFileSync(fullRulePath, 'utf8');
+        if (!rawRule.startsWith('---\n') && !rawRule.startsWith('---\r\n')) {
+          const desc = f === 'infra.md'
+            ? 'Apply whenever configuring ports, databases, Redis caches, process daemons, supervisor/systemd workers, or deployment infrastructure.'
+            : f === 'negative-constraints.md'
+              ? 'Apply whenever executing shell commands, managing processes or Docker containers, querying databases, or enforcing the <= 8 tool turns credit and token frugality budget.'
+              : `Apply when working on ${f.replace(/\.md$/, '')} guidelines in ${displayProject}.`;
+          writeFileIfChangedSync(fullRulePath, `---\ntrigger: model_decision\ndescription: "${desc}"\n---\n${rawRule}`);
+        }
+        workspaceRules.push({ relPath: `.agents/rules/${f}`, summary: extractMarkdownSummary(fullRulePath) });
       }
     } catch {}
   }

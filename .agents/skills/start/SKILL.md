@@ -6,12 +6,12 @@ description: Context bootstrap workflow run on session start (/start) to load th
 # Session Bootstrap (`/start`)
 
 When `/start` is executed or a new session begins:
-1. Ingest `memory-bank/projectbrief.md`, `memory-bank/productContext.md`, `memory-bank/systemPatterns.md`, `memory-bank/infrastructureInvariants.md`, and `memory-bank/integrationsAndCustomizations.md` to establish architectural and UX invariants.
-2. Inspect `memory-bank/activeContext.md` to identify the current sprint stage, production endpoints, and recent decisions.
-3. Read `memory-bank/progress.md` to confirm completed features, bug fixes, and outstanding backlog items.
-4. Check `git status -s` and the last 3 commit messages (`git log -n 3 --oneline`) to detect recent codebase updates.
-5. If configured, run a non-invasive live health probe against the target service.
-6. Output a concise 3-bullet status summary:
+1. Batch-read `memory-bank/activeContext.md`, `memory-bank/progress.md`, `memory-bank/integrationsAndCustomizations.md`, `memory-bank/systemPatterns.md`, `memory-bank/infrastructureInvariants.md`, `memory-bank/projectbrief.md`, and `memory-bank/productContext.md` in a single turn (note: in normal turns, these files are progressively disclosed via `.agents/rules/memory-*.md` with `trigger: model_decision` so root `AGENTS.md` stays `< 50 lines`).
+2. Inspect `docs/backlog.json` to identify `in_progress` tickets, pending Action Items (`waitingOn`), and top `todo` priorities.
+3. Check `git status -s` and the last 3 commit messages (`git log -n 3 --oneline`) to detect recent codebase updates.
+4. If configured, run a non-invasive live health probe against the target service.
+5. Output a concise 3-bullet status summary:
    - **Current Phase**
    - **Immediate Task**
    - **Proposed Next Step**
+   *(Tip: Run `/context` anytime in Antigravity to verify active `model_decision` rule files in `.agents/rules/*.md` and inspect per-rule token consumption.)*

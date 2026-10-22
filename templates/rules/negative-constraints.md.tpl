@@ -1,3 +1,7 @@
+---
+trigger: model_decision
+description: "Apply whenever executing shell commands, managing processes or Docker containers, querying databases, or enforcing the <= 8 tool turns credit and token frugality budget."
+---
 # Tier 2: Negative Constraints & Execution Deny-List
 
 When generating code, scripts, or executing shell commands in **{{PROJECT_NAME}}**:
