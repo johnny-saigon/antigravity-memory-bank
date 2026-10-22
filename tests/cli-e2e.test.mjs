@@ -251,12 +251,21 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.equal(/@\[[^\]]+\]\(memory-bank\/[^)]+\)/.test(agentsMd), false, 'Root AGENTS.md must not inline @[...](memory-bank/...)');
 
     // Verify progressive-disclosure .agents/rules/*.md files exist with valid snake_case trigger: model_decision frontmatter
-    for (const ruleFile of ['infra.md', 'negative-constraints.md', 'memory-architecture.md', 'memory-integrations.md', 'memory-sprint-context.md']) {
+    for (const ruleFile of ['infra.md', 'negative-constraints.md', 'brick-governance.md', 'memory-architecture.md', 'memory-integrations.md', 'memory-sprint-context.md']) {
       const rulePath = path.join(tmpRepo, '.agents', 'rules', ruleFile);
       assert.equal(fs.existsSync(rulePath), true, `Expected .agents/rules/${ruleFile} to exist`);
       const ruleContent = fs.readFileSync(rulePath, 'utf8');
       assert.match(ruleContent, /^---\n[\s\S]*?trigger:\s*model_decision[\s\S]*?description:\s*".+"[\s\S]*?\n---/, `.agents/rules/${ruleFile} must have valid model_decision frontmatter`);
     }
+
+    // Verify docs/BRICK_ARCHITECTURE_GUIDE.md is installed on init and documents the 3-Tier Pluggable UX/UI Architecture
+    const brickGuidePath = path.join(tmpRepo, 'docs', 'BRICK_ARCHITECTURE_GUIDE.md');
+    assert.equal(fs.existsSync(brickGuidePath), true, 'Expected docs/BRICK_ARCHITECTURE_GUIDE.md to be installed on init');
+    const brickGuideContent = fs.readFileSync(brickGuidePath, 'utf8');
+    assert.match(brickGuideContent, /Tier A — Headless State & Behavior Hooks/);
+    assert.match(brickGuideContent, /Tier B — Token-Driven Default Shell/);
+    assert.match(brickGuideContent, /Tier C — Host Brand Adapter/);
+    assert.match(brickGuideContent, /Bonus: How to Plug in a Brand New UX\/UI Redesign Later/);
 
     // Verify skills & lifecycle hooks installed (including /context, /clear, /effort, /credits, /usage)
     assert.equal(fs.existsSync(path.join(tmpRepo, '.agents', 'hooks.json')), true);

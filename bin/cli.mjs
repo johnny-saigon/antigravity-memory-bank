@@ -299,6 +299,7 @@ async function exportMemory(targetDir, exportDir) {
     '.agents/hooks.json',
     '.agents/rules/infra.md',
     '.agents/rules/negative-constraints.md',
+    '.agents/rules/brick-governance.md',
     '.agents/skills/start/SKILL.md',
     '.agents/skills/update-memory/SKILL.md',
     '.agents/skills/backlog-start/SKILL.md',
@@ -310,6 +311,8 @@ async function exportMemory(targetDir, exportDir) {
     'scripts/backlog.mjs',
     'docs/backlog.json',
     'docs/BACKLOG_GUIDE.md',
+    'docs/PLANNING_GUIDE.md',
+    'docs/BRICK_ARCHITECTURE_GUIDE.md',
   ];
 
   for (const rel of candidatePaths) {
@@ -446,10 +449,11 @@ async function uninstallMemory(targetDir, opts, detected) {
     }
   } catch {}
 
-  // 4. Remove rules: infra.md, negative-constraints.md, and progressive-disclosure memory-*.md rules
+  // 4. Remove rules: infra.md, negative-constraints.md, brick-governance.md, and progressive-disclosure memory-*.md rules
   for (const r of [
     'infra.md',
     'negative-constraints.md',
+    'brick-governance.md',
     'memory-architecture.md',
     'memory-integrations.md',
     'memory-sprint-context.md',
@@ -669,7 +673,7 @@ async function installSyncAndHooks(targetDir, detected) {
     console.log('  ↷ Preserved upstream scripts/backlog.mjs (self-repository guard)');
   }
 
-  // 4. Install docs/BACKLOG_GUIDE.md and docs/PLANNING_GUIDE.md
+  // 4. Install docs/BACKLOG_GUIDE.md, docs/PLANNING_GUIDE.md, docs/BRICK_ARCHITECTURE_GUIDE.md, and .agents/rules/brick-governance.md
   const guideSrc = path.join(pkgRoot, 'templates/docs/BACKLOG_GUIDE.md');
   const guideDest = path.join(targetDir, 'docs/BACKLOG_GUIDE.md');
   await fs.mkdir(path.dirname(guideDest), { recursive: true });
@@ -680,6 +684,17 @@ async function installSyncAndHooks(targetDir, detected) {
   const planGuideDest = path.join(targetDir, 'docs/PLANNING_GUIDE.md');
   await fs.copyFile(planGuideSrc, planGuideDest);
   console.log('  ✓ Installed docs/PLANNING_GUIDE.md (3-artifact planning mode guide)');
+
+  const brickGuideSrc = path.join(pkgRoot, 'templates/docs/BRICK_ARCHITECTURE_GUIDE.md');
+  const brickGuideDest = path.join(targetDir, 'docs/BRICK_ARCHITECTURE_GUIDE.md');
+  await fs.copyFile(brickGuideSrc, brickGuideDest);
+  console.log('  ✓ Installed docs/BRICK_ARCHITECTURE_GUIDE.md (3-tier pluggable UX/UI & brick architecture guide)');
+
+  const brickGovSrc = path.join(pkgRoot, 'templates/rules/brick-governance.md.tpl');
+  const brickGovDest = path.join(targetDir, '.agents/rules/brick-governance.md');
+  await fs.mkdir(path.dirname(brickGovDest), { recursive: true });
+  await fs.copyFile(brickGovSrc, brickGovDest);
+  console.log('  ✓ Installed .agents/rules/brick-governance.md (3-tier pluggable UX/UI & brick governance rule)');
 
   // 5. Install docs/backlog.json if not present
   const backlogJsonDest = path.join(targetDir, 'docs/backlog.json');

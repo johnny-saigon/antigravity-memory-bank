@@ -147,6 +147,63 @@ Treat Antigravity as your hands-on execution engineer rather than an unconstrain
 
 ---
 
+### 🧱 Feature Guide 3: How the Pluggable UX/UI & Branding Architecture Works (`FEAT-120`)
+
+Every new (`init`) or existing (`upgrade`) installation of `antigravity-memory-bank` automatically installs [`docs/BRICK_ARCHITECTURE_GUIDE.md`](templates/docs/BRICK_ARCHITECTURE_GUIDE.md) and the progressive-disclosure rule [`.agents/rules/brick-governance.md`](templates/rules/brick-governance.md.tpl), enabling **Shared Hexagonal Bricks** (such as `bricks/user-profile` with 4-provider Google, Facebook, Apple, and Microsoft OAuth).
+
+We split every brick's presentation layer into **3 decoupled tiers** across **Web, iOS, and Android**:
+
+```mermaid
+flowchart TD
+  subgraph TA["Tier A — Headless State & Behavior Hooks (platforms/*/headless/)"]
+    A1["100% Shared Across All Repos • Zero CSS, Zero Colors, Zero Fonts"]
+    A2["useSocialAuth() • useAvatarUploader() / useAvatarUpload() • useUserProfile() / useAccountLinking()"]
+  end
+
+  subgraph TB["Tier B — Token-Driven Default Shell (platforms/*/themed-ui/)"]
+    B1["<ProfileThemeProvider slots={customSlots} theme={hostTheme}>"]
+    B2["Reads Every Color, Radius, Font, Logo & Button Variant from ProfileBrandThemePort"]
+    B3["Component Slots (ProfileUISlotsPort): slots={{ CardWrapper: MyCustomCard }}"]
+  end
+
+  subgraph TC["Tier C — Host Brand Adapter (src/adapters/user-profile-theme.adapter.ts)"]
+    C1["100% Isolated Per Sister Repository (SnapCal • BinaryDay • RemoveBackGround • Greenfield)"]
+    C2["Reads docs/BRAND_BOOK.md & docs/UX_BRIEF.md (or Tailwind / iOS ColorAssets / Android MaterialTheme)"]
+  end
+
+  TC -->|"Feeds Tokens & Slot Overrides"| TB
+  TA -->|"Feeds Headless State & OAuth Triggers"| TB
+  TC -.->|"Or Binds Directly to Bespoke Custom UI"| TA
+```
+
+#### 1. Tier A — Headless State & Behavior Hooks (`platforms/*/headless/`)
+- **100% shared across all repos.**
+- Handles form validation, loading/error states, OAuth redirect/popup triggers (`useSocialAuth()`), optimistic avatar cropping/upload (`useAvatarUploader()` / `useAvatarUpload()`), and account-linking confirmation modals (`useUserProfile()` / `useAccountLinking()` / `useProfileSettings()`).
+- **Zero CSS, zero colors, zero fonts.**
+
+#### 2. Tier B — Token-Driven Default Shell (`platforms/*/themed-ui/`)
+- Shared layout primitives that consume a `<ProfileThemeProvider slots={customSlots} theme={hostTheme}>` (and `ProfileThemeConfiguration.swift` on iOS / `ProfileThemeTokens.kt` on Android).
+- Every color, border radius, typography scale, spacing unit, app logo, and social button variant (`pill`, `outline`, `icon-only`, `dark`/`light`) is read from a strict **`ProfileBrandThemePort`** contract.
+- **Supports Component Slots (`ProfileUISlotsPort` — Slot Overrides)**: If `RemoveBackGround` wants a completely custom glassmorphic Card wrapper or custom header while keeping the brick's form internals and OAuth buttons, it simply passes `slots={{ CardWrapper: MyCustomCard }}` without touching the brick's source code.
+
+#### 3. Tier C — Host Brand Adapter (`src/adapters/user-profile-theme.adapter.ts`)
+- **100% isolated per sister repository.**
+- Lives in `SnapCal`, `BinaryDay`, `RemoveBackGround`, or any greenfield project. Reads that specific project's `docs/BRAND_BOOK.md` / `docs/UX_BRIEF.md` (or Tailwind/CSS variables / iOS `ColorAssets` / Android `MaterialTheme`) and feeds them into the brick.
+
+#### 🚀 Bonus: How to Plug in a Brand New UX/UI Redesign Later (in Any Repo)
+Because `src/adapters/user-profile-theme.adapter.ts` and the `headless/` hooks are 100% isolated from the brick's core logic, whenever you design a new UI mockup (e.g., from Figma or Stitch) for `BinaryDay`, `SnapCal`, `RemoveBackGround`, or any new repo in the future:
+
+1. **Attach the UX/UI `.zip` bundle or screenshot offline at `0` token cost**:
+   ```bash
+   npm run backlog add "Apply New Brand UX/UI to User Profile" --type feature --priority medium
+   npm run backlog attach FEAT-105 ./path/to/new-profile-ui.zip
+   ```
+2. **Run `/backlog-plan FEAT-105`**. The agent will update **only** `src/adapters/user-profile-theme.adapter.ts` (or drop custom slot components into `slots={{ ... }}`), leaving **100% of your 4 OAuth logins, security logic, and database adapters untouched!**
+
+Full documentation is automatically installed in [`docs/BRICK_ARCHITECTURE_GUIDE.md`](templates/docs/BRICK_ARCHITECTURE_GUIDE.md).
+
+---
+
 ## 🛡️ Core Invariant: Passive Observer & Listener Only
 
 A foundational separation of concerns governs the Three-Tier Memory Bank:
