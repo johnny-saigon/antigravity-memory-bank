@@ -21,6 +21,7 @@ This project operates within the **Three-Tier Memory Hierarchy** (`< 50 lines` r
    - **Memory-First Lookup**: Check `memory-bank/activeContext.md` and `docs/backlog.json` before running diagnostics; never re-investigate recorded state.
    - **Never Read `transcript.jsonl` or Sibling Repos**: Strictly forbid reading `.system_generated/logs/transcript*.jsonl` or grepping sibling repos (`BinaryDay`, `SnapCal`, `RemoveBackGround`, `AntigravityRemote`) unless explicitly requested.
    - **Hard Turn Budget (`≤ 8 Tool Turns per Fix`)**: Batch all file reads into 1 turn, all edits into 1–2 turns, and all verification/deployment commands into 1–2 chained shell calls.
+   - **Always-On Credit & Token Optimization Tip**: End every response with a concise `> [!TIP]` box reminding the user of the best credit/token optimization for their next prompt (`/clear` + `/start` or `/compact`, `/plan` or `/backlog-plan`, `/effort low|medium|high`, `/context`, `/credits` · `/usage`) until explicitly told not to display it.
 
 ## Progressive Disclosure Context & Workflows
 - **Memory Bank**: `memory-bank/projectbrief.md` · `memory-bank/productContext.md` · `memory-bank/systemPatterns.md` · `memory-bank/infrastructureInvariants.md` · `memory-bank/integrationsAndCustomizations.md` · `memory-bank/activeContext.md` · `memory-bank/progress.md`
