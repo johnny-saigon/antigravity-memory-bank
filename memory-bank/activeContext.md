@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `23bc2b6` — "feat(memory): enforce Always-On Credit & Token Optimization Footer Tip on every response [skip ci]" (2026-10-22)
+- **Last Synchronized Commit**: `bd13565` — "feat(skills): implement executable /context, /clear, /effort, /credits, and /usage skills and CLI inspectors (FEAT-120)" (2026-10-22)
 - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank, Decoupled Zero-Token Backlog Engine, and Correlated 3-Artifact Planning Mode directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 
