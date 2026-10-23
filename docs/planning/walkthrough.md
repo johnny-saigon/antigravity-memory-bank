@@ -6,16 +6,16 @@
 
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
-- **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
+- **Current Phase**: v1.5 Canonical Living Documentation Hierarchy (`FEAT-121` & `FEAT-122`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`23/23` backlog tickets `DONE`).
 - **Backlog Completion**: **29 / 29** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
-- **feat(frugality): encode Strict Credit & Token Frugality Mandate (`≤ 8 Tool Turns per Fix`, Memory-First Lookup, Zero `transcript.jsonl`/Sibling-Repo Scraping, Fresh Chat/`/compact` ~95% token reduction) in `~/.gemini/GEMINI.md`, `AGENTS.md`, `templates/AGENTS.md.tpl`, `.agents/rules/negative-constraints.md`, `skills/backlog-start/SKILL.md`, `bin/cli.mjs`, and Check #6 of `lib/ingestion-checklist.mjs`**
-- **feat(organize): implement FEAT-117 AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`) across all 5 repositories**
-- **feat(planning): implement FEAT-116 correlating Antigravity Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md` in `<brainDir>/` and `docs/planning/`) with `docs/backlog.json` and `/backlog-plan`**
-- **feat(qa): implement FEAT-112 & FEAT-111 (`tests/cli-e2e.test.mjs`, `scripts/lint-memory.mjs`) enforcing upstream template byte-parity and hermetic zero-dependency E2E CLI testing**
-- **feat(rules): implement FEAT-115 enforcing Strict End-to-End Verification Before Closure and Mandatory Dual-Test Invariant for Bug Fixes (`BUG-*`)**
-- **feat(hooks): implement FEAT-114 on-the-fly lifecycle hooks (`.agents/hooks.json`), 10-Point Mandatory Baseline Ingestion Checklist, and `< 24 KB` rule shard balancer**
+- **feat(docs): implement `FEAT-122` Deep Universal Documentation & Codebase Harvester (`scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`) with 8-pillar weighted Markdown classifier (`docs/**/*.md`), non-destructive in-place harvesting (`README.md`, `SECURITY.md`, `CHANGELOG.md`, `memory-bank/*.md`), and deep AST/regex extraction (`app/**/route.ts`, Prisma `model`, SQL `CREATE TABLE`, mobile URL schemes)**
+- **feat(docs): implement `FEAT-121` Canonical Living Documentation Hierarchy & Auto-Synthesizer (`docs/INDEX.md` + `docs/{architecture,design,quality,operations}/`, `.agents/rules/docs-living-specs.md`)**
+- **feat(bricks): extract `bricks/user-profile` Hexagonal Brick (`FEAT-120`) with 4-provider Social OAuth (Google, Apple, Facebook, Microsoft), 3-Tier Pluggable UX/UI (`headless/` + `themed-ui/` + `src/adapters/user-profile-theme.adapter.ts`), and `BUG-737`/`BUG-738` non-regression tests**
+- **feat(skills): implement executable `/context`, `/clear`, `/effort`, `/credits`, and `/usage` skills and CLI inspectors (`FEAT-119` & `FEAT-120`)**
+- **feat(memory): implement native `model_decision` progressive disclosure and `< 50-line` root `AGENTS.md` (`FEAT-118`)**
+- **feat(organize): implement `FEAT-117` AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
 ### ✅ [FEAT-122]: Deep Universal Documentation & Codebase Harvester for Canonical Living Docs *(Verified 2026-10-23)*

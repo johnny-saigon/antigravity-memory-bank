@@ -3,7 +3,7 @@
 
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
-> - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
+> - **Current Phase**: v1.5 Canonical Living Documentation Hierarchy (`FEAT-121` & `FEAT-122`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`23/23` backlog tickets `DONE`).
 > - **Backlog Progress**: `29/29` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline

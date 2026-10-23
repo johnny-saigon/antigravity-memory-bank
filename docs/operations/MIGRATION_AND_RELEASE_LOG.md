@@ -41,11 +41,11 @@
 ### Harvested Repository & Memory-Bank Context
 
 - **From [`memory-bank/progress.md`](../../memory-bank/progress.md) (Memory Bank Baseline)**:
-  - **Test, Parity & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs`) — 14/14 memory files (`< 150 lines`), 5/5 template parity pairs, 7/7 E2E & parity tests passing (`0` violations), and 10/10 Mandatory Baseline Ingestion Checklist passing.
+  - **Test, Parity & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs bricks/user-profile/testing/contract.spec.ts`) — 25/25 memory & rule files (`< 150 lines`, `< 50 lines` `AGENTS.md`), 14/14 template parity pairs, 9/9 canonical living docs, and 15/15 E2E & contract tests passing (`0` violations).
   - **Package Whitelist Audit**: `npm pack --dry-run` — excludes `memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`, and `.github/`.
-  - **Backlog Renderer & Live Bridge**: `npm run backlog:render` + `http://127.0.0.1:4199/api/health` (v1.2.0) — synchronizes `docs/BACKLOG.md`, `docs/backlog.html`, and exact project `<brainDir>/backlog.html` with native OS clipboard copy and `.zip` attachment unpacking.
-  - **Active Development Board**: Operational tickets and feature backlogs are managed in `docs/backlog.json` and `docs/BACKLOG.md`.
-  - **Backlog Workflow Guide**: Documented in `docs/BACKLOG_GUIDE.md`.
+  - **Backlog Renderer & Live Bridge**: `npm run backlog:render` + `http://127.0.0.1:4199/api/health` (v1.2.0) — synchronizes `docs/BACKLOG.md`, `docs/backlog.html`, and `<brainDir>/backlog.html`.
+  - **Living Documentation Hub**: Indexed in [`docs/INDEX.md`](../docs/INDEX.md) across `docs/{architecture,design,quality,operations}/`.
+  - **Active Development Board**: Operational tickets and feature backlogs are managed in [`docs/backlog.json`](../docs/backlog.json) and [`docs/BACKLOG.md`](../docs/BACKLOG.md) (`23/23` `DONE`, `0` pending).
 
 - **From [`README.md`](../../README.md) (## 🛡️ Core Invariant: Passive Observer & Listener Only)**:
   A foundational separation of concerns governs the Three-Tier Memory Bank:

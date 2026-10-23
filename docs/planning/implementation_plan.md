@@ -3,8 +3,8 @@
 
 ## 1. Goal Description
 - **Project North Star**: Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.
-- **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
-- **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Decoupled Zero-Token Backlog Engine, and Correlated 3-Artifact Planning Mode directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
+- **Current Phase**: v1.5 Canonical Living Documentation Hierarchy (`FEAT-121` & `FEAT-122`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`23/23` backlog tickets `DONE`).
+- **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical.
 - **Planning Scope (`BASELINE`)**:
   - **[FEAT-122] Deep Universal Documentation & Codebase Harvester for Canonical Living Docs** (`HIGH` · Status: `done`): Implement and verify according to project architecture invariants.
   - **[FEAT-121] Canonical Living Documentation Hierarchy & Auto-Synthesizer** (`P0` · Status: `done`): Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.
