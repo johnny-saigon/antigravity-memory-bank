@@ -95,7 +95,7 @@ function parseCliArgs(argv) {
       options.command = 'upgrade';
     } else if (a === 'organize' || a === 'reorganize' || a === 'organise') {
       options.command = 'organize';
-    } else if (a === 'docs:sync' || a === 'docs') {
+    } else if (a === 'docs:sync' || a === 'docs' || a === 'harvest') {
       options.command = 'docs:sync';
     } else if (a === 'sync') {
       options.command = 'sync';
@@ -1336,6 +1336,7 @@ Immediately after closing the previous session, initialize the new working cycle
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
   console.log('📦 New capabilities active in this project:');
   console.log('   - 🗂️  AI-Native Repository Organizer: Clean root entrypoints, relocated docs/, rewritten links & hardened .gitignore');
+  console.log('   - 📚 Canonical Living Docs & Deep Harvester: docs/INDEX.md + 4 Pillars (npm run docs:sync / npm run docs:lint)');
   console.log('   - ⚡ On-the-Fly Lifecycle Hooks: .agents/hooks.json (SessionStart, PostToolUse, Stop) + .git/hooks/post-commit');
   console.log('   - 📋 10-Point Baseline Ingestion Checklist: Verified repo paths, keys, MCPs, rules, skills & <24KB rule cap');
   console.log('   - 🔑 API Keys, MCP & Customizations Index: memory-bank/integrationsAndCustomizations.md');

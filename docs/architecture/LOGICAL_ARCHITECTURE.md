@@ -34,6 +34,7 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
+| **`FEAT-102`** | On-the-Fly CLI Initializer & Universal One-Line Shell Installer | 🟢 DONE | `bin/cli.mjs`, `install.sh` |
 | **`FEAT-103`** | Consolidated Context Export & Zero-Loss Clean Deinstallation | 🟢 DONE | `bin/cli.mjs` |
 | **`FEAT-104`** | Non-Destructive In-Place Upgrade Workflow for Existing Installations | 🟢 DONE | `bin/cli.mjs` |
 | **`FEAT-105`** | Automated Historical Context Scraper (Git, Docs & Antigravity Transcripts) | 🟢 DONE | `lib/context-scraper.mjs`, `bin/cli.mjs` |
@@ -52,8 +53,7 @@ flowchart LR
 | **`FEAT-118`** | Antigravity Native Rule Discovery & model_decision Progressive Disclosure | 🟢 DONE | `AGENTS.md`, `.agents/rules/`, `scripts/lint-memory.mjs` |
 | **`FEAT-119`** | Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage) | 🟢 DONE | `skills/`, `.agents/skills/`, `scripts/lint-memory.mjs` |
 | **`FEAT-120`** | Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/) | 🟢 DONE | `bricks/user-profile/brick.json`, `bricks/user-profile/core/`, `bricks/user-profile/platforms/web/` |
-| **`FEAT-121`** | Canonical Living Documentation Hierarchy & Auto-Synthesizer | 🟢 DONE | `lib/docs-synthesizer.mjs`, `scripts/sync-living-docs.mjs`, `lib/repo-organizer.mjs` |
-| **`FEAT-122`** | Deep Universal Documentation & Codebase Harvester for Canonical Living Docs | 🟢 DONE | `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `tests/e2e-cli.test.mjs` |
+| **`FEAT-121`** | Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars) | 🟢 DONE | `lib/docs-synthesizer.mjs`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs` |
 <!-- ag-section:logical-features:end -->
 
 ---

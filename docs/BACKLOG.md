@@ -324,21 +324,19 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
-### FEAT-121: Canonical Living Documentation Hierarchy & Auto-Synthesizer
+### FEAT-121: Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars)
 - **Status:** Completed (`DONE`)
 - **Priority:** P0
-- **Components:** `lib/docs-synthesizer.mjs`, `scripts/sync-living-docs.mjs`, `lib/repo-organizer.mjs`, `bin/cli.mjs`, `scripts/backlog.mjs`, `scripts/sync-memory-context.mjs`, `scripts/lint-memory.mjs`, `templates/docs/`, `templates/rules/docs-living-specs.md.tpl`
+- **Components:** `lib/docs-synthesizer.mjs`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `lib/repo-organizer.mjs`, `bin/cli.mjs`, `scripts/backlog.mjs`, `scripts/sync-memory-context.mjs`, `scripts/lint-memory.mjs`, `templates/docs/`, `templates/rules/docs-living-specs.md.tpl`, `tests/cli-e2e.test.mjs`, `README.md`
 - **Attachments:** `docs/attachments/FEAT-121/STANDARD_DOCS_HIERARCHY_SPEC.md`
-- **Description:** Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.
+- **Description:** Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester: every initialized (init), upgraded (upgrade), organized (organize), or synced (docs:sync) repository automatically scaffolds the 9-file living documentation hierarchy inside docs/{architecture,design,quality,operations}/, classifies and consolidates all existing docs/**/*.md specs across the 8 canonical pillars (archiving originals in docs/archive/ and rewriting links repo-wide), non-destructively harvests README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md sections, extracts deep codebase routes/schemas/tokens/tests, and bridges deep specs on demand via .agents/rules/docs-living-specs.md (trigger: model_decision).
 - **Technical Specification:**
-  Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.
-
----
-
-### FEAT-122: Deep Universal Documentation & Codebase Harvester for Canonical Living Docs
-- **Status:** Completed (`DONE`)
-- **Priority:** High
-- **Components:** `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `tests/e2e-cli.test.mjs`
+  Implement scripts/sync-living-docs.mjs (and templates/scripts/sync-living-docs.mjs) combining 9 canonical living templates (docs/INDEX.md, LOGICAL_ARCHITECTURE.md, TECHNICAL_ARCHITECTURE.md, SECURITY_AND_COMPLIANCE.md, UX_BRIEF.md, BRAND_BOOK.md, TEST_PLAN_AND_SUITES.md, BUG_FIX_RECORDS.md, MIGRATION_AND_RELEASE_LOG.md) with the 8-pillar weighted Markdown classifier (classifyMarkdownDocument), non-destructive in-place repo/memory-bank harvester (harvestInPlaceRepoKnowledge), and deep codebase AST/regex harvesters (Next.js App Router route.ts, Pages API, Fastify/Express, Prisma models, SQL CREATE TABLE, Zod schemas, mobile Info.plist/AndroidManifest.xml OAuth schemes, masked .env* keys, CSS/Tailwind tokens, and test suites).
+- **Acceptance Criteria:**
+  - [x] Scaffolds all 9 canonical living documents and .agents/rules/docs-living-specs.md (trigger: model_decision) on init, upgrade, organize, and docs:sync while keeping memory-bank/*.md < 150 lines.
+  - [x] Crawls and classifies all non-preserved docs/**/*.md files across the 8 pillars, merges content with zero loss, archives originals in docs/archive/, and rewrites relative and file:// links repo-wide.
+  - [x] Non-destructively harvests domain sections from README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md with clickable provenance links.
+  - [x] Extracts deep codebase facts (Next.js app/**/route.ts methods, Prisma models, SQL CREATE TABLE, mobile OAuth schemes, masked .env* keys, brand tokens, and test suites) and passes 15/15 E2E & contract tests.
 
 ---
 

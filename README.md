@@ -204,6 +204,65 @@ Full documentation is automatically installed in [`docs/BRICK_ARCHITECTURE_GUIDE
 
 ---
 
+### 📚 Feature Guide 4: Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`)
+
+To keep `memory-bank/*.md` strictly under **150 lines** (`Passive Observer Invariant`) while ensuring zero architectural, UX, security, or QA detail is ever lost, `antigravity-memory-bank` includes a unified **Canonical Living Documentation Hierarchy & Deep Universal Harvester** ([`scripts/sync-living-docs.mjs`](scripts/sync-living-docs.mjs)) bridged on demand via [`.agents/rules/docs-living-specs.md`](templates/rules/docs-living-specs.md.tpl) (`trigger: model_decision`).
+
+#### 1. The 9 Canonical Living Documents (`docs/INDEX.md` + 4 Pillars)
+
+| Pillar | Canonical Living Document | What the Harvester Populates & Consolidates (`0 AI Tokens`) |
+| :--- | :--- | :--- |
+| **Navigation Hub** | [`docs/INDEX.md`](docs/INDEX.md) | Master TOC, real-time status badges (`🟢 Populated & Auto-Synced` vs `🟡 Progressive Scaffold`), and index of archived legacy specs (`docs/archive/`). |
+| **1. Architecture** | [`docs/architecture/LOGICAL_ARCHITECTURE.md`](docs/architecture/LOGICAL_ARCHITECTURE.md) | System context, Mermaid flows, installed Hexagonal Bricks (`bricks/*/brick.json`), progressive `FEAT-*` capability map, and harvested domain sections from `README.md` & `memory-bank/projectbrief.md`. |
+| **1. Architecture** | [`docs/architecture/TECHNICAL_ARCHITECTURE.md`](docs/architecture/TECHNICAL_ARCHITECTURE.md) | Stack matrix, HTTP routes (`app/**/route.ts`, `pages/api/**`, Fastify/Express), CLI binaries, mobile URL schemes (`app.json`, `Info.plist`, `AndroidManifest.xml`), Prisma models (`model <Name>`), SQL tables (`CREATE TABLE`), and harvested `systemPatterns.md` / `infrastructureInvariants.md`. |
+| **1. Architecture** | [`docs/architecture/SECURITY_AND_COMPLIANCE.md`](docs/architecture/SECURITY_AND_COMPLIANCE.md) | OAuth 2.0 / PKCE / Apple `5.1.1(v)` / Meta GDPR rules, masked `.env*` variable contracts (secrets redacted), and harvested `SECURITY.md` & `integrationsAndCustomizations.md`. |
+| **2. Design & UX** | [`docs/design/UX_BRIEF.md`](docs/design/UX_BRIEF.md) | Target platforms, discovered Web/iOS/Android screens & components (`.tsx`, `.swift`, `.kt`), attached UX `.zip` bundles (`docs/attachments/`), and harvested `productContext.md`. |
+| **2. Design & UX** | [`docs/design/BRAND_BOOK.md`](docs/design/BRAND_BOOK.md) | `ProfileBrandThemePort` (`--ag-profile-*`) & `ProfileUISlotsPort` contracts, plus discovered CSS variables and `#hex` tokens from `*theme*`, `tailwind.config.*`, and `.css` files. |
+| **3. Quality & QA** | [`docs/quality/TEST_PLAN_AND_SUITES.md`](docs/quality/TEST_PLAN_AND_SUITES.md) | Mandatory Dual-Test & Live E2E gates (Mandate #6) and auto-discovered unit, contract, and E2E test suites (`**/*.test.*`, `**/*.spec.*`). |
+| **3. Quality & QA** | [`docs/quality/BUG_FIX_RECORDS.md`](docs/quality/BUG_FIX_RECORDS.md) | Root-cause analysis (RCA) log correlated with `BUG-*` tickets in `docs/backlog.json`, `fix:` Git commits, and consolidated legacy `BUG_FIX_RECORDS.md` files. |
+| **4. Operations** | [`docs/operations/MIGRATION_AND_RELEASE_LOG.md`](docs/operations/MIGRATION_AND_RELEASE_LOG.md) | Completed milestones, installed Hexagonal Bricks, SQL/Prisma schema migrations, and harvested `CHANGELOG.md` & `memory-bank/progress.md`. |
+
+#### 2. How the Deep Universal Harvester Works on Existing & Greenfield Projects
+1. **Universal 8-Pillar Markdown Crawler & Classifier (`classifyMarkdownDocument`)**:
+   - Relocates loose root `.md` specs into `docs/` and crawls **all** non-preserved Markdown files in `docs/**/*.md` (including custom filenames and nested subfolders like `docs/specs/STRIPE_BILLING_API.md` or `docs/guides/OAUTH_SECURITY_FLOW.md`).
+   - Scores filenames, `#`/`##` headings, and domain keywords across the 8 canonical pillars, merges full content into `<!-- ag-section:legacy-*:start -->` with **zero content loss**, moves original files to `docs/archive/`, and automatically rewrites all relative and `file://` Markdown links across the repository.
+2. **Non-Destructive In-Place Section Harvester (`harvestInPlaceRepoKnowledge`)**:
+   - Reads `README.md`, `SECURITY.md`, `CHANGELOG.md`, and `memory-bank/*.md` without moving or modifying them, routing high-signal domain sections into `<!-- harvested-repo-context:start -->` blocks inside each canonical document with clickable provenance links.
+3. **Deep Codebase AST/Regex Harvesters (`extractCodebaseFacts`)**:
+   - Scans Next.js App Router (`app/**/route.ts`), Pages Router (`pages/api/**`), Fastify/Express routes, Prisma `model` definitions, SQL `CREATE TABLE` statements, Zod/validator schemas, mobile `Info.plist`/`AndroidManifest.xml` schemes, masked `.env*` keys, CSS/Tailwind tokens, and test suites.
+
+#### 3. How to Activate & Run the Doc Structure and Harvester
+
+- **A. Automatic Activation on New (`init`) or Existing (`upgrade` / `organize`) Projects**:
+  The doc structure creation and deep harvester run **automatically** whenever you initialize, upgrade, or organize a repository:
+  ```bash
+  # On a new or existing project (from GitHub via npx):
+  npx --yes github:johnny-saigon/antigravity-memory-bank init -y
+  npx --yes github:johnny-saigon/antigravity-memory-bank upgrade -y
+
+  # Or inside a project with antigravity-memory-bank already installed:
+  npm run memory:upgrade -- -y
+  npm run memory:organize
+  ```
+- **B. Manual On-Demand Execution & Linting Anytime (`0 AI Tokens`)**:
+  After installation or upgrade, you can trigger the harvester or verify link integrity at any time using the installed `package.json` scripts or CLI:
+  ```bash
+  # Re-scan all docs/**/*.md, README.md, memory-bank/*.md, routes, schemas & tokens:
+  npm run docs:sync
+  # (or: node scripts/sync-living-docs.mjs)
+
+  # Audit that all 9 canonical living docs exist and 0 broken links exist in docs/INDEX.md:
+  npm run docs:lint
+  # (or: node scripts/sync-living-docs.mjs --lint)
+  ```
+- **C. Continuous Lifecycle Auto-Sync**:
+  Once installed, the harvester also triggers automatically in the background whenever:
+  - You plan or complete a ticket (`npm run backlog plan <ID>` / `npm run backlog done <ID>`),
+  - You run `npm run memory:sync` (or `/update-memory`), or
+  - `.git/hooks/post-commit` and `.agents/hooks.json` execute after code changes.
+
+---
+
 ## 🛡️ Core Invariant: Passive Observer & Listener Only
 
 A foundational separation of concerns governs the Three-Tier Memory Bank:

@@ -3,13 +3,13 @@
 
 ## 1. Goal Description
 - **Project North Star**: Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.
-- **Current Phase**: v1.5 Canonical Living Documentation Hierarchy (`FEAT-121` & `FEAT-122`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`23/23` backlog tickets `DONE`).
-- **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical.
+- **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
+- **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical.
 - **Planning Scope (`BASELINE`)**:
-  - **[FEAT-122] Deep Universal Documentation & Codebase Harvester for Canonical Living Docs** (`HIGH` · Status: `done`): Implement and verify according to project architecture invariants.
-  - **[FEAT-121] Canonical Living Documentation Hierarchy & Auto-Synthesizer** (`P0` · Status: `done`): Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.
+  - **[FEAT-121] Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars)** (`P0` · Status: `done`): Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester: every initialized (init), upgraded (upgrade), organized (organize), or synced (docs:sync) repository automatically scaffolds the 9-file living documentation hierarchy inside docs/{architecture,design,quality,operations}/, classifies and consolidates all existing docs/**/*.md specs across the 8 canonical pillars (archiving originals in docs/archive/ and rewriting links repo-wide), non-destructively harvests README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md sections, extracts deep codebase routes/schemas/tokens/tests, and bridges deep specs on demand via .agents/rules/docs-living-specs.md (trigger: model_decision).
   - **[FEAT-120] Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)** (`P0` · Status: `done`): Extract User Profile Management and 4-Provider Social Login (Google, Facebook, Apple, Microsoft) from ../SnapCal into bricks/user-profile/ as a shared, platform-adaptive Hexagonal Brick with a Headless + Design-Token/Slot Theming Engine (ProfileBrandThemePort & ProfileUISlotsPort) across Web, iOS, and Android.
   - **[FEAT-119] Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)** (`P0` · Status: `done`): Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
+  - **[FEAT-118] Antigravity Native Rule Discovery & model_decision Progressive Disclosure** (`P0` · Status: `done`): Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -25,17 +25,12 @@
 > One or more planned tickets involve third-party integrations, OAuth providers, or external credentials. **NEVER mark these tickets as `done` (`npm run backlog done`) until live server credentials are configured and real end-to-end provider HTTP requests pass.** If external credentials are pending, keep the ticket `in_progress`.
 
 ## 3. Proposed Changes
-### [FEAT-122] Deep Universal Documentation & Codebase Harvester for Canonical Living Docs *(Completed & Verified Baseline)*
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [sync-living-docs.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-living-docs.mjs) (`scripts/sync-living-docs.mjs`)
-  - `[VERIFIED]` [sync-living-docs.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/sync-living-docs.mjs) (`templates/scripts/sync-living-docs.mjs`)
-  - `[VERIFIED]` [e2e-cli.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/e2e-cli.test.mjs) (`tests/e2e-cli.test.mjs`)
-
-### [FEAT-121] Canonical Living Documentation Hierarchy & Auto-Synthesizer *(Completed & Verified Baseline)*
-- **Specification**: Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.
+### [FEAT-121] Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars) *(Completed & Verified Baseline)*
+- **Specification**: Implement scripts/sync-living-docs.mjs (and templates/scripts/sync-living-docs.mjs) combining 9 canonical living templates (docs/INDEX.md, LOGICAL_ARCHITECTURE.md, TECHNICAL_ARCHITECTURE.md, SECURITY_AND_COMPLIANCE.md, UX_BRIEF.md, BRAND_BOOK.md, TEST_PLAN_AND_SUITES.md, BUG_FIX_RECORDS.md, MIGRATION_AND_RELEASE_LOG.md) with the 8-pillar weighted Markdown classifier (classifyMarkdownDocument), non-destructive in-place repo/memory-bank harvester (harvestInPlaceRepoKnowledge), and deep codebase AST/regex harvesters (Next.js App Router route.ts, Pages API, Fastify/Express, Prisma models, SQL CREATE TABLE, Zod schemas, mobile Info.plist/AndroidManifest.xml OAuth schemes, masked .env* keys, CSS/Tailwind tokens, and test suites).
 - **Component Modifications (Dependencies First)**:
   - `[VERIFIED]` [docs-synthesizer.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/docs-synthesizer.mjs) (`lib/docs-synthesizer.mjs`)
   - `[VERIFIED]` [sync-living-docs.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-living-docs.mjs) (`scripts/sync-living-docs.mjs`)
+  - `[VERIFIED]` [sync-living-docs.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/sync-living-docs.mjs) (`templates/scripts/sync-living-docs.mjs`)
   - `[VERIFIED]` [repo-organizer.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/repo-organizer.mjs) (`lib/repo-organizer.mjs`)
   - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
   - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
@@ -43,8 +38,15 @@
   - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
   - `[VERIFIED]` [docs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/docs) (`templates/docs/`)
   - `[VERIFIED]` [docs-living-specs.md.tpl](file:///Users/jbb/Documents/antigravity-memory-bank/templates/rules/docs-living-specs.md.tpl) (`templates/rules/docs-living-specs.md.tpl`)
+  - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
+  - `[VERIFIED]` [README.md](file:///Users/jbb/Documents/antigravity-memory-bank/README.md) (`README.md`)
 - **Attached UX/UI & Context Bundles**:
   - 📎 [STANDARD_DOCS_HIERARCHY_SPEC.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/attachments/FEAT-121/STANDARD_DOCS_HIERARCHY_SPEC.md) (`docs/attachments/FEAT-121/STANDARD_DOCS_HIERARCHY_SPEC.md` → unpacked in `docs/attachments/FEAT-121/extracted/`)
+- **Acceptance Criteria**:
+  - Scaffolds all 9 canonical living documents and .agents/rules/docs-living-specs.md (trigger: model_decision) on init, upgrade, organize, and docs:sync while keeping memory-bank/*.md < 150 lines.
+  - Crawls and classifies all non-preserved docs/**/*.md files across the 8 pillars, merges content with zero loss, archives originals in docs/archive/, and rewrites relative and file:// links repo-wide.
+  - Non-destructively harvests domain sections from README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md with clickable provenance links.
+  - Extracts deep codebase facts (Next.js app/**/route.ts methods, Prisma models, SQL CREATE TABLE, mobile OAuth schemes, masked .env* keys, brand tokens, and test suites) and passes 15/15 E2E & contract tests.
 
 ### [FEAT-120] Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/) *(Completed & Verified Baseline)*
 - **Specification**: Implement bricks/user-profile/ (core ports, 4 OAuth verifiers, account linking, GDPR/App Store 5.1.1(v) revocation & Meta data-deletion, ProfileLifecycleEventPort, i18n dictionary, canonical SQL/Prisma schemas, Day-1 mock OAuth adapter, headless + themed-ui for Web/iOS/Android, contract.spec.ts) and add brick list/install/upgrade/doctor commands (--platforms web,ios,android | --platforms web, --with-schema) to bin/cli.mjs.
@@ -73,6 +75,14 @@
 - **Component Modifications (Dependencies First)**:
   - `[VERIFIED]` [skills](file:///Users/jbb/Documents/antigravity-memory-bank/skills) (`skills/`)
   - `[VERIFIED]` [skills](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/skills) (`.agents/skills/`)
+  - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
+  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
+
+### [FEAT-118] Antigravity Native Rule Discovery & model_decision Progressive Disclosure *(Completed & Verified Baseline)*
+- **Specification**: Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md) (`AGENTS.md`)
+  - `[VERIFIED]` [rules](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/rules) (`.agents/rules/`)
   - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
   - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
 

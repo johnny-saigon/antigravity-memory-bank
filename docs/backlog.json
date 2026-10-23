@@ -886,60 +886,55 @@
     {
       "id": "FEAT-121",
       "type": "feature",
-      "title": "Canonical Living Documentation Hierarchy & Auto-Synthesizer",
+      "title": "Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars)",
       "status": "done",
       "priority": "P0",
       "components": [
         "lib/docs-synthesizer.mjs",
         "scripts/sync-living-docs.mjs",
+        "templates/scripts/sync-living-docs.mjs",
         "lib/repo-organizer.mjs",
         "bin/cli.mjs",
         "scripts/backlog.mjs",
         "scripts/sync-memory-context.mjs",
         "scripts/lint-memory.mjs",
         "templates/docs/",
-        "templates/rules/docs-living-specs.md.tpl"
+        "templates/rules/docs-living-specs.md.tpl",
+        "tests/cli-e2e.test.mjs",
+        "README.md"
       ],
       "attachments": [
         "docs/attachments/FEAT-121/STANDARD_DOCS_HIERARCHY_SPEC.md"
       ],
-      "description": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
-      "spec": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
-      "acceptanceCriteria": [],
+      "description": "Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester: every initialized (init), upgraded (upgrade), organized (organize), or synced (docs:sync) repository automatically scaffolds the 9-file living documentation hierarchy inside docs/{architecture,design,quality,operations}/, classifies and consolidates all existing docs/**/*.md specs across the 8 canonical pillars (archiving originals in docs/archive/ and rewriting links repo-wide), non-destructively harvests README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md sections, extracts deep codebase routes/schemas/tokens/tests, and bridges deep specs on demand via .agents/rules/docs-living-specs.md (trigger: model_decision).",
+      "spec": "Implement scripts/sync-living-docs.mjs (and templates/scripts/sync-living-docs.mjs) combining 9 canonical living templates (docs/INDEX.md, LOGICAL_ARCHITECTURE.md, TECHNICAL_ARCHITECTURE.md, SECURITY_AND_COMPLIANCE.md, UX_BRIEF.md, BRAND_BOOK.md, TEST_PLAN_AND_SUITES.md, BUG_FIX_RECORDS.md, MIGRATION_AND_RELEASE_LOG.md) with the 8-pillar weighted Markdown classifier (classifyMarkdownDocument), non-destructive in-place repo/memory-bank harvester (harvestInPlaceRepoKnowledge), and deep codebase AST/regex harvesters (Next.js App Router route.ts, Pages API, Fastify/Express, Prisma models, SQL CREATE TABLE, Zod schemas, mobile Info.plist/AndroidManifest.xml OAuth schemes, masked .env* keys, CSS/Tailwind tokens, and test suites).",
+      "acceptanceCriteria": [
+        "Scaffolds all 9 canonical living documents and .agents/rules/docs-living-specs.md (trigger: model_decision) on init, upgrade, organize, and docs:sync while keeping memory-bank/*.md < 150 lines.",
+        "Crawls and classifies all non-preserved docs/**/*.md files across the 8 pillars, merges content with zero loss, archives originals in docs/archive/, and rewrites relative and file:// links repo-wide.",
+        "Non-destructively harvests domain sections from README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md with clickable provenance links.",
+        "Extracts deep codebase facts (Next.js app/**/route.ts methods, Prisma models, SQL CREATE TABLE, mobile OAuth schemes, masked .env* keys, brand tokens, and test suites) and passes 15/15 E2E & contract tests."
+      ],
       "actionItems": [
         {
           "id": "FEAT-121-ACT-1",
-          "text": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
+          "text": "Scaffold 9 canonical living documentation templates (docs/INDEX.md + 4 Pillars) and .agents/rules/docs-living-specs.md progressive disclosure rule.",
           "owner": "antigravity",
           "done": true
         },
         {
           "id": "FEAT-121-ACT-2",
-          "text": "Run deterministic & live E2E verification and mark FEAT-121 done",
+          "text": "Build unified 8-pillar Markdown classifier (docs/**/*.md), non-destructive in-place harvester (README.md, SECURITY.md, CHANGELOG.md, memory-bank/*.md), and deep codebase AST/regex harvesters.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-121-ACT-3",
+          "text": "Document activation for new/existing projects in README.md and upgrade SnapCal, BinaryDay, RemoveBackGround, and AntigravityRemote.",
           "owner": "antigravity",
           "done": true
         }
       ],
-      "waitingOn": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
-      "completedAt": "2026-10-23T20:49:44.725Z"
-    },
-    {
-      "id": "FEAT-122",
-      "type": "feature",
-      "title": "Deep Universal Documentation & Codebase Harvester for Canonical Living Docs",
-      "status": "done",
-      "priority": "high",
-      "components": [
-        "scripts/sync-living-docs.mjs",
-        "templates/scripts/sync-living-docs.mjs",
-        "tests/e2e-cli.test.mjs"
-      ],
-      "attachments": [],
-      "description": "",
-      "spec": "",
-      "acceptanceCriteria": [],
-      "actionItems": [],
-      "completedAt": "2026-10-23T21:24:39.784Z"
+      "completedAt": "2026-10-23T21:38:00.000Z"
     }
   ],
   "milestones": [

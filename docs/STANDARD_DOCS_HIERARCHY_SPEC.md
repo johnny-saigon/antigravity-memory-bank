@@ -51,3 +51,22 @@ Build the deterministic, 0-AI-token documentation synthesizer invoked during `in
 1. `npm test` — Run unit tests verifying both **Greenfield Scaffolding** (progressive updates on `FEAT-101` / `BUG-101` completion) and **Existing Repo Consolidation** (migrating legacy `docs/*.md` files into the canonical hierarchy with 0 broken links and 0 data loss).
 2. `node bin/cli.mjs organize --dry-run` — Verify canonical `docs/` path mapping and link rewriting.
 3. `npm run lint:memory` — Verify `AGENTS.md` remains `< 50 lines`, all `memory-bank/*.md` files remain `< 150 lines`, `.agents/rules/docs-living-specs.md` has valid `trigger: model_decision` frontmatter, and `10/10` baseline checks pass.
+
+
+---
+
+## 6. Unified Harvester & Activation Guide (`FEAT-121`)
+
+`FEAT-121` combines the **9-File Canonical Living Documentation Hierarchy** (`docs/INDEX.md` + `docs/{architecture,design,quality,operations}/`) and the **Deep Universal Documentation & Codebase Harvester** (`classifyMarkdownDocument`, `harvestInPlaceRepoKnowledge`, `extractCodebaseFacts`) into a single self-contained engine ([`scripts/sync-living-docs.mjs`](../scripts/sync-living-docs.mjs)).
+
+### How to Activate on Any New or Existing Project
+1. **During Installation or Upgrade (Automatic)**:
+   ```bash
+   npx --yes github:johnny-saigon/antigravity-memory-bank init -y
+   npx --yes github:johnny-saigon/antigravity-memory-bank upgrade -y
+   ```
+2. **On Demand After Installation (`0 AI Tokens`)**:
+   ```bash
+   npm run docs:sync   # Runs the universal Markdown classifier, in-place harvester & codebase scanner
+   npm run docs:lint   # Verifies all 9 canonical docs and 0 broken links in docs/INDEX.md
+   ```

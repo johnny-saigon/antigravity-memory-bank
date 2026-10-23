@@ -1,8 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
-- [x] **feat(docs): implement `FEAT-122` deep universal doc and codebase harvester for canonical living docs** (`b3ff54b`)
-- [x] **feat(docs): implement `FEAT-121` canonical living documentation hierarchy and auto-synthesizer (`docs/INDEX.md` + 4 Pillars)** (`47fc528`)
+- [x] **feat(docs): implement unified `FEAT-121` canonical living documentation hierarchy and deep universal harvester (`docs/INDEX.md` + 4 Pillars)** (`b3a9ea8`)
 - [x] **test(user-profile): upstream `BUG-737` dark-mode & `BUG-738` mobile Yoga refresh UI regression tests** (`6743d31`)
 - [x] **feat(bricks): extract `user-profile` Hexagonal Brick with 4-provider OAuth and Token/Slot UI (`FEAT-120`)** (`e5aa0c2`)
 - [x] **feat(skills): implement executable `/context`, `/clear`, `/effort`, `/credits`, and `/usage` skills and CLI inspectors (`FEAT-120`)** (`bd13565`)
@@ -29,4 +28,4 @@
 
 ## 3. Active Development & Documentation
 - **Living Documentation Hub**: Indexed in [`docs/INDEX.md`](../docs/INDEX.md) across `docs/{architecture,design,quality,operations}/`.
-- **Active Development Board**: Operational tickets and feature backlogs are managed in [`docs/backlog.json`](../docs/backlog.json) and [`docs/BACKLOG.md`](../docs/BACKLOG.md) (`23/23` `DONE`, `0` pending).
+- **Active Development Board**: Operational tickets and feature backlogs are managed in [`docs/backlog.json`](../docs/backlog.json) and [`docs/BACKLOG.md`](../docs/BACKLOG.md) (`22/22` `DONE`, `0` pending).
