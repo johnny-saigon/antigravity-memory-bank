@@ -1,6 +1,14 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+<<<<<<< Updated upstream
+- [x] **test(user-profile): upstream BUG-737 dark-mode & BUG-738 mobile Yoga refresh UI regression tests** (`6743d31`)
+=======
+- [x] **feat(docs): implement FEAT-121 canonical living documentation hierarchy and auto-synthesizer** (`4630c4b`)
+>>>>>>> Stashed changes
+- [x] **feat(docs): implement FEAT-121 canonical living documentation hierarchy and auto-synthesizer** (`9833211`)
+- [x] **feat(docs): implement FEAT-121 canonical living documentation hierarchy and auto-synthesizer** (`637e8b7`)
+- [x] **test(user-profile): upstream BUG-737 dark-mode & BUG-738 mobile Yoga refresh UI regression tests** (`d41f0ff`)
 - [x] **feat(bricks): extract user-profile Hexagonal Brick with 4-provider OAuth and Token/Slot UI (FEAT-120)** (`e5aa0c2`)
 - [x] **feat(skills): implement executable /context, /clear, /effort, /credits, and /usage skills and CLI inspectors (FEAT-120)** (`bd13565`)
 - [x] **feat(memory): enforce Always-On Credit & Token Optimization Footer Tip on every response [skip ci]** (`23bc2b6`)

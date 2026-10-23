@@ -26,6 +26,7 @@ Transforms the agent into an autonomous software architect that explores the cod
      ```
 2. **Targeted Architectural Exploration (`Explore -> Plan`)**:
    - Ingest `AGENTS.md` and `memory-bank/*.md` (`projectbrief.md`, `systemPatterns.md`, `infrastructureInvariants.md`, `integrationsAndCustomizations.md`, `activeContext.md`).
+   - Consult the Canonical Living Documentation Hierarchy (`docs/INDEX.md` and `docs/{architecture,design,quality,operations}/`) via `.agents/rules/docs-living-specs.md`.
    - Inspect all existing files listed in `ticket.components`, connected callers, shared schemas, and any unpacked UX/UI assets in `docs/attachments/<TICKET_ID>/extracted/`.
 3. **Update `task.md` Live Checklist**:
    - Update `<brainDir>/task.md` and `docs/planning/task.md` with granular sub-tasks grouped into:

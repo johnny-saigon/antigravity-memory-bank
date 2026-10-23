@@ -24,6 +24,7 @@ import {
   installOrUpgradeBrick,
   runBrickDoctor,
 } from '../lib/brick-engine.mjs';
+import { synthesizeLivingDocs, validateLivingDocsHierarchy } from '../lib/docs-synthesizer.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +95,8 @@ function parseCliArgs(argv) {
       options.command = 'upgrade';
     } else if (a === 'organize' || a === 'reorganize' || a === 'organise') {
       options.command = 'organize';
+    } else if (a === 'docs:sync' || a === 'docs') {
+      options.command = 'docs:sync';
     } else if (a === 'sync') {
       options.command = 'sync';
     } else if (a === '--dry-run') {
@@ -300,6 +303,7 @@ async function exportMemory(targetDir, exportDir) {
     '.agents/rules/infra.md',
     '.agents/rules/negative-constraints.md',
     '.agents/rules/brick-governance.md',
+    '.agents/rules/docs-living-specs.md',
     '.agents/skills/start/SKILL.md',
     '.agents/skills/update-memory/SKILL.md',
     '.agents/skills/backlog-start/SKILL.md',
@@ -309,6 +313,8 @@ async function exportMemory(targetDir, exportDir) {
     '.agents/plugins/memory-bank/skills/update-memory/SKILL.md',
     '.agents/plugins/memory-bank/skills/backlog-start/SKILL.md',
     'scripts/backlog.mjs',
+    'scripts/sync-living-docs.mjs',
+    'docs/INDEX.md',
     'docs/backlog.json',
     'docs/BACKLOG_GUIDE.md',
     'docs/PLANNING_GUIDE.md',
@@ -449,11 +455,12 @@ async function uninstallMemory(targetDir, opts, detected) {
     }
   } catch {}
 
-  // 4. Remove rules: infra.md, negative-constraints.md, brick-governance.md, and progressive-disclosure memory-*.md rules
+  // 4. Remove rules: infra.md, negative-constraints.md, brick-governance.md, docs-living-specs.md, and progressive-disclosure memory-*.md rules
   for (const r of [
     'infra.md',
     'negative-constraints.md',
     'brick-governance.md',
+    'docs-living-specs.md',
     'memory-architecture.md',
     'memory-integrations.md',
     'memory-sprint-context.md',
@@ -512,7 +519,8 @@ async function uninstallMemory(targetDir, opts, detected) {
     try {
       await fs.rm(path.join(targetDir, 'scripts/lint-memory.mjs'), { force: true });
       await fs.rm(path.join(targetDir, 'scripts/sync-memory-context.mjs'), { force: true });
-      console.log('  ✓ Removed scripts/lint-memory.mjs and scripts/sync-memory-context.mjs');
+      await fs.rm(path.join(targetDir, 'scripts/sync-living-docs.mjs'), { force: true });
+      console.log('  ✓ Removed scripts/lint-memory.mjs, scripts/sync-memory-context.mjs, and scripts/sync-living-docs.mjs');
       const remainingScripts = await fs.readdir(path.join(targetDir, 'scripts'));
       if (remainingScripts.length === 0) {
         await fs.rm(path.join(targetDir, 'scripts'), { recursive: true, force: true });
@@ -696,6 +704,22 @@ async function installSyncAndHooks(targetDir, detected) {
   await fs.copyFile(brickGovSrc, brickGovDest);
   console.log('  ✓ Installed .agents/rules/brick-governance.md (3-tier pluggable UX/UI & brick governance rule)');
 
+  const docsRuleSrc = path.join(pkgRoot, 'templates/rules/docs-living-specs.md.tpl');
+  const docsRuleDest = path.join(targetDir, '.agents/rules/docs-living-specs.md');
+  await fs.copyFile(docsRuleSrc, docsRuleDest);
+  console.log('  ✓ Installed .agents/rules/docs-living-specs.md (canonical living docs progressive disclosure rule)');
+
+  const livingDocsScriptSrc = path.join(pkgRoot, 'templates/scripts/sync-living-docs.mjs');
+  const livingDocsScriptDest = path.join(targetDir, 'scripts/sync-living-docs.mjs');
+  if (path.resolve(livingDocsScriptSrc) !== path.resolve(livingDocsScriptDest) && !detected.isSelfRepo) {
+    await fs.mkdir(path.dirname(livingDocsScriptDest), { recursive: true });
+    await fs.copyFile(livingDocsScriptSrc, livingDocsScriptDest);
+    await fs.chmod(livingDocsScriptDest, 0o755);
+    console.log('  ✓ Installed scripts/sync-living-docs.mjs (canonical living docs synthesizer)');
+  } else {
+    console.log('  ↷ Preserved upstream scripts/sync-living-docs.mjs (self-repository guard)');
+  }
+
   // 5. Install docs/backlog.json if not present
   const backlogJsonDest = path.join(targetDir, 'docs/backlog.json');
   try {
@@ -752,7 +776,9 @@ async function installSyncAndHooks(targetDir, detected) {
       'memory:credits': 'node scripts/lint-memory.mjs --credits',
       'memory:usage': 'node scripts/lint-memory.mjs --usage',
       'memory:effort': 'node scripts/lint-memory.mjs --effort',
-      'memory:clear': 'node scripts/lint-memory.mjs --clear'
+      'memory:clear': 'node scripts/lint-memory.mjs --clear',
+      'docs:sync': 'node scripts/sync-living-docs.mjs',
+      'docs:lint': 'node scripts/sync-living-docs.mjs --lint'
     };
     for (const [k, v] of Object.entries(creditScripts)) {
       if (!pkg.scripts[k]) {
@@ -1404,6 +1430,8 @@ async function main() {
     await uninstallMemory(targetDir, opts, detected);
   } else if (opts.command === 'organize') {
     await organizeRepo(targetDir, opts, detected);
+  } else if (opts.command === 'docs:sync') {
+    await synthesizeLivingDocs(targetDir, { pkgRoot, projectName: detected.name, dryRun: opts.dryRun, quiet: opts.quiet });
   } else if (opts.command === 'sync') {
     await syncCustomizationsToMemoryBank(targetDir, detected.name);
     await syncMemory(targetDir, opts);

@@ -3353,6 +3353,12 @@ function main() {
     saveBacklog(data);
     renderMigrationBoard(data);
     writeReviewPaneArtifacts(data, REPO_ROOT, true);
+    try {
+      const livingDocsScript = path.join(REPO_ROOT, 'scripts', 'sync-living-docs.mjs');
+      if (fs.existsSync(livingDocsScript)) {
+        spawnSync(process.execPath, [livingDocsScript, '--quiet'], { cwd: REPO_ROOT, stdio: 'ignore' });
+      }
+    } catch {}
     ensureDaemonRunning();
 
     const idList = matchedTasks.map(t => t.id).join(', ');
@@ -3458,6 +3464,12 @@ function main() {
     saveBacklog(data);
     renderMigrationBoard(data);
     writeReviewPaneArtifacts(data, REPO_ROOT, true);
+    try {
+      const livingDocsScript = path.join(REPO_ROOT, 'scripts', 'sync-living-docs.mjs');
+      if (fs.existsSync(livingDocsScript)) {
+        spawnSync(process.execPath, [livingDocsScript, '--quiet'], { cwd: REPO_ROOT, stdio: 'ignore' });
+      }
+    } catch {}
     ensureDaemonRunning();
 
     const idList = matchedTasks.map(t => t.id).join(', ');

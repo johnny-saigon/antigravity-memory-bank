@@ -1,6 +1,6 @@
 # Antigravity Memory Bank — Development & Backlog Board
 
-This board tracks active development tickets, feature backlogs, architecture initiatives, and sprint milestones for Antigravity Memory Bank. For historical bug fixes and root-cause analyses, refer to [`docs/BUG_FIX_RECORDS.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BUG_FIX_RECORDS.md).
+This board tracks active development tickets, feature backlogs, architecture initiatives, and sprint milestones for Antigravity Memory Bank.
 
 ---
 
@@ -321,6 +321,17 @@ This board tracks active development tickets, feature backlogs, architecture ini
   - [x] Complete separation of platforms/{web,ios,android}/headless/ and platforms/{web,ios,android}/themed-ui/ powered by ProfileBrandThemePort (--ag-profile-* tokens) and ProfileUISlotsPort.
   - [x] bin/cli.mjs supports brick list, brick install user-profile [--platforms web,ios,android | --platforms web] [--with-schema], brick upgrade user-profile (preserving repo-local adapters), and brick doctor user-profile.
   - [x] npm test passes contract.spec.ts for all 4 OAuth providers, profile CRUD, account linking, and theme token injection, and npm run lint:memory passes with 0 violations.
+
+---
+
+### FEAT-121: Canonical Living Documentation Hierarchy & Auto-Synthesizer
+- **Status:** Completed (`DONE`)
+- **Priority:** P0
+- **Components:** `lib/docs-synthesizer.mjs`, `scripts/sync-living-docs.mjs`, `lib/repo-organizer.mjs`, `bin/cli.mjs`, `scripts/backlog.mjs`, `scripts/sync-memory-context.mjs`, `scripts/lint-memory.mjs`, `templates/docs/`, `templates/rules/docs-living-specs.md.tpl`
+- **Attachments:** `docs/attachments/FEAT-121/STANDARD_DOCS_HIERARCHY_SPEC.md`
+- **Description:** Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.
+- **Technical Specification:**
+  Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.
 
 ---
 

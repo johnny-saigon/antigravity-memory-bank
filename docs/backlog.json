@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-22T21:56:58.739Z",
+  "lastUpdated": "2026-10-23T20:49:44.725Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -865,23 +865,63 @@
           "id": "FEAT-120-ACT-2",
           "text": "Extract core/ports.ts, core/schemas.ts, core/profile.service.ts, and core/oauth/{google,facebook,apple,microsoft,account-linking}.ts from ../SnapCal with zero brand/DB coupling.",
           "owner": "antigravity",
-          "done": false
+          "done": true
         },
         {
           "id": "FEAT-120-ACT-3",
           "text": "Build platforms/{web,ios,android}/{headless,themed-ui}/ using ProfileBrandThemePort (--ag-profile-*) and ProfileUISlotsPort.",
           "owner": "antigravity",
-          "done": false
+          "done": true
         },
         {
           "id": "FEAT-120-ACT-4",
           "text": "Add schemas/, adapters/templates/, testing/contract.spec.ts, .agents/rules/brick-governance.md, and bin/cli.mjs brick commands (list, install, upgrade, doctor).",
           "owner": "antigravity",
-          "done": false
+          "done": true
         }
       ],
       "waitingOn": "Review and approve implementation_plan.md before executing Phase 1 code extraction.",
       "completedAt": "2026-10-22T21:56:58.738Z"
+    },
+    {
+      "id": "FEAT-121",
+      "type": "feature",
+      "title": "Canonical Living Documentation Hierarchy & Auto-Synthesizer",
+      "status": "done",
+      "priority": "P0",
+      "components": [
+        "lib/docs-synthesizer.mjs",
+        "scripts/sync-living-docs.mjs",
+        "lib/repo-organizer.mjs",
+        "bin/cli.mjs",
+        "scripts/backlog.mjs",
+        "scripts/sync-memory-context.mjs",
+        "scripts/lint-memory.mjs",
+        "templates/docs/",
+        "templates/rules/docs-living-specs.md.tpl"
+      ],
+      "attachments": [
+        "docs/attachments/FEAT-121/STANDARD_DOCS_HIERARCHY_SPEC.md"
+      ],
+      "description": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
+      "spec": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-121-ACT-1",
+          "text": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
+          "owner": "antigravity",
+          "done": false
+        },
+        {
+          "id": "FEAT-121-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-121 done",
+          "owner": "antigravity",
+          "done": false
+        }
+      ],
+      "waitingOn": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
+      "completedAt": "2026-10-23T20:49:44.725Z"
     }
   ],
   "milestones": [
@@ -903,7 +943,7 @@
   ],
   "meta": {
     "effortLevel": "high",
-    "effortUpdatedAt": "2026-10-22T21:33:54.110Z"
+    "effortUpdatedAt": "2026-10-23T20:35:16.655Z"
   },
   "activePlanTaskIds": []
 }

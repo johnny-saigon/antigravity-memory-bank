@@ -857,6 +857,14 @@ async function runSync() {
       } catch {}
     }
 
+    // 4b. Auto-sync Canonical Living Documentation Hierarchy (`docs/{architecture,design,quality,operations}/`) if installed
+    const livingDocsScriptPath = path.join(targetDir, 'scripts/sync-living-docs.mjs');
+    if (fsSync.existsSync(livingDocsScriptPath)) {
+      try {
+        execSync('node scripts/sync-living-docs.mjs --quiet', { cwd: targetDir, stdio: 'ignore' });
+      } catch {}
+    }
+
     // 5. Run line budget audit if not in quiet hook mode
     if (!hookEvent) {
       const linterPath = path.join(targetDir, 'scripts/lint-memory.mjs');

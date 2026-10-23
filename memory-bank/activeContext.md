@@ -1,7 +1,11 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `ef28361` — "docs(bricks): document 3-tier pluggable UX/UI & branding architecture for all new and existing installations" (2026-10-22)
+<<<<<<< Updated upstream
+- **Last Synchronized Commit**: `6743d31` — "test(user-profile): upstream BUG-737 dark-mode & BUG-738 mobile Yoga refresh UI regression tests" (2026-10-23)
+=======
+- **Last Synchronized Commit**: `4630c4b` — "feat(docs): implement FEAT-121 canonical living documentation hierarchy and auto-synthesizer" (2026-10-23)
+>>>>>>> Stashed changes
 - **Current Phase**: v1.5 Correlated 3-Artifact Planning Mode & Automated E2E CLI Verification (`23/23` backlog tickets `DONE`).
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank, Decoupled Zero-Token Backlog Engine, and Correlated 3-Artifact Planning Mode directly inside `antigravity-memory-bank` while keeping upstream templates 100% generic.
 

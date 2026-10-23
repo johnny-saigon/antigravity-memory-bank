@@ -251,12 +251,42 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.equal(/@\[[^\]]+\]\(memory-bank\/[^)]+\)/.test(agentsMd), false, 'Root AGENTS.md must not inline @[...](memory-bank/...)');
 
     // Verify progressive-disclosure .agents/rules/*.md files exist with valid snake_case trigger: model_decision frontmatter
-    for (const ruleFile of ['infra.md', 'negative-constraints.md', 'brick-governance.md', 'memory-architecture.md', 'memory-integrations.md', 'memory-sprint-context.md']) {
+    for (const ruleFile of ['infra.md', 'negative-constraints.md', 'brick-governance.md', 'docs-living-specs.md', 'memory-architecture.md', 'memory-integrations.md', 'memory-sprint-context.md']) {
       const rulePath = path.join(tmpRepo, '.agents', 'rules', ruleFile);
       assert.equal(fs.existsSync(rulePath), true, `Expected .agents/rules/${ruleFile} to exist`);
       const ruleContent = fs.readFileSync(rulePath, 'utf8');
       assert.match(ruleContent, /^---\n[\s\S]*?trigger:\s*model_decision[\s\S]*?description:\s*".+"[\s\S]*?\n---/, `.agents/rules/${ruleFile} must have valid model_decision frontmatter`);
     }
+
+    // Verify all 9 Canonical Living Documentation Hierarchy files are created on init (`FEAT-121`)
+    for (const livingRel of [
+      'docs/INDEX.md',
+      'docs/architecture/LOGICAL_ARCHITECTURE.md',
+      'docs/architecture/TECHNICAL_ARCHITECTURE.md',
+      'docs/architecture/SECURITY_AND_COMPLIANCE.md',
+      'docs/design/UX_BRIEF.md',
+      'docs/design/BRAND_BOOK.md',
+      'docs/quality/TEST_PLAN_AND_SUITES.md',
+      'docs/quality/BUG_FIX_RECORDS.md',
+      'docs/operations/MIGRATION_AND_RELEASE_LOG.md'
+    ]) {
+      assert.equal(fs.existsSync(path.join(tmpRepo, livingRel)), true, `Expected ${livingRel} to exist after init`);
+    }
+
+    // Verify progressive greenfield auto-fill when a BUG-* or FEAT-* ticket is completed via scripts/backlog.mjs
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'add', 'Fix OAuth Callback Nonce Race', '--id', 'BUG-205', '--type', 'bug', '--desc', 'Resolved nonce race condition in callback verifier'],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'done', 'BUG-205'],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    const bugDocContent = fs.readFileSync(path.join(tmpRepo, 'docs', 'quality', 'BUG_FIX_RECORDS.md'), 'utf8');
+    assert.match(bugDocContent, /BUG-205/, 'Expected BUG-205 to progressively populate docs/quality/BUG_FIX_RECORDS.md');
+    assert.match(bugDocContent, /Fix OAuth Callback Nonce Race/);
 
     // Verify docs/BRICK_ARCHITECTURE_GUIDE.md is installed on init and documents the 3-Tier Pluggable UX/UI Architecture
     const brickGuidePath = path.join(tmpRepo, 'docs', 'BRICK_ARCHITECTURE_GUIDE.md');
@@ -407,15 +437,19 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(orgOut, /0 loose root docs/);
     assert.equal(fs.existsSync(path.join(tmpRepo, 'UX_BRIEF.md')), false, 'UX_BRIEF.md must be moved out of root');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'DESIGN.md')), false, 'DESIGN.md must be moved out of root');
-    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'UX_BRIEF.md')), true, 'docs/UX_BRIEF.md must exist');
-    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'DESIGN.md')), true, 'docs/DESIGN.md must exist');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'design', 'UX_BRIEF.md')), true, 'docs/design/UX_BRIEF.md must exist');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'design', 'BRAND_BOOK.md')), true, 'docs/design/BRAND_BOOK.md must exist');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'UX_BRIEF.md')), true, 'docs/archive/UX_BRIEF.md must preserve original legacy file');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'DESIGN.md')), true, 'docs/archive/DESIGN.md must preserve original legacy file');
+    assert.match(fs.readFileSync(path.join(tmpRepo, 'docs', 'design', 'UX_BRIEF.md'), 'utf8'), /Glassmorphic dark mode/, 'Zero content loss when consolidating UX_BRIEF.md');
+    assert.match(fs.readFileSync(path.join(tmpRepo, 'docs', 'design', 'BRAND_BOOK.md'), 'utf8'), /Primary token #0EA5E9/, 'Zero content loss when consolidating DESIGN.md');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'CLAUDE.md')), false, 'Redundant CLAUDE.md pointer stub must be removed');
     assert.equal(fs.existsSync(path.join(tmpRepo, '.DS_Store')), false, '.DS_Store must be removed');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'skills-lock.json')), false, 'Orphaned skills-lock.json must be removed');
 
     const updatedReadme = fs.readFileSync(path.join(tmpRepo, 'README.md'), 'utf8');
-    assert.match(updatedReadme, /\[UX Brief\]\(docs\/UX_BRIEF\.md\)/);
-    assert.match(updatedReadme, /\[Design Spec\]\(docs\/DESIGN\.md\)/);
+    assert.match(updatedReadme, /\[UX Brief\]\(docs\/design\/UX_BRIEF\.md\)/);
+    assert.match(updatedReadme, /\[Design Spec\]\(docs\/design\/BRAND_BOOK\.md\)/);
 
     const gitignore = fs.readFileSync(path.join(tmpRepo, '.gitignore'), 'utf8');
     assert.match(gitignore, /docs\/backlog\.html/);

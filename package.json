@@ -43,7 +43,9 @@
     "memory:credits": "node scripts/lint-memory.mjs --credits",
     "memory:usage": "node scripts/lint-memory.mjs --usage",
     "memory:effort": "node scripts/lint-memory.mjs --effort",
-    "memory:clear": "node scripts/lint-memory.mjs --clear"
+    "memory:clear": "node scripts/lint-memory.mjs --clear",
+    "docs:sync": "node scripts/sync-living-docs.mjs",
+    "docs:lint": "node scripts/sync-living-docs.mjs --lint"
   },
   "keywords": [
     "antigravity",

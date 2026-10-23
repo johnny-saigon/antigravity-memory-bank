@@ -423,6 +423,7 @@ for (const rDirRel of ['.agents/rules', 'templates/rules']) {
 const parityPairs = [
   ['scripts/backlog.mjs', 'templates/scripts/backlog.mjs'],
   ['scripts/sync-memory-context.mjs', 'templates/scripts/sync-memory-context.mjs'],
+  ['scripts/sync-living-docs.mjs', 'templates/scripts/sync-living-docs.mjs'],
   ['skills/start/SKILL.md', '.agents/skills/start/SKILL.md'],
   ['skills/backlog-start/SKILL.md', '.agents/skills/backlog-start/SKILL.md'],
   ['skills/backlog-plan/SKILL.md', '.agents/skills/backlog-plan/SKILL.md'],
@@ -432,7 +433,8 @@ const parityPairs = [
   ['skills/credits/SKILL.md', '.agents/skills/credits/SKILL.md'],
   ['skills/usage/SKILL.md', '.agents/skills/usage/SKILL.md'],
   ['docs/PLANNING_GUIDE.md', 'templates/docs/PLANNING_GUIDE.md'],
-  ['docs/BACKLOG_GUIDE.md', 'templates/docs/BACKLOG_GUIDE.md']
+  ['docs/BACKLOG_GUIDE.md', 'templates/docs/BACKLOG_GUIDE.md'],
+  ['docs/BRICK_ARCHITECTURE_GUIDE.md', 'templates/docs/BRICK_ARCHITECTURE_GUIDE.md']
 ];
 
 let parityChecked = 0;
@@ -453,6 +455,47 @@ for (const [relA, relB] of parityPairs) {
     }
   } catch {
     // Downstream consumer repositories do not have templates/ or upstream skills/
+  }
+}
+
+// Canonical Living Documentation Hierarchy Audit (FEAT-121): runs when docs/INDEX.md is present
+const docsIndexFull = path.resolve(process.cwd(), 'docs/INDEX.md');
+if (fsSync.existsSync(docsIndexFull)) {
+  const requiredLivingDocs = [
+    'docs/INDEX.md',
+    'docs/architecture/LOGICAL_ARCHITECTURE.md',
+    'docs/architecture/TECHNICAL_ARCHITECTURE.md',
+    'docs/architecture/SECURITY_AND_COMPLIANCE.md',
+    'docs/design/UX_BRIEF.md',
+    'docs/design/BRAND_BOOK.md',
+    'docs/quality/TEST_PLAN_AND_SUITES.md',
+    'docs/quality/BUG_FIX_RECORDS.md',
+    'docs/operations/MIGRATION_AND_RELEASE_LOG.md'
+  ];
+  let missingLiving = 0;
+  for (const relDoc of requiredLivingDocs) {
+    if (!fsSync.existsSync(path.resolve(process.cwd(), relDoc))) {
+      console.error(`❌ Missing Canonical Living Document: ${relDoc}`);
+      violations++;
+      missingLiving++;
+    }
+  }
+  const indexRaw = await fs.readFile(docsIndexFull, 'utf8');
+  const linkRe = /\]\(([^)#\s]+)(?:#[^)]*)?\)/g;
+  let m;
+  let brokenLinks = 0;
+  while ((m = linkRe.exec(indexRaw)) !== null) {
+    const linkTarget = m[1];
+    if (/^(https?:|mailto:|file:)/i.test(linkTarget)) continue;
+    const resolved = path.resolve(path.dirname(docsIndexFull), linkTarget);
+    if (!fsSync.existsSync(resolved)) {
+      console.error(`❌ Broken relative link in docs/INDEX.md: '${linkTarget}'`);
+      violations++;
+      brokenLinks++;
+    }
+  }
+  if (missingLiving === 0 && brokenLinks === 0) {
+    console.log('✅ Canonical Living Docs Hierarchy verified: 9/9 docs present, 0 broken links in docs/INDEX.md');
   }
 }
 
