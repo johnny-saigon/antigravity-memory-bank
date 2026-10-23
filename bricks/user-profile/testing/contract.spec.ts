@@ -46,6 +46,8 @@ import {
   clampCropOffset,
   computeSourceCropRect,
   deriveConnectedProvidersMap,
+  reconcileProfileRefreshState,
+  verifyMobileYogaLayoutInvariants,
 } from '../platforms/web/headless/index.ts';
 
 import {
@@ -347,5 +349,69 @@ describe('Brick Contract Suite: bricks/user-profile (FEAT-120)', () => {
     const pwStrong = evaluatePasswordStrength('Str0ng!Pass#2026');
     assert.equal(pwStrong.score, 4);
     assert.equal(pwStrong.isValid, true);
+  });
+
+  test('5. Cross-Platform UI Regression & State Refresh Stability (BUG-737 Dark-Mode Contrast & BUG-738 Mobile Yoga Layout / Refresh Reconciliation)', () => {
+    // 5a. BUG-737: Default theme adapter must never inject an opaque light background box in dark mode
+    const cssStyle = buildProfileThemeStyleObject(userProfileBrandTheme);
+    assert.equal(
+      cssStyle['--ag-profile-color-bg'],
+      'transparent',
+      'ProfileThemeProvider background must default to transparent so dark-mode host shells never render a white background box'
+    );
+    assert.ok(
+      !['#0a0a0a', '#000000', '#0f172a'].includes(String(cssStyle['--ag-profile-color-text']).toLowerCase()),
+      'ProfileThemeProvider text token must use theme-adaptive CSS variables instead of hardcoded black hex'
+    );
+
+    // 5b. BUG-738: Background refresh state reconciliation (e.g., Refresh Calendar Status updating user.connectedCalendar)
+    const cleanDraft = {
+      firstName: 'Jean-Baptiste',
+      lastName: 'Bouquet',
+      email: 'jbb@avilo.capital',
+      avatarUrl: 'https://example.com/a.jpg',
+      dirty: false,
+    };
+    const refreshedFromServer = {
+      firstName: 'Jean-Baptiste',
+      lastName: 'Bouquet',
+      email: 'jbb@avilo.capital',
+      avatarUrl: 'https://example.com/a-new.jpg',
+    };
+    const reconciledClean = reconcileProfileRefreshState(cleanDraft, refreshedFromServer);
+    assert.equal(reconciledClean.firstName, 'Jean-Baptiste');
+    assert.equal(reconciledClean.lastName, 'Bouquet');
+    assert.equal(reconciledClean.avatarUrl, 'https://example.com/a-new.jpg');
+    assert.equal(reconciledClean.dirty, false);
+
+    // Dirty unsaved user edits must not be wiped out by a background status refresh
+    const dirtyDraft = {
+      firstName: 'JB-Edited',
+      lastName: 'Bouquet-Edited',
+      email: 'jbb@avilo.capital',
+      avatarUrl: 'https://example.com/a.jpg',
+      dirty: true,
+    };
+    const reconciledDirty = reconcileProfileRefreshState(dirtyDraft, refreshedFromServer);
+    assert.equal(reconciledDirty.firstName, 'JB-Edited');
+    assert.equal(reconciledDirty.lastName, 'Bouquet-Edited');
+    assert.equal(reconciledDirty.dirty, true);
+
+    // 5c. BUG-738: Mobile Yoga layout invariant checker catches @expo/ui NativeHost 0pt collapse
+    const brokenNativeHostCheck = verifyMobileYogaLayoutInvariants({
+      buttonSource: '<NativeHost matchContents><ExpoButton /></NativeHost>',
+      textFieldSource: '<NativeHost matchContents><ExpoTextInput /></NativeHost>',
+      switchSource: '<NativeHost matchContents><ExpoSwitch /></NativeHost>',
+    });
+    assert.equal(brokenNativeHostCheck.valid, false);
+    assert.equal(brokenNativeHostCheck.errors.length, 4);
+
+    const validYogaCheck = verifyMobileYogaLayoutInvariants({
+      buttonSource: '<Pressable className="min-h-11 h-11 rounded-full"><Text>{label}</Text></Pressable>',
+      textFieldSource: '<TextFieldFrame className="min-h-12"><RNTextInput value={resolvedValue} /></TextFieldFrame>',
+      switchSource: '<View className="min-h-11"><RNSwitch value={checked} /></View>',
+    });
+    assert.equal(validYogaCheck.valid, true);
+    assert.equal(validYogaCheck.errors.length, 0);
   });
 });

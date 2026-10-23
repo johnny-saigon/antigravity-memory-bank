@@ -154,3 +154,49 @@ export function createUseUserProfileHook(React) {
     };
   };
 }
+
+/**
+ * Reconciles local profile form draft state when an external refresh occurs
+ * (e.g. `connectedCalendar` or `notificationsEnabled` updated in background)
+ * so clean fields stay in sync with `user` while dirty unsaved edits are preserved (`BUG-738`).
+ */
+export function reconcileProfileRefreshState(currentDraft = {}, nextDerived = {}) {
+  const dirty = Boolean(currentDraft.dirty);
+  return {
+    firstName: dirty && currentDraft.firstName !== undefined ? currentDraft.firstName : (nextDerived.firstName ?? ''),
+    lastName: dirty && currentDraft.lastName !== undefined ? currentDraft.lastName : (nextDerived.lastName ?? ''),
+    email: dirty && currentDraft.email !== undefined ? currentDraft.email : (nextDerived.email ?? ''),
+    avatarUrl: nextDerived.avatarUrl ?? currentDraft.avatarUrl ?? '',
+    dirty,
+  };
+}
+
+/**
+ * Verifies that React Native / iOS profile form primitives (`Button`, `TextField`, `Switch`)
+ * use deterministic Yoga layout containers (`Pressable`, `RNTextInput`, `RNSwitch`) instead of
+ * `@expo/ui` `NativeHost` (`UIHostingController`), which collapses to 0pt height or shifts
+ * text frames on parent ScrollView state refresh (`BUG-738`).
+ */
+export function verifyMobileYogaLayoutInvariants({
+  buttonSource = '',
+  textFieldSource = '',
+  switchSource = '',
+} = {}) {
+  const errors = [];
+  if (buttonSource.includes('<NativeHost') || buttonSource.includes('<ExpoButton')) {
+    errors.push('Button must use Yoga-measured Pressable instead of @expo/ui NativeHost/ExpoButton.');
+  }
+  if (!buttonSource.includes('min-h-11')) {
+    errors.push('Button must declare explicit min-h-11 Yoga height.');
+  }
+  if (textFieldSource.includes('<NativeHost') || textFieldSource.includes('<ExpoTextInput')) {
+    errors.push('TextField must use RNTextInput inside TextFieldFrame instead of @expo/ui NativeHost/ExpoTextInput.');
+  }
+  if (switchSource.includes('<NativeHost') || switchSource.includes('<ExpoSwitch')) {
+    errors.push('Switch must use RNSwitch inside a min-h-11 Yoga row instead of @expo/ui NativeHost/ExpoSwitch.');
+  }
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
