@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
-- [x] **feat(docs): implement unified `FEAT-121` canonical living documentation hierarchy and deep universal harvester (`docs/INDEX.md` + 4 Pillars)** (`b3a9ea8`)
+- [x] **feat(docs): unify `FEAT-121` canonical living docs hierarchy and deep harvester + roll out across all 5 repositories** (`eea0dde`)
 - [x] **test(user-profile): upstream `BUG-737` dark-mode & `BUG-738` mobile Yoga refresh UI regression tests** (`6743d31`)
 - [x] **feat(bricks): extract `user-profile` Hexagonal Brick with 4-provider OAuth and Token/Slot UI (`FEAT-120`)** (`e5aa0c2`)
 - [x] **feat(skills): implement executable `/context`, `/clear`, `/effort`, `/credits`, and `/usage` skills and CLI inspectors (`FEAT-120`)** (`bd13565`)
@@ -23,8 +23,8 @@
 
 ## 2. Test Matrix & Verification Status
 - **Test, Parity & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs bricks/user-profile/testing/contract.spec.ts`) — 25/25 memory & rule files (`< 150 lines`, `< 50 lines` `AGENTS.md`), 14/14 template parity pairs, 9/9 canonical living docs, and 15/15 E2E & contract tests passing (`0` violations).
+- **Cross-Cluster Upgrade Rollout**: Verified `10/10` Mandatory Baseline Ingestion Checklist and `9/9` Canonical Living Docs (`0` broken links) across `antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `AntigravityRemote`.
 - **Package Whitelist Audit**: `npm pack --dry-run` — excludes `memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`, and `.github/`.
-- **Backlog Renderer & Live Bridge**: `npm run backlog:render` + `http://127.0.0.1:4199/api/health` (v1.2.0) — synchronizes `docs/BACKLOG.md`, `docs/backlog.html`, and `<brainDir>/backlog.html`.
 
 ## 3. Active Development & Documentation
 - **Living Documentation Hub**: Indexed in [`docs/INDEX.md`](../docs/INDEX.md) across `docs/{architecture,design,quality,operations}/`.
