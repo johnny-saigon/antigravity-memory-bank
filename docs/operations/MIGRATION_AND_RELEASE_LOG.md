@@ -19,9 +19,17 @@
 
 <!-- ag-section:db-migrations:start -->
 - **Hexagonal Brick**: `bricks/user-profile@1.0.0` — Multi-Platform OAuth 2.0, User Profile & Pluggable Token/Slot UX Brick (Platforms: `web, ios, android`)
-- **Schema / Migration**: `bricks/user-profile/core/schemas.ts`
-- **Schema / Migration**: `bricks/user-profile/schemas/001_user_profile_oauth.sql`
-- **Schema / Migration**: `bricks/user-profile/schemas/user-profile.prisma`
+- **Schema / Migration**: `bricks/user-profile/core/index.ts` — index.ts
+- **Schema / Migration**: `bricks/user-profile/core/oauth/account-linking.service.ts` — account-linking.service.ts (normalizeUserProfile)
+- **Schema / Migration**: `bricks/user-profile/core/oauth/apple.verifier.ts` — apple.verifier.ts
+- **Schema / Migration**: `bricks/user-profile/core/oauth/facebook.verifier.ts` — facebook.verifier.ts
+- **Schema / Migration**: `bricks/user-profile/core/oauth/google.verifier.ts` — google.verifier.ts
+- **Schema / Migration**: `bricks/user-profile/core/oauth/microsoft.verifier.ts` — microsoft.verifier.ts
+- **Schema / Migration**: `bricks/user-profile/core/ports.ts` — ports.ts (LinkedSocialAccount, NormalizedUserProfile, UserProfileStoragePort, OAuthProviderPort, SessionTokenPort)
+- **Schema / Migration**: `bricks/user-profile/core/profile.service.ts` — profile.service.ts
+- **Schema / Migration**: `bricks/user-profile/core/schemas.ts` — schemas.ts (validateProfileUpdate, validateAndBuildThemeCssVars)
+- **Schema / Migration**: `bricks/user-profile/schemas/001_user_profile_oauth.sql` — 001_user_profile_oauth.sql (table users, table oauth_accounts, table sessions)
+- **Schema / Migration**: `bricks/user-profile/schemas/user-profile.prisma` — user-profile.prisma (model User, model OAuthAccount, model Session)
 <!-- ag-section:db-migrations:end -->
 
 ---
@@ -29,5 +37,22 @@
 ## 3. Consolidated Historical Migration Boards
 
 <!-- ag-section:legacy-migrations:start -->
-_No legacy migration board documents merged yet._
+<!-- harvested-repo-context:start -->
+### Harvested Repository & Memory-Bank Context
+
+- **From [`memory-bank/progress.md`](../../memory-bank/progress.md) (Memory Bank Baseline)**:
+  - **Test, Parity & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs`) — 14/14 memory files (`< 150 lines`), 5/5 template parity pairs, 7/7 E2E & parity tests passing (`0` violations), and 10/10 Mandatory Baseline Ingestion Checklist passing.
+  - **Package Whitelist Audit**: `npm pack --dry-run` — excludes `memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`, and `.github/`.
+  - **Backlog Renderer & Live Bridge**: `npm run backlog:render` + `http://127.0.0.1:4199/api/health` (v1.2.0) — synchronizes `docs/BACKLOG.md`, `docs/backlog.html`, and exact project `<brainDir>/backlog.html` with native OS clipboard copy and `.zip` attachment unpacking.
+  - **Active Development Board**: Operational tickets and feature backlogs are managed in `docs/backlog.json` and `docs/BACKLOG.md`.
+  - **Backlog Workflow Guide**: Documented in `docs/BACKLOG_GUIDE.md`.
+
+- **From [`README.md`](../../README.md) (## 🛡️ Core Invariant: Passive Observer & Listener Only)**:
+  A foundational separation of concerns governs the Three-Tier Memory Bank:
+  > **The Memory Bank (`memory-bank/*.md`) is strictly a passive context baseline and observer. It is NOT an operational backlog, issue tracker, or work surface.**
+  1. **Independent Reference Baseline**: The Memory Bank exists purely to provide immutable architectural ground truth, domain taxonomies, and high-level milestones when an Antigravity agent boots a session (`/start`).
+  2. **Separation of Dev Operations**: Active engineering tasks, sprint boards, migration checklists, and bug fix logs belong in the project's documentation directory (`docs/MIGRATION_BOARD.md`, `docs/BUG_FIX_RECORDS.md`, `docs/BACKLOG.md`), **never** inside `memory-bank/`.
+  3. **Passive Reflection**: When code is committed or `/update-memory` runs, the memory system passively observes Git commits and `docs/` records, reflecting high-level summaries and verification stamps into `memory-bank/*.md`. It never conducts active ticket operations.
+  ---
+<!-- harvested-repo-context:end -->
 <!-- ag-section:legacy-migrations:end -->

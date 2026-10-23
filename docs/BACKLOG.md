@@ -335,6 +335,13 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-122: Deep Universal Documentation & Codebase Harvester for Canonical Living Docs
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `tests/e2e-cli.test.mjs`
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

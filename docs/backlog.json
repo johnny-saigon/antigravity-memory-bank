@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-23T20:49:44.725Z",
+  "lastUpdated": "2026-10-23T21:24:39.785Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -911,17 +911,35 @@
           "id": "FEAT-121-ACT-1",
           "text": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
           "owner": "antigravity",
-          "done": false
+          "done": true
         },
         {
           "id": "FEAT-121-ACT-2",
           "text": "Run deterministic & live E2E verification and mark FEAT-121 done",
           "owner": "antigravity",
-          "done": false
+          "done": true
         }
       ],
       "waitingOn": "Upgrade antigravity-memory-bank so every initialized (init), upgraded (upgrade), or organized (organize) repository automatically builds and maintains a Standardized Living Documentation Hierarchy inside docs/{architecture,design,quality,operations}/ with zero-token auto-synthesis, progressive greenfield fill, legacy doc consolidation & link rewriting, and .agents/rules/docs-living-specs.md progressive disclosure.",
       "completedAt": "2026-10-23T20:49:44.725Z"
+    },
+    {
+      "id": "FEAT-122",
+      "type": "feature",
+      "title": "Deep Universal Documentation & Codebase Harvester for Canonical Living Docs",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/sync-living-docs.mjs",
+        "templates/scripts/sync-living-docs.mjs",
+        "tests/e2e-cli.test.mjs"
+      ],
+      "attachments": [],
+      "description": "",
+      "spec": "",
+      "acceptanceCriteria": [],
+      "actionItems": [],
+      "completedAt": "2026-10-23T21:24:39.784Z"
     }
   ],
   "milestones": [
@@ -943,7 +961,7 @@
   ],
   "meta": {
     "effortLevel": "high",
-    "effortUpdatedAt": "2026-10-23T20:35:16.655Z"
+    "effortUpdatedAt": "2026-10-23T21:11:55.618Z"
   },
   "activePlanTaskIds": []
 }

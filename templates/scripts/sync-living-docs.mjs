@@ -186,6 +186,201 @@ export const LEGACY_DOC_MAPPING = {
   }
 };
 
+export const PRESERVED_DOCS_REL_PATHS = new Set([
+  ...CANONICAL_LIVING_DOCS.map((d) => d.relPath.toLowerCase()),
+  'docs/backlog.md',
+  'docs/backlog_guide.md',
+  'docs/planning_guide.md',
+  'docs/brick_architecture_guide.md',
+  'docs/standard_docs_hierarchy_spec.md',
+  'docs/phase_1_extract_snapcal_auth_profile_brick.md'
+]);
+
+const PILLAR_CLASSIFICATION_RULES = [
+  {
+    targetRel: 'docs/architecture/LOGICAL_ARCHITECTURE.md',
+    sectionId: 'legacy-logical',
+    fileKeywords: ['logical', 'domain', 'entity', 'entities', 'bounded', 'usecase', 'workflow', 'feature', 'overview', 'product', 'concept'],
+    headingKeywords: ['domain', 'entity', 'logical', 'workflow', 'capability', 'use case', 'bounded context', 'mermaid', 'system context', 'overview'],
+    bodyKeywords: ['flowchart', 'sequencediagram', 'erdiagram', 'bounded context', 'hexagonal', 'domain model', 'aggregate', 'invariant']
+  },
+  {
+    targetRel: 'docs/architecture/TECHNICAL_ARCHITECTURE.md',
+    sectionId: 'legacy-technical',
+    fileKeywords: ['technical', 'architecture', 'system', 'api', 'endpoint', 'route', 'database', 'schema', 'sql', 'prisma', 'infra', 'server', 'backend', 'billing', 'stripe', 'webhook', 'setup', 'share'],
+    headingKeywords: ['api', 'endpoint', 'route', 'database', 'schema', 'table', 'stack', 'infrastructure', 'port', 'webhook', 'service', 'adapter', 'runtime'],
+    bodyKeywords: ['postgresql', 'fastify', 'express', 'next.js', 'create table', 'endpoint', 'http', 'webhook', 'redis', 'localhost', 'docker', 'prisma']
+  },
+  {
+    targetRel: 'docs/architecture/SECURITY_AND_COMPLIANCE.md',
+    sectionId: 'legacy-security',
+    fileKeywords: ['security', 'auth', 'oauth', 'oidc', 'pkce', 'compliance', 'gdpr', 'privacy', 'permission', 'secret', 'token', 'jwt', 'encryption', 'rbac'],
+    headingKeywords: ['security', 'authentication', 'authorization', 'oauth', 'compliance', 'gdpr', 'privacy', 'secret', 'token', 'credential', 'revocation', 'deletion'],
+    bodyKeywords: ['client_secret', 'authorization_code', 'pkce', 'appleid.apple.com', 'signed_request', 'hmac', 'sha256', 'bearer', 'jwt', 'gdpr', '5.1.1']
+  },
+  {
+    targetRel: 'docs/design/UX_BRIEF.md',
+    sectionId: 'legacy-ux',
+    fileKeywords: ['ux', 'ui', 'wireframe', 'flow', 'journey', 'screen', 'onboarding', 'navigation', 'interaction', 'modal', 'mockup'],
+    headingKeywords: ['user journey', 'screen', 'wireframe', 'onboarding', 'navigation', 'interaction', 'ux', 'modal', 'form', 'layout'],
+    bodyKeywords: ['headless', 'modal', 'screen', 'onboarding', 'button', 'avatar', 'crop', 'responsive', 'mobile', 'gesture', 'accessibility']
+  },
+  {
+    targetRel: 'docs/design/BRAND_BOOK.md',
+    sectionId: 'legacy-brand',
+    fileKeywords: ['brand', 'design', 'style', 'theme', 'palette', 'color', 'typography', 'font', 'token', 'icon', 'logo'],
+    headingKeywords: ['brand', 'color', 'palette', 'typography', 'font', 'theme', 'token', 'radius', 'spacing', 'dark mode', 'slot'],
+    bodyKeywords: ['--ag-profile', 'tailwind', 'border-radius', 'font-family', 'glassmorphic', 'hex', 'primary', 'surface', 'dark mode', 'light mode']
+  },
+  {
+    targetRel: 'docs/quality/TEST_PLAN_AND_SUITES.md',
+    sectionId: 'legacy-tests',
+    fileKeywords: ['test', 'testing', 'qa', 'e2e', 'playwright', 'vitest', 'jest', 'scenario', 'verification', 'suite', 'coverage'],
+    headingKeywords: ['test', 'qa', 'verification', 'e2e', 'unit test', 'contract test', 'assertion', 'coverage', 'scenario'],
+    bodyKeywords: ['node --test', 'playwright', 'vitest', 'jest', 'assert.', 'expect(', 'non-regression', 'e2e', 'mock']
+  },
+  {
+    targetRel: 'docs/quality/BUG_FIX_RECORDS.md',
+    sectionId: 'legacy-bugs',
+    fileKeywords: ['bug', 'bugs', 'rca', 'issue', 'issues', 'incident', 'postmortem', 'hotfix', 'regression', 'fix'],
+    headingKeywords: ['bug', 'root cause', 'rca', 'regression', 'symptom', 'resolution', 'incident', 'hotfix'],
+    bodyKeywords: ['bug-', 'root cause', 'non-regression', 'race condition', 'crash', 'workaround', 'fixed by']
+  },
+  {
+    targetRel: 'docs/operations/MIGRATION_AND_RELEASE_LOG.md',
+    sectionId: 'legacy-migrations',
+    fileKeywords: ['migration', 'release', 'changelog', 'deploy', 'deployment', 'cutover', 'rollout', 'upgrade', 'ops', 'runbook'],
+    headingKeywords: ['migration', 'release', 'changelog', 'deployment', 'cutover', 'milestone', 'rollout', 'version'],
+    bodyKeywords: ['git push', 'migration', 'milestone', 'v1.', 'v2.', 'production', 'staging', 'cutover', 'rollback']
+  }
+];
+
+/**
+ * Deterministically classify any Markdown document (docs/<subpath>/<name>.md) into one of the 8 canonical living pillars
+ * using exact filename lookup first, followed by weighted filename + heading + keyword scoring.
+ */
+export function classifyMarkdownDocument(relPath, content = '') {
+  const baseName = path.basename(relPath).toLowerCase();
+  if (LEGACY_DOC_MAPPING[baseName]) {
+    return {
+      ...LEGACY_DOC_MAPPING[baseName],
+      confidence: 'exact-mapping',
+      score: 100
+    };
+  }
+
+  const lowerRel = relPath.toLowerCase();
+  const lowerBody = String(content || '').toLowerCase();
+  const headings = (String(content || '').match(/^#{1,3}\s+[^\n]+/gm) || []).join(' ').toLowerCase();
+
+  let bestRule = PILLAR_CLASSIFICATION_RULES[1]; // Default to TECHNICAL_ARCHITECTURE.md
+  let bestScore = -1;
+
+  for (const rule of PILLAR_CLASSIFICATION_RULES) {
+    let score = 0;
+    for (const fk of rule.fileKeywords) {
+      if (lowerRel.includes(fk)) score += 6;
+    }
+    for (const hk of rule.headingKeywords) {
+      if (headings.includes(hk)) score += 4;
+    }
+    for (const bk of rule.bodyKeywords) {
+      if (lowerBody.includes(bk)) score += 2;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestRule = rule;
+    }
+  }
+
+  return {
+    targetRel: bestRule.targetRel,
+    sectionId: bestRule.sectionId,
+    confidence: bestScore >= 6 ? 'heuristic-high' : 'heuristic-fallback',
+    score: bestScore
+  };
+}
+
+/**
+ * Non-destructively harvest domain sections from in-place repository Markdown files
+ * (`README.md`, `SECURITY.md`, `CHANGELOG.md`, `memory-bank/*.md`, and preserved guides)
+ * to enrich the 8 canonical pillars without moving or deleting the source files.
+ */
+function harvestInPlaceRepoKnowledge(root) {
+  const harvestedBySection = {
+    'legacy-logical': [],
+    'legacy-technical': [],
+    'legacy-security': [],
+    'legacy-ux': [],
+    'legacy-brand': [],
+    'legacy-tests': [],
+    'legacy-bugs': [],
+    'legacy-migrations': []
+  };
+
+  const pushExcerpt = (sectionId, sourceRel, heading, excerpt, fromDocDir = 'docs/architecture') => {
+    const cleanExcerpt = excerpt
+      .split('\n')
+      .map((l) => l.trimEnd())
+      .filter((l) => l && !l.startsWith('<!--'))
+      .slice(0, 8)
+      .join('\n')
+      .trim();
+    if (!cleanExcerpt || cleanExcerpt.length < 15) return;
+    const relLink = path.relative(path.join(root, fromDocDir), path.join(root, sourceRel)).split(path.sep).join('/');
+    harvestedBySection[sectionId].push(
+      `- **From [\`${sourceRel}\`](${relLink}) (${heading})**:\n  ${cleanExcerpt.replace(/\n/g, '\n  ')}`
+    );
+  };
+
+  // 1. Harvest Memory Bank baseline files (`memory-bank/*.md`)
+  const memoryMappings = [
+    { rel: 'memory-bank/projectbrief.md', sectionId: 'legacy-logical', dir: 'docs/architecture' },
+    { rel: 'memory-bank/productContext.md', sectionId: 'legacy-ux', dir: 'docs/design' },
+    { rel: 'memory-bank/systemPatterns.md', sectionId: 'legacy-technical', dir: 'docs/architecture' },
+    { rel: 'memory-bank/infrastructureInvariants.md', sectionId: 'legacy-technical', dir: 'docs/architecture' },
+    { rel: 'memory-bank/integrationsAndCustomizations.md', sectionId: 'legacy-security', dir: 'docs/architecture' },
+    { rel: 'memory-bank/progress.md', sectionId: 'legacy-migrations', dir: 'docs/operations' }
+  ];
+
+  for (const mm of memoryMappings) {
+    const full = path.join(root, mm.rel);
+    if (!fsSync.existsSync(full)) continue;
+    try {
+      const raw = fsSync.readFileSync(full, 'utf8');
+      const bulletLines = raw
+        .split('\n')
+        .filter((l) => /^\s*[-*]\s+\*\*/.test(l) && !l.includes('{{'))
+        .slice(0, 5);
+      if (bulletLines.length > 0) {
+        pushExcerpt(mm.sectionId, mm.rel, 'Memory Bank Baseline', bulletLines.join('\n'), mm.dir);
+      }
+    } catch {}
+  }
+
+  // 2. Harvest `README.md`, `SECURITY.md`, `CHANGELOG.md` by `## ` headings
+  for (const rootDoc of ['README.md', 'SECURITY.md', 'CHANGELOG.md']) {
+    const full = path.join(root, rootDoc);
+    if (!fsSync.existsSync(full)) continue;
+    try {
+      const raw = fsSync.readFileSync(full, 'utf8');
+      const sections = raw.split(/^##\s+/m);
+      for (const sec of sections.slice(1)) {
+        const firstNl = sec.indexOf('\n');
+        if (firstNl === -1) continue;
+        const headingTitle = sec.slice(0, firstNl).trim();
+        const body = sec.slice(firstNl + 1).trim();
+        if (!body || body.length < 20) continue;
+        const classified = classifyMarkdownDocument(rootDoc, `## ${headingTitle}\n${body}`);
+        const docDir = path.dirname(classified.targetRel);
+        pushExcerpt(classified.sectionId, rootDoc, `## ${headingTitle}`, body, docDir);
+      }
+    } catch {}
+  }
+
+  return harvestedBySection;
+}
+
 const SENSITIVE_KEY_REGEX = /(SECRET|TOKEN|PASSWORD|PRIVATE_KEY|API_KEY|ACCESS_KEY|WEBHOOK_SECRET|CREDENTIAL|AUTH_KEY|CLIENT_SECRET|DSN)/i;
 
 function getDefaultTemplateContent(relPath) {
@@ -608,23 +803,22 @@ export function rewriteConsolidatedDocLinks(root, consolidations, dryRun = false
 
     for (const item of consolidations) {
       const fileName = item.fileName;
+      const fromRel = item.fromRel || `docs/${fileName}`;
+      const fromInsideDocs = fromRel.replace(/^docs\//, '');
       const targetFull = path.join(root, item.targetRel);
       if (path.resolve(fileObj.fullPath) === path.resolve(targetFull)) continue;
 
-      let relToTarget = path.relative(fileDir, targetFull).split(path.sep).join('/');
-      if (!relToTarget.startsWith('.') && !relToTarget.startsWith('/')) {
-        // Keep clean relative path (e.g. `docs/design/UX_BRIEF.md` from root, or `design/UX_BRIEF.md` from `docs/`)
-      }
-
+      const relToTarget = path.relative(fileDir, targetFull).split(path.sep).join('/');
       const escapedName = fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapedFromInsideDocs = fromInsideDocs.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      // 1. Rewrite file:// absolute links pointing to either <root>/<fileName> or <root>/docs/<fileName>
-      const fileUrlRe = new RegExp(`(file://${escapedRoot})/(?:docs/)?${escapedName}\\b`, 'g');
+      // 1. Rewrite file:// absolute links pointing to <root>/<fileName> or <root>/docs/<fromInsideDocs>
+      const fileUrlRe = new RegExp(`(file://${escapedRoot})/(?:docs/)?(?:${escapedFromInsideDocs}|${escapedName})\\b`, 'g');
       updated = updated.replace(fileUrlRe, `$1/${item.targetRel}`);
 
-      // 2. Rewrite markdown links: ](./docs/FILE.md), ](docs/FILE.md), ](../docs/FILE.md), ](./FILE.md), ](FILE.md)
+      // 2. Rewrite markdown links: ](./docs/sub/FILE.md), ](docs/FILE.md), ](./FILE.md), ](sub/FILE.md)
       const mdLinkRe = new RegExp(
-        `(\\]\\()(?:\\.\\.\\/docs\\/|\\.\\/docs\\/|docs\\/|\\.\\.\\/|\\.\\/)?${escapedName}(#[^)]+)?(\\))`,
+        `(\\]\\()(?:\\.\\.\\/docs\\/|\\.\\/docs\\/|docs\\/|\\.\\.\\/|\\.\\/)?(?:${escapedFromInsideDocs}|${escapedName})(#[^)]+)?(\\))`,
         'g'
       );
       updated = updated.replace(mdLinkRe, `$1${relToTarget}$2$3`);
@@ -657,7 +851,8 @@ function extractCodebaseFacts(root) {
     brandTokens: [],
     testSuites: [],
     bugRecords: [],
-    archivedDocs: []
+    archivedDocs: [],
+    harvestedKnowledge: harvestInPlaceRepoKnowledge(root)
   };
 
   // 1. Bricks (`bricks/*/brick.json`)
@@ -721,10 +916,10 @@ function extractCodebaseFacts(root) {
     (name, rel) =>
       /\.(ts|tsx|js|mjs)$/.test(name) &&
       (rel.startsWith('src/') || rel.startsWith('server/') || rel.startsWith('app/') || rel.startsWith('pages/') || rel.startsWith('apps/') || rel.startsWith('bin/') || rel.startsWith('lib/')),
-    4
+    5
   );
 
-  for (const rf of routeFiles.slice(0, 60)) {
+  for (const rf of routeFiles.slice(0, 80)) {
     try {
       const raw = fsSync.readFileSync(rf.fullPath, 'utf8');
       const httpRe = /\b(?:app|router|fastify|server)\.(get|post|put|patch|delete)\(\s*['"`]([^'"`]+)['"`]/g;
@@ -736,6 +931,49 @@ function extractCodebaseFacts(root) {
           source: rf.relPath
         });
       }
+
+      // Next.js App Router API Route Handlers (`app/**/route.{ts,tsx,js,mjs}`)
+      if (/(?:^|\/)route\.(ts|tsx|js|mjs)$/.test(rf.relPath)) {
+        const cleanRoute =
+          '/' +
+          rf.relPath
+            .replace(/^(?:src\/)?app\//, '')
+            .replace(/\/?route\.(ts|tsx|js|mjs)$/, '');
+        const methodRe = /export\s+(?:async\s+)?(?:function|const)\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b/g;
+        let mm;
+        let matchedAny = false;
+        while ((mm = methodRe.exec(raw)) !== null) {
+          matchedAny = true;
+          facts.routesAndEntrypoints.push({
+            kind: `HTTP ${mm[1].toUpperCase()}`,
+            route: cleanRoute === '//' ? '/' : cleanRoute,
+            source: rf.relPath
+          });
+        }
+        if (!matchedAny) {
+          facts.routesAndEntrypoints.push({
+            kind: 'App Router Handler',
+            route: cleanRoute === '//' ? '/' : cleanRoute,
+            source: rf.relPath
+          });
+        }
+      }
+
+      // Next.js Pages Router API Handlers (`pages/api/**/*.{ts,js,mjs}`)
+      if (/(?:^|\/)pages\/api\/.+\.(ts|tsx|js|mjs)$/.test(rf.relPath)) {
+        const apiRoute =
+          '/' +
+          rf.relPath
+            .replace(/^(?:src\/)?pages\//, '')
+            .replace(/\.(ts|tsx|js|mjs)$/, '')
+            .replace(/\/index$/, '');
+        facts.routesAndEntrypoints.push({
+          kind: 'Pages API Route',
+          route: apiRoute,
+          source: rf.relPath
+        });
+      }
+
       if (/\/page\.(tsx|jsx|ts|js)$/.test(rf.relPath)) {
         const routePath = '/' + rf.relPath.replace(/^.*?\bapp\//, '').replace(/\/?page\.(tsx|jsx|ts|js)$/, '');
         facts.uxScreens.push({
@@ -743,6 +981,53 @@ function extractCodebaseFacts(root) {
           platform: 'Web (Next.js App Router)',
           source: rf.relPath
         });
+      }
+    } catch {}
+  }
+
+  // Mobile & OAuth Manifest Discovery (`app.json`, `Info.plist`, `AndroidManifest.xml`)
+  const appJsonPath = path.join(root, 'app.json');
+  if (fsSync.existsSync(appJsonPath)) {
+    try {
+      const appJson = JSON.parse(fsSync.readFileSync(appJsonPath, 'utf8'));
+      const expo = appJson.expo || appJson;
+      if (expo.scheme) {
+        facts.routesAndEntrypoints.push({
+          kind: 'Deep Link / OAuth Scheme',
+          route: `${expo.scheme}://`,
+          source: 'app.json'
+        });
+      }
+    } catch {}
+  }
+
+  const mobileManifests = walkFiles(
+    root,
+    (name) => name === 'Info.plist' || name === 'AndroidManifest.xml',
+    4
+  );
+  for (const mm of mobileManifests.slice(0, 10)) {
+    try {
+      const raw = fsSync.readFileSync(mm.fullPath, 'utf8');
+      if (mm.name === 'AndroidManifest.xml') {
+        const schemeMatch = raw.match(/android:scheme="([^"]+)"/);
+        if (schemeMatch) {
+          facts.routesAndEntrypoints.push({
+            kind: 'Android URL Scheme',
+            route: `${schemeMatch[1]}://`,
+            source: mm.relPath
+          });
+        }
+      } else if (mm.name === 'Info.plist' && raw.includes('CFBundleURLSchemes')) {
+        const afterKey = raw.split('CFBundleURLSchemes')[1] || '';
+        const strMatch = afterKey.match(/<string>([^<]+)<\/string>/);
+        if (strMatch) {
+          facts.routesAndEntrypoints.push({
+            kind: 'iOS URL Scheme',
+            route: `${strMatch[1]}://`,
+            source: mm.relPath
+          });
+        }
       }
     } catch {}
   }
@@ -764,18 +1049,43 @@ function extractCodebaseFacts(root) {
     });
   }
 
-  // 4. Database & Schema Files (`*.sql`, `*.prisma`, `*schema*.ts`)
+  // 4. Deep Database & Schema Files (`*.sql`, `*.prisma`, `*schema*.ts`, `bricks/**/core/*.mjs`)
   const schemaFiles = walkFiles(
     root,
     (name, rel) =>
       name.endsWith('.prisma') ||
       name.endsWith('.sql') ||
-      /schema/i.test(name),
-    4
+      /schema/i.test(name) ||
+      (rel.startsWith('bricks/') && rel.includes('/core/') && /\.(ts|js|mjs)$/.test(name)),
+    5
   );
-  for (const sf of schemaFiles.slice(0, 25)) {
+  for (const sf of schemaFiles.slice(0, 35)) {
+    const entities = [];
+    try {
+      const raw = fsSync.readFileSync(sf.fullPath, 'utf8');
+      if (sf.name.endsWith('.prisma')) {
+        const modelRe = /^\s*model\s+([A-Za-z0-9_]+)\s*\{/gm;
+        let m;
+        while ((m = modelRe.exec(raw)) !== null) {
+          entities.push(`model ${m[1]}`);
+        }
+      } else if (sf.name.endsWith('.sql')) {
+        const sqlRe = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["`]?([A-Za-z0-9_.]+)["`]?/gi;
+        let m;
+        while ((m = sqlRe.exec(raw)) !== null) {
+          entities.push(`table ${m[1]}`);
+        }
+      } else {
+        const zodRe = /export\s+(?:const|function|interface|type)\s+([A-Za-z0-9_]*(?:Schema|Port|Profile|Account|Session|validate[A-Za-z0-9_]+))\b/g;
+        let m;
+        while ((m = zodRe.exec(raw)) !== null && entities.length < 6) {
+          if (!entities.includes(m[1])) entities.push(m[1]);
+        }
+      }
+    } catch {}
+    const entitySuffix = entities.length > 0 ? ` (${entities.slice(0, 5).join(', ')})` : '';
     facts.schemas.push({
-      name: sf.name,
+      name: `${sf.name}${entitySuffix}`,
       relPath: sf.relPath
     });
   }
@@ -905,12 +1215,15 @@ function extractCodebaseFacts(root) {
   if (fsSync.existsSync(archiveDir)) {
     try {
       for (const f of fsSync.readdirSync(archiveDir).filter((x) => x.endsWith('.md')).sort()) {
-        const lower = f.toLowerCase();
-        const mapped = LEGACY_DOC_MAPPING[lower];
+        let archivedRaw = '';
+        try {
+          archivedRaw = fsSync.readFileSync(path.join(archiveDir, f), 'utf8');
+        } catch {}
+        const classified = classifyMarkdownDocument(`docs/${f}`, archivedRaw);
         facts.archivedDocs.push({
           fileName: f,
           archiveRel: `archive/${f}`,
-          targetRel: mapped ? mapped.targetRel.replace(/^docs\//, '') : 'INDEX.md'
+          targetRel: classified ? classified.targetRel.replace(/^docs\//, '') : 'INDEX.md'
         });
       }
     } catch {}
@@ -965,30 +1278,55 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
     }
   }
 
-  // 2. Scan `docs/` for legacy scattered markdown files and consolidate them non-destructively
+  // 2. Crawl `docs/**/*.md` (top-level & nested custom subdirectories) and classify/consolidate non-preserved specs
   const docsDir = path.join(root, 'docs');
   const consolidatedLegacy = [];
   if (fsSync.existsSync(docsDir)) {
-    const entries = fsSync.readdirSync(docsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
-      const lower = entry.name.toLowerCase();
-      const mapping = LEGACY_DOC_MAPPING[lower];
-      if (!mapping) continue;
+    const candidateDocs = walkFiles(
+      docsDir,
+      (name, relInsideDocs) => {
+        if (!name.endsWith('.md')) return false;
+        const fullRel = `docs/${relInsideDocs}`.toLowerCase();
+        if (PRESERVED_DOCS_REL_PATHS.has(fullRel)) return false;
+        if (
+          relInsideDocs.startsWith('archive/') ||
+          relInsideDocs.startsWith('planning/') ||
+          relInsideDocs.startsWith('attachments/') ||
+          relInsideDocs.startsWith('architecture/') ||
+          relInsideDocs.startsWith('design/') ||
+          relInsideDocs.startsWith('quality/') ||
+          relInsideDocs.startsWith('operations/')
+        ) {
+          return false;
+        }
+        return true;
+      },
+      4
+    );
 
-      const legacyFull = path.join(docsDir, entry.name);
+    for (const docFile of candidateDocs) {
+      const legacyFull = docFile.fullPath;
+      const fromRel = `docs/${docFile.relPath}`;
+      let legacyContent = '';
+      try {
+        legacyContent = fsSync.readFileSync(legacyFull, 'utf8').trim();
+      } catch {
+        continue;
+      }
+
+      const mapping = classifyMarkdownDocument(fromRel, legacyContent);
       const targetFull = path.join(root, mapping.targetRel);
       const archiveDir = path.join(docsDir, 'archive');
-      const archiveFull = path.join(archiveDir, entry.name);
+      const archiveFileName = docFile.name;
+      const archiveFull = path.join(archiveDir, archiveFileName);
 
       if (!dryRun && fsSync.existsSync(legacyFull) && fsSync.existsSync(targetFull)) {
-        const legacyContent = fsSync.readFileSync(legacyFull, 'utf8').trim();
         let targetContent = fsSync.readFileSync(targetFull, 'utf8');
         const currentSection = extractBoundedSection(targetContent, mapping.sectionId);
-        const sourceTagStart = `<!-- merged-source:docs/${entry.name}:start -->`;
-        const sourceTagEnd = `<!-- merged-source:docs/${entry.name}:end -->`;
+        const sourceTagStart = `<!-- merged-source:${fromRel}:start -->`;
+        const sourceTagEnd = `<!-- merged-source:${fromRel}:end -->`;
 
-        const mergedBlock = `${sourceTagStart}\n### Consolidated from \`docs/${entry.name}\` (Archived at [\`docs/archive/${entry.name}\`](../archive/${entry.name}))\n\n${legacyContent}\n${sourceTagEnd}`;
+        const mergedBlock = `${sourceTagStart}\n### Consolidated from \`${fromRel}\` (Archived at [\`docs/archive/${archiveFileName}\`](../archive/${archiveFileName}))\n\n${legacyContent}\n${sourceTagEnd}`;
 
         let nextSection = currentSection;
         if (currentSection.includes(sourceTagStart) && currentSection.includes(sourceTagEnd)) {
@@ -1006,12 +1344,11 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
 
         // Archive original file in docs/archive/<name>
         fsSync.mkdirSync(archiveDir, { recursive: true });
-        const relFrom = path.join('docs', entry.name);
-        const relTo = path.join('docs', 'archive', entry.name);
+        const relTo = path.join('docs', 'archive', archiveFileName);
         let movedByGit = false;
-        if (hasGit && isFileGitTracked(root, relFrom)) {
+        if (hasGit && isFileGitTracked(root, fromRel)) {
           try {
-            execSync(`git mv -f "${relFrom}" "${relTo}"`, { cwd: root, stdio: 'pipe' });
+            execSync(`git mv -f "${fromRel}" "${relTo}"`, { cwd: root, stdio: 'pipe' });
             movedByGit = true;
           } catch {}
         }
@@ -1019,16 +1356,29 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
           fsSync.copyFileSync(legacyFull, archiveFull);
           fsSync.rmSync(legacyFull, { force: true });
         }
+
+        // Remove empty custom parent directory inside docs/ if applicable
+        const parentDir = path.dirname(legacyFull);
+        if (path.resolve(parentDir) !== path.resolve(docsDir)) {
+          try {
+            if (fsSync.readdirSync(parentDir).length === 0) {
+              fsSync.rmdirSync(parentDir);
+            }
+          } catch {}
+        }
       }
 
       consolidatedLegacy.push({
-        fileName: entry.name,
-        fromRel: `docs/${entry.name}`,
-        archiveRel: `docs/archive/${entry.name}`,
-        targetRel: mapping.targetRel
+        fileName: docFile.name,
+        fromRel,
+        archiveRel: `docs/archive/${archiveFileName}`,
+        targetRel: mapping.targetRel,
+        confidence: mapping.confidence
       });
       if (!quiet) {
-        console.log(`  ✓ Consolidated \`docs/${entry.name}\` → \`${mapping.targetRel}\` (archived in \`docs/archive/${entry.name}\`)`);
+        console.log(
+          `  ✓ Consolidated \`${fromRel}\` → \`${mapping.targetRel}\` (${mapping.confidence}, archived in \`docs/archive/${archiveFileName}\`)`
+        );
       }
     }
   }
@@ -1220,12 +1570,36 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
         lines.push(`- **Hexagonal Brick**: \`bricks/${b.name}@${b.version}\` — ${b.title} (Platforms: \`${b.platforms}\`)`);
       }
       for (const s of facts.schemas) {
-        lines.push(`- **Schema / Migration**: \`${s.relPath}\``);
+        lines.push(`- **Schema / Migration**: \`${s.relPath}\` — ${s.name}`);
       }
       next = updateBoundedSection(next, 'db-migrations', lines.join('\n'));
     }
     return next;
   });
+
+  // 4h-bis. Inject non-destructively harvested repo knowledge (`README.md`, `SECURITY.md`, `CHANGELOG.md`, `memory-bank/*.md`)
+  for (const rule of PILLAR_CLASSIFICATION_RULES) {
+    const items = facts.harvestedKnowledge?.[rule.sectionId] || [];
+    if (items.length === 0) continue;
+    writeDocSectionUpdates(rule.targetRel, (content) => {
+      const currentSection = extractBoundedSection(content, rule.sectionId);
+      const hStart = '<!-- harvested-repo-context:start -->';
+      const hEnd = '<!-- harvested-repo-context:end -->';
+      const harvestedBlock = `${hStart}\n### Harvested Repository & Memory-Bank Context\n\n${items.slice(0, 8).join('\n\n')}\n${hEnd}`;
+
+      let nextSection = currentSection;
+      if (currentSection.includes(hStart) && currentSection.includes(hEnd)) {
+        const sIdx = currentSection.indexOf(hStart);
+        const eIdx = currentSection.indexOf(hEnd) + hEnd.length;
+        nextSection = currentSection.slice(0, sIdx) + harvestedBlock + currentSection.slice(eIdx);
+      } else if (currentSection.startsWith('_No legacy ')) {
+        nextSection = harvestedBlock;
+      } else {
+        nextSection = `${currentSection}\n\n---\n\n${harvestedBlock}`;
+      }
+      return updateBoundedSection(content, rule.sectionId, nextSection);
+    });
+  }
 
   // 4i. Update docs/INDEX.md status badges (`🟢 Populated` vs `🟡 Progressive Scaffold`) & archived legacy docs
   writeDocSectionUpdates('docs/INDEX.md', (content) => {
@@ -1243,6 +1617,7 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
         isPopulated =
           raw.includes('| **') ||
           raw.includes('<!-- merged-source:') ||
+          raw.includes('<!-- harvested-repo-context:start -->') ||
           raw.includes('- **Hexagonal Brick**:') ||
           raw.includes('| `--');
       }

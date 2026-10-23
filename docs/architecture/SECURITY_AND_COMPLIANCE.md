@@ -23,5 +23,34 @@ _Progressive scaffold: automatically synchronized from `.env*` and brick contrac
 ## 3. Consolidated Project Specifications
 
 <!-- ag-section:legacy-security:start -->
-_No legacy security or compliance documents merged yet._
+<!-- harvested-repo-context:start -->
+### Harvested Repository & Memory-Bank Context
+
+- **From [`memory-bank/integrationsAndCustomizations.md`](../../memory-bank/integrationsAndCustomizations.md) (Memory Bank Baseline)**:
+  - **Workspace Root**: `~/Documents/antigravity-memory-bank` · **Git Remote**: `https://github.com/johnny-saigon/antigravity-memory-bank.git` (`main`)
+  - **Directory Layout**: `lib/`, `bin/`, `scripts/`, `docs/`, `templates/`, `memory-bank/`, `.agents/`
+  - **Pre-Authenticated Host Token & CLI Stores**: `~/.github_token` (GitHub PAT ✅) · `~/.stripe_token` (Stripe API ✅) · `~/.stitch_token` (Google Stitch ✅) · `~/.ovh_credentials.json` (OVHcloud API ✅) · `~/.meta_credentials.json` (Meta Graph & App ✅) · `~/.meta_token` (Meta Business Token ✅) · `~/.azure/azureProfile.json` (Azure & Entra CLI ✅) · `~/.linkedin_mcp/account_identity.json` (LinkedIn Session ✅) · `~/Library/Application Support/mj/config.json` (Midjourney Profile ✅) · `~/.mcp-auth/mcp-remote-v1` (MCP OAuth2 Cache ✅)
+  - **Workspace `.env` Files**: None detected (uses pre-authenticated host stores & `~/.gemini/config/mcp_config.json`).
+  - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`
+
+- **From [`README.md`](../../README.md) (## 📏 Token Efficiency & The 150-Line Budget)**:
+  Large context dumps degrade LLM reasoning and balloon context consumption. Every document in `memory-bank/` must stay **under 150 lines**.
+  Run the built-in linter anytime:
+  ```bash
+  npm run lint:memory
+  ```
+  When a topic expands, split it into a linked sub-file:
+  ```markdown
+  @[Vision Taxonomy](memory-bank/visionTaxonomy.md)
+
+- **From [`README.md`](../../README.md) (## 📋 4. Decoupled Zero-Token Backlog Engine & Review Pane Integration)**:
+  Capturing backlog ideas, organizing sprints, or updating task statuses through conversational LLM prompts consumes **15,000 to 35,000 prompt tokens** per interaction (due to system instructions, memory files, tool definitions, and chat history).
+  The **Antigravity Memory Bank** decouples **task capture** from **agent execution**, saving up to **90% of AI credits**:
+  ```
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                        1. OFFLINE CAPTURE (0 TOKENS)                   │
+  │                                                                        │
+  │   • Local CLI: npm run backlog add "..."                               │
+  │   • Direct Edit: docs/backlog.json                                     │
+<!-- harvested-repo-context:end -->
 <!-- ag-section:legacy-security:end -->

@@ -1,6 +1,10 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(docs): implement FEAT-122 deep universal doc and codebase harvester for canonical living docs** (`8533eff`)
+- [x] **feat(docs): implement FEAT-122 deep universal doc and codebase harvester for canonical living docs** (`912a7b7`)
+- [x] **feat(docs): implement FEAT-122 deep universal doc and codebase harvester for canonical living docs** (`df86733`)
+- [x] **feat(docs): implement FEAT-122 deep universal doc and codebase harvester for canonical living docs** (`bb376a4`)
 - [x] **feat(docs): implement FEAT-121 canonical living documentation hierarchy and auto-synthesizer** (`47fc528`)
 <<<<<<< Updated upstream
 - [x] **test(user-profile): upstream BUG-737 dark-mode & BUG-738 mobile Yoga refresh UI regression tests** (`6743d31`)

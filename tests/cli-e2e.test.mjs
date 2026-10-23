@@ -416,15 +416,44 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(activeContextMd, /feat\(billing\): add Stripe webhook handler/);
   });
 
-  test('3b. organize: relocates loose root specs to docs/, rewrites links, removes stubs/clutter, and hardens .gitignore', () => {
+  test('3b. organize: relocates loose root specs to docs/, classifies custom nested docs, harvests README/memory-bank, extracts deep routes/schemas, and rewrites links', () => {
     fs.writeFileSync(path.join(tmpRepo, 'UX_BRIEF.md'), '# Acme UX Brief\n- Glassmorphic dark mode.\n', 'utf8');
     fs.writeFileSync(path.join(tmpRepo, 'DESIGN.md'), '# Acme Design System\n- Primary token #0EA5E9.\n', 'utf8');
     fs.writeFileSync(path.join(tmpRepo, 'CLAUDE.md'), '# See AGENTS.md\n\nFollow the instructions in AGENTS.md.\n', 'utf8');
     fs.writeFileSync(path.join(tmpRepo, '.DS_Store'), 'macos-clutter', 'utf8');
     fs.writeFileSync(path.join(tmpRepo, 'skills-lock.json'), '{}', 'utf8');
+
+    // FEAT-122: Seed custom-named nested docs (`docs/specs/STRIPE_BILLING_API.md` & `docs/guides/OAUTH_SECURITY_FLOW.md`)
+    fs.mkdirSync(path.join(tmpRepo, 'docs', 'specs'), { recursive: true });
+    fs.mkdirSync(path.join(tmpRepo, 'docs', 'guides'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpRepo, 'docs', 'specs', 'STRIPE_BILLING_API.md'),
+      '# Stripe Billing Webhook & Database Endpoint Spec\n\n## API Endpoints\n- POST /api/webhooks/stripe processes PostgreSQL billing events.\n',
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(tmpRepo, 'docs', 'guides', 'OAUTH_SECURITY_FLOW.md'),
+      '# OAuth2 PKCE & GDPR Security Guide\n\n## Authentication & Token Revocation\n- Enforces PKCE authorization_code and Apple 5.1.1(v) revocation.\n',
+      'utf8'
+    );
+
+    // FEAT-122: Seed Next.js App Router API route (`app/api/billing/route.ts`) & SQL schema (`db/001_billing.sql`)
+    fs.mkdirSync(path.join(tmpRepo, 'app', 'api', 'billing'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpRepo, 'app', 'api', 'billing', 'route.ts'),
+      'export async function GET() { return Response.json({ ok: true }); }\nexport async function POST() { return Response.json({ created: true }); }\n',
+      'utf8'
+    );
+    fs.mkdirSync(path.join(tmpRepo, 'db'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpRepo, 'db', '001_billing.sql'),
+      'CREATE TABLE IF NOT EXISTS tenant_invoices (id UUID PRIMARY KEY, amount_cents INT NOT NULL);\n',
+      'utf8'
+    );
+
     fs.writeFileSync(
       path.join(tmpRepo, 'README.md'),
-      '# Acme SaaS\n\nSee [UX Brief](UX_BRIEF.md) and [Design Spec](./DESIGN.md).\n',
+      '# Acme SaaS\n\nSee [UX Brief](UX_BRIEF.md), [Design Spec](./DESIGN.md), and [Stripe Spec](docs/specs/STRIPE_BILLING_API.md).\n\n## Domain Workflow Overview\n- Multi-tenant bounded context with automated invoice reconciliation.\n',
       'utf8'
     );
 
@@ -441,8 +470,23 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'design', 'BRAND_BOOK.md')), true, 'docs/design/BRAND_BOOK.md must exist');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'UX_BRIEF.md')), true, 'docs/archive/UX_BRIEF.md must preserve original legacy file');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'DESIGN.md')), true, 'docs/archive/DESIGN.md must preserve original legacy file');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'STRIPE_BILLING_API.md')), true, 'Custom nested STRIPE_BILLING_API.md must be archived after classification');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'OAUTH_SECURITY_FLOW.md')), true, 'Custom nested OAUTH_SECURITY_FLOW.md must be archived after classification');
     assert.match(fs.readFileSync(path.join(tmpRepo, 'docs', 'design', 'UX_BRIEF.md'), 'utf8'), /Glassmorphic dark mode/, 'Zero content loss when consolidating UX_BRIEF.md');
     assert.match(fs.readFileSync(path.join(tmpRepo, 'docs', 'design', 'BRAND_BOOK.md'), 'utf8'), /Primary token #0EA5E9/, 'Zero content loss when consolidating DESIGN.md');
+
+    // FEAT-122 assertions: custom nested docs classified into TECHNICAL_ARCHITECTURE.md and SECURITY_AND_COMPLIANCE.md
+    const techArchContent = fs.readFileSync(path.join(tmpRepo, 'docs', 'architecture', 'TECHNICAL_ARCHITECTURE.md'), 'utf8');
+    assert.match(techArchContent, /POST \/api\/webhooks\/stripe/, 'Expected STRIPE_BILLING_API.md to be classified into TECHNICAL_ARCHITECTURE.md');
+    assert.match(techArchContent, /\/api\/billing/, 'Expected Next.js App Router app/api/billing/route.ts to be discovered in TECHNICAL_ARCHITECTURE.md');
+    assert.match(techArchContent, /table tenant_invoices/, 'Expected SQL CREATE TABLE tenant_invoices to be discovered in TECHNICAL_ARCHITECTURE.md');
+
+    const secArchContent = fs.readFileSync(path.join(tmpRepo, 'docs', 'architecture', 'SECURITY_AND_COMPLIANCE.md'), 'utf8');
+    assert.match(secArchContent, /PKCE authorization_code/, 'Expected OAUTH_SECURITY_FLOW.md to be classified into SECURITY_AND_COMPLIANCE.md');
+
+    const logicalArchContent = fs.readFileSync(path.join(tmpRepo, 'docs', 'architecture', 'LOGICAL_ARCHITECTURE.md'), 'utf8');
+    assert.match(logicalArchContent, /Harvested Repository & Memory-Bank Context/, 'Expected in-place README.md and memory-bank/*.md sections to be harvested into LOGICAL_ARCHITECTURE.md');
+
     assert.equal(fs.existsSync(path.join(tmpRepo, 'CLAUDE.md')), false, 'Redundant CLAUDE.md pointer stub must be removed');
     assert.equal(fs.existsSync(path.join(tmpRepo, '.DS_Store')), false, '.DS_Store must be removed');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'skills-lock.json')), false, 'Orphaned skills-lock.json must be removed');
@@ -450,6 +494,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     const updatedReadme = fs.readFileSync(path.join(tmpRepo, 'README.md'), 'utf8');
     assert.match(updatedReadme, /\[UX Brief\]\(docs\/design\/UX_BRIEF\.md\)/);
     assert.match(updatedReadme, /\[Design Spec\]\(docs\/design\/BRAND_BOOK\.md\)/);
+    assert.match(updatedReadme, /\[Stripe Spec\]\(docs\/architecture\/TECHNICAL_ARCHITECTURE\.md\)/);
 
     const gitignore = fs.readFileSync(path.join(tmpRepo, '.gitignore'), 'utf8');
     assert.match(gitignore, /docs\/backlog\.html/);

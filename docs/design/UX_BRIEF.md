@@ -36,5 +36,23 @@
 ## 4. Consolidated Project Specifications
 
 <!-- ag-section:legacy-ux:start -->
-_No legacy UX brief or wireframe specifications merged yet._
+<!-- harvested-repo-context:start -->
+### Harvested Repository & Memory-Bank Context
+
+- **From [`memory-bank/productContext.md`](../../memory-bank/productContext.md) (Memory Bank Baseline)**:
+  - **Primary Persona**: AI-native engineer using Antigravity IDE across multiple repositories who wants persistent architectural context and zero-token task management.
+  - **Core Flows**:
+  - **Theme**: Dark glassmorphic Kanban board (`#0b0f19` background, `#111827` cards) rendered into both `<appDataDir>/brain/<cid>/backlog.html` and `docs/backlog.html`.
+  - **Feedback Loops**: Instant search/filter, one-click `/backlog-start <ID>` prompt copy, and inline modal task creation with WebSocket/FileSystem Access API persistence.
+
+- **From [`README.md`](../../README.md) (## 🏛️ The Three-Tier Memory & Correlated Planning Architecture)**:
+  ```mermaid
+  flowchart TD
+    subgraph T1["Tier 1: Global Developer Standard (~/.gemini/GEMINI.md, <50 Lines)"]
+      G1["Conventional Commits • TypeScript Strict Mode • <=8-Turn Token Frugality"]
+    end
+    subgraph ROOT["Lean Root Entrypoint (AGENTS.md, <50 Lines, 0 Inline Bloat)"]
+      R1["Tech Stack • Build Commands • Core Mandates • Standard Links"]
+    end
+<!-- harvested-repo-context:end -->
 <!-- ag-section:legacy-ux:end -->
