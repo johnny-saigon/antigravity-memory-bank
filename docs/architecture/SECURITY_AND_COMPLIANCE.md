@@ -36,21 +36,17 @@ _Progressive scaffold: automatically synchronized from `.env*` and brick contrac
 - **From [`README.md`](../../README.md) (## 📏 Token Efficiency & The 150-Line Budget)**:
   Large context dumps degrade LLM reasoning and balloon context consumption. Every document in `memory-bank/` must stay **under 150 lines**.
   Run the built-in linter anytime:
-  ```bash
-  npm run lint:memory
-  ```
   When a topic expands, split it into a linked sub-file:
-  ```markdown
-  @[Vision Taxonomy](memory-bank/visionTaxonomy.md)
+  ---
 
 - **From [`README.md`](../../README.md) (## 📋 4. Decoupled Zero-Token Backlog Engine & Review Pane Integration)**:
   Capturing backlog ideas, organizing sprints, or updating task statuses through conversational LLM prompts consumes **15,000 to 35,000 prompt tokens** per interaction (due to system instructions, memory files, tool definitions, and chat history).
   The **Antigravity Memory Bank** decouples **task capture** from **agent execution**, saving up to **90% of AI credits**:
-  ```
-  ┌────────────────────────────────────────────────────────────────────────┐
-  │                        1. OFFLINE CAPTURE (0 TOKENS)                   │
-  │                                                                        │
-  │   • Local CLI: npm run backlog add "..."                               │
-  │   • Direct Edit: docs/backlog.json                                     │
+  ### Clean Separation, Tight Integration & Uncompromising Execution Quality
+  1. **Clean Separation**: The Memory Bank (`memory-bank/*.md`) remains strictly a passive architectural context baseline (< 150 lines per file). Active operational tasks and sprint state live in `docs/backlog.json` and `docs/MIGRATION_BOARD.md`.
+  2. **Frugal on Context Re-Ingestion, Uncompromising on Execution Quality**: Token frugality applies strictly to eliminating redundant context re-ingestion, chat-based ticket management, and bloated memory files—freeing the token budget for deep reasoning, thorough root-cause analysis, complete edge-case coverage, and rigorous test verification.
+  3. **Tight Integration**: The agent uses `docs/backlog.json` as its direct execution contract, and upon task completion automatically updates both the local backlog (`DONE`) and the passive memory bank (`progress.md` accomplishments).
+  ### Local Backlog CLI (0 Tokens / 0 Credits)
+  ### The `/backlog-start` Slash Command & Automated Work Recap
 <!-- harvested-repo-context:end -->
 <!-- ag-section:legacy-security:end -->

@@ -47,6 +47,13 @@ export const CANONICAL_LIVING_DOCS = [
     triggers: 'OAuth providers, masked `.env` contracts & GDPR/App Store rules'
   },
   {
+    relPath: 'docs/design/DESIGN.md',
+    templateRel: 'docs/design/DESIGN.md',
+    domain: 'Design & UX',
+    title: 'Unified Design System (DESIGN.md)',
+    triggers: 'Synthesized from BRAND_BOOK.md, UX_BRIEF.md, tokens & harvested design docs'
+  },
+  {
     relPath: 'docs/design/UX_BRIEF.md',
     templateRel: 'docs/design/UX_BRIEF.md',
     domain: 'Design & UX',
@@ -133,8 +140,16 @@ export const LEGACY_DOC_MAPPING = {
     sectionId: 'legacy-ux'
   },
   'design.md': {
-    targetRel: 'docs/design/BRAND_BOOK.md',
-    sectionId: 'legacy-brand'
+    targetRel: 'docs/design/DESIGN.md',
+    sectionId: 'legacy-design'
+  },
+  'design_system.md': {
+    targetRel: 'docs/design/DESIGN.md',
+    sectionId: 'legacy-design'
+  },
+  'ui_guidelines.md': {
+    targetRel: 'docs/design/DESIGN.md',
+    sectionId: 'legacy-design'
   },
   'brand_book.md': {
     targetRel: 'docs/design/BRAND_BOOK.md',
@@ -217,6 +232,13 @@ const PILLAR_CLASSIFICATION_RULES = [
     fileKeywords: ['security', 'auth', 'oauth', 'oidc', 'pkce', 'compliance', 'gdpr', 'privacy', 'permission', 'secret', 'token', 'jwt', 'encryption', 'rbac'],
     headingKeywords: ['security', 'authentication', 'authorization', 'oauth', 'compliance', 'gdpr', 'privacy', 'secret', 'token', 'credential', 'revocation', 'deletion'],
     bodyKeywords: ['client_secret', 'authorization_code', 'pkce', 'appleid.apple.com', 'signed_request', 'hmac', 'sha256', 'bearer', 'jwt', 'gdpr', '5.1.1']
+  },
+  {
+    targetRel: 'docs/design/DESIGN.md',
+    sectionId: 'legacy-design',
+    fileKeywords: ['design_system', 'ui_guidelines', 'stitch', 'aesthetic', 'visual_spec', 'component_library'],
+    headingKeywords: ['design system', 'visual language', 'design principles', 'component library', 'stitch', 'ui specification'],
+    bodyKeywords: ['design system', 'stitch', 'glassmorphism', 'elevation', 'component hierarchy', 'visual hierarchy']
   },
   {
     targetRel: 'docs/design/UX_BRIEF.md',
@@ -311,6 +333,7 @@ function harvestInPlaceRepoKnowledge(root) {
     'legacy-logical': [],
     'legacy-technical': [],
     'legacy-security': [],
+    'legacy-design': [],
     'legacy-ux': [],
     'legacy-brand': [],
     'legacy-tests': [],
@@ -319,10 +342,11 @@ function harvestInPlaceRepoKnowledge(root) {
   };
 
   const pushExcerpt = (sectionId, sourceRel, heading, excerpt, fromDocDir = 'docs/architecture') => {
-    const cleanExcerpt = excerpt
+    const withoutCodeBlocks = String(excerpt || '').replace(/```[\s\S]*?```/g, '');
+    const cleanExcerpt = withoutCodeBlocks
       .split('\n')
       .map((l) => l.trimEnd())
-      .filter((l) => l && !l.startsWith('<!--'))
+      .filter((l) => l && !l.startsWith('<!--') && !l.startsWith('```'))
       .slice(0, 8)
       .join('\n')
       .trim();
@@ -336,6 +360,7 @@ function harvestInPlaceRepoKnowledge(root) {
   // 1. Harvest Memory Bank baseline files (`memory-bank/*.md`)
   const memoryMappings = [
     { rel: 'memory-bank/projectbrief.md', sectionId: 'legacy-logical', dir: 'docs/architecture' },
+    { rel: 'memory-bank/productContext.md', sectionId: 'legacy-design', dir: 'docs/design' },
     { rel: 'memory-bank/productContext.md', sectionId: 'legacy-ux', dir: 'docs/design' },
     { rel: 'memory-bank/systemPatterns.md', sectionId: 'legacy-technical', dir: 'docs/architecture' },
     { rel: 'memory-bank/infrastructureInvariants.md', sectionId: 'legacy-technical', dir: 'docs/architecture' },
@@ -402,6 +427,7 @@ This index tracks the real-time status of all living specifications across **Arc
 | **Architecture** | [\`architecture/LOGICAL_ARCHITECTURE.md\`](architecture/LOGICAL_ARCHITECTURE.md) | 🟡 Progressive Scaffold | Domain entities, Mermaid flows & \`FEAT-*\` tickets |
 | **Architecture** | [\`architecture/TECHNICAL_ARCHITECTURE.md\`](architecture/TECHNICAL_ARCHITECTURE.md) | 🟡 Progressive Scaffold | Stack matrix, API routes, DB schemas & ports |
 | **Architecture** | [\`architecture/SECURITY_AND_COMPLIANCE.md\`](architecture/SECURITY_AND_COMPLIANCE.md) | 🟡 Progressive Scaffold | OAuth providers, masked \`.env\` contracts & GDPR/App Store rules |
+| **Design & UX** | [\`design/DESIGN.md\`](design/DESIGN.md) | 🟡 Progressive Scaffold | Synthesized from BRAND_BOOK.md, UX_BRIEF.md, tokens & harvested design docs |
 | **Design & UX** | [\`design/UX_BRIEF.md\`](design/UX_BRIEF.md) | 🟡 Progressive Scaffold | User journeys, screen/route inventory & UX \`.zip\` bundles |
 | **Design & UX** | [\`design/BRAND_BOOK.md\`](design/BRAND_BOOK.md) | 🟡 Progressive Scaffold | Color tokens, typography, radii & \`ProfileUISlotsPort\` overrides |
 | **Quality & QA** | [\`quality/TEST_PLAN_AND_SUITES.md\`](quality/TEST_PLAN_AND_SUITES.md) | 🟡 Progressive Scaffold | Unit, contract & E2E test suites + Mandate #6 gates |
@@ -533,6 +559,52 @@ _Progressive scaffold: automatically synchronized from \`.env*\` and brick contr
 <!-- ag-section:legacy-security:start -->
 _No legacy security or compliance documents merged yet._
 <!-- ag-section:legacy-security:end -->
+`,
+    'docs/design/DESIGN.md': `<!-- antigravity-doc-sync -->
+# 💎 {{PROJECT_NAME}} — Unified Design System (\`docs/design/DESIGN.md\`)
+
+> **Index**: [\`docs/INDEX.md\`](../INDEX.md) · **Brand Book**: [\`docs/design/BRAND_BOOK.md\`](BRAND_BOOK.md) · **UX Brief**: [\`docs/design/UX_BRIEF.md\`](UX_BRIEF.md) · **Brick UX Guide**: [\`docs/BRICK_ARCHITECTURE_GUIDE.md\`](../BRICK_ARCHITECTURE_GUIDE.md)
+
+## 1. Visual Direction, Platforms & 3-Tier Pluggable UX/UI
+- **Project**: **{{PROJECT_NAME}}** — {{PROJECT_TAGLINE}}
+- **Target Platforms**: {{PLATFORMS}}
+- **Frontend & UI Stack**: {{FRONTEND_TECH}}
+- **3-Tier Pluggable UX/UI Architecture**:
+  - **Tier A (\`headless/\`)**: Pure state, validation, OAuth, and interaction hooks (\`0\` CSS/colors).
+  - **Tier B (\`themed-ui/\`)**: Token-driven default shell consuming \`ProfileBrandThemePort\` (\`--ag-profile-*\`) and \`ProfileUISlotsPort\` (\`slots={{ CardWrapper, HeaderBanner, SocialButton, AvatarBadge, DangerZoneModal }}\`).
+  - **Tier C (\`src/adapters/user-profile-theme.adapter.ts\`)**: Host repository brand adapter mapping \`BRAND_BOOK.md\` and \`UX_BRIEF.md\` into runtime tokens.
+
+---
+
+## 2. Synthesized Brand Tokens & Palette (Harvested from \`BRAND_BOOK.md\` & Codebase)
+
+<!-- ag-section:design-brand-summary:start -->
+_Progressive scaffold: automatically synthesized from \`docs/design/BRAND_BOOK.md\`, \`src/adapters/*theme*.ts\`, \`tailwind.config.*\`, and CSS custom properties._
+<!-- ag-section:design-brand-summary:end -->
+
+---
+
+## 3. Synthesized UX Screens, Flows & Bundles (Harvested from \`UX_BRIEF.md\` & Codebase)
+
+<!-- ag-section:design-ux-summary:start -->
+_Progressive scaffold: automatically synthesized from \`docs/design/UX_BRIEF.md\`, discovered Web/iOS/Android screens, and \`docs/attachments/\` UX/UI bundles._
+<!-- ag-section:design-ux-summary:end -->
+
+---
+
+## 4. Cross-Harvested Design Specifications (\`BRAND_BOOK.md\`, \`UX_BRIEF.md\` & Repo Design Docs)
+
+<!-- ag-section:design-harvested-rollup:start -->
+_Progressive scaffold: automatically aggregates design specifications harvested from \`BRAND_BOOK.md\`, \`UX_BRIEF.md\`, \`memory-bank/productContext.md\`, \`README.md\`, and archived design docs._
+<!-- ag-section:design-harvested-rollup:end -->
+
+---
+
+## 5. Consolidated Direct Design Specifications (\`DESIGN.md\`)
+
+<!-- ag-section:legacy-design:start -->
+_No standalone legacy \`DESIGN.md\` specifications merged yet._
+<!-- ag-section:legacy-design:end -->
 `,
     'docs/design/UX_BRIEF.md': `<!-- antigravity-doc-sync -->
 # 📱 {{PROJECT_NAME}} — User Experience (UX) Brief (\`docs/design/UX_BRIEF.md\`)
@@ -1592,7 +1664,7 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
         const sIdx = currentSection.indexOf(hStart);
         const eIdx = currentSection.indexOf(hEnd) + hEnd.length;
         nextSection = currentSection.slice(0, sIdx) + harvestedBlock + currentSection.slice(eIdx);
-      } else if (currentSection.startsWith('_No legacy ')) {
+      } else if (currentSection.startsWith('_No legacy ') || currentSection.startsWith('_No standalone legacy ')) {
         nextSection = harvestedBlock;
       } else {
         nextSection = `${currentSection}\n\n---\n\n${harvestedBlock}`;
@@ -1600,6 +1672,78 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
       return updateBoundedSection(content, rule.sectionId, nextSection);
     });
   }
+
+  // 4h-ter. Synthesize docs/design/DESIGN.md from BRAND_BOOK.md, UX_BRIEF.md, tokens, screens & all harvested design docs
+  writeDocSectionUpdates('docs/design/DESIGN.md', (content) => {
+    let next = content;
+    const brandPath = path.join(root, 'docs', 'design', 'BRAND_BOOK.md');
+    const uxPath = path.join(root, 'docs', 'design', 'UX_BRIEF.md');
+    const brandRaw = fsSync.existsSync(brandPath) ? fsSync.readFileSync(brandPath, 'utf8') : '';
+    const uxRaw = fsSync.existsSync(uxPath) ? fsSync.readFileSync(uxPath, 'utf8') : '';
+
+    // 1. Brand Tokens & Palette Summary (from BRAND_BOOK.md & codebase tokens)
+    const brandSummaryLines = [
+      '- **Source Brand Specification**: [`docs/design/BRAND_BOOK.md`](BRAND_BOOK.md)',
+      '- **Theme Adapter Contract**: `ProfileBrandThemePort` (`--ag-profile-*`) & `ProfileUISlotsPort` (`src/adapters/user-profile-theme.adapter.ts`)'
+    ];
+    if (facts.brandTokens.length > 0) {
+      brandSummaryLines.push(
+        '',
+        '| Design Token | Default / Value | Source File |',
+        '| :--- | :--- | :--- |'
+      );
+      for (const bt of facts.brandTokens.slice(0, 25)) {
+        brandSummaryLines.push(`| \`${bt.token}\` | \`${bt.value}\` | \`${bt.source}\` |`);
+      }
+    }
+    next = updateBoundedSection(next, 'design-brand-summary', brandSummaryLines.join('\n'));
+
+    // 2. UX Screens, Flows & Bundles Summary (from UX_BRIEF.md & codebase screens)
+    const uxSummaryLines = [
+      '- **Source UX Specification**: [`docs/design/UX_BRIEF.md`](UX_BRIEF.md)'
+    ];
+    if (facts.uxScreens.length > 0) {
+      uxSummaryLines.push(
+        '',
+        '| Screen / Component | Platform | Source Path |',
+        '| :--- | :--- | :--- |'
+      );
+      for (const sc of facts.uxScreens.slice(0, 25)) {
+        uxSummaryLines.push(`| **\`${sc.screen}\`** | ${sc.platform} | \`${sc.source}\` |`);
+      }
+    }
+    if (facts.uxAttachments.length > 0) {
+      uxSummaryLines.push('', '### Attached UX/UI Bundles (`docs/attachments/`)');
+      for (const att of facts.uxAttachments) {
+        uxSummaryLines.push(`- \`${att}\``);
+      }
+    }
+    next = updateBoundedSection(next, 'design-ux-summary', uxSummaryLines.join('\n'));
+
+    // 3. Cross-Harvested Design Specifications Rollup (from BRAND_BOOK.md, UX_BRIEF.md, legacy-design & harvested design docs)
+    const rollupBlocks = [];
+    const legacyBrandSection = extractBoundedSection(brandRaw, 'legacy-brand');
+    if (legacyBrandSection && !legacyBrandSection.startsWith('_No legacy ')) {
+      rollupBlocks.push(`### Harvested from [\`docs/design/BRAND_BOOK.md\`](BRAND_BOOK.md)\n\n${legacyBrandSection}`);
+    }
+    const legacyUxSection = extractBoundedSection(uxRaw, 'legacy-ux');
+    if (legacyUxSection && !legacyUxSection.startsWith('_No legacy ')) {
+      rollupBlocks.push(`### Harvested from [\`docs/design/UX_BRIEF.md\`](UX_BRIEF.md)\n\n${legacyUxSection}`);
+    }
+    const directDesignItems = [
+      ...(facts.harvestedKnowledge?.['legacy-design'] || []),
+      ...(facts.harvestedKnowledge?.['legacy-brand'] || []),
+      ...(facts.harvestedKnowledge?.['legacy-ux'] || [])
+    ];
+    const uniqueDesignItems = Array.from(new Set(directDesignItems));
+    if (uniqueDesignItems.length > 0 && rollupBlocks.length === 0) {
+      rollupBlocks.push(`### Harvested Repository & Memory-Bank Design Context\n\n${uniqueDesignItems.slice(0, 10).join('\n\n')}`);
+    }
+    if (rollupBlocks.length > 0) {
+      next = updateBoundedSection(next, 'design-harvested-rollup', rollupBlocks.join('\n\n---\n\n'));
+    }
+    return next;
+  });
 
   // 4i. Update docs/INDEX.md status badges (`🟢 Populated` vs `🟡 Progressive Scaffold`) & archived legacy docs
   writeDocSectionUpdates('docs/INDEX.md', (content) => {
@@ -1641,7 +1785,7 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
 
   if (!quiet && (createdDocs.length > 0 || updatedDocs.length > 0)) {
     console.log(
-      `  ✓ Synchronized Canonical Living Docs Hierarchy (${CANONICAL_LIVING_DOCS.length}/9 docs active, ${consolidatedLegacy.length} legacy file(s) consolidated)`
+      `  ✓ Synchronized Canonical Living Docs Hierarchy (${CANONICAL_LIVING_DOCS.length}/10 docs active, ${consolidatedLegacy.length} legacy file(s) consolidated)`
     );
   }
 
@@ -1713,7 +1857,7 @@ if (isCliEntrypoint) {
       process.exit(1);
     }
     if (!quiet) {
-      console.log('✅ All 9 Canonical Living Docs exist with 0 broken links in docs/INDEX.md.');
+      console.log('✅ All 10 Canonical Living Docs exist with 0 broken links in docs/INDEX.md.');
     }
     process.exit(0);
   }

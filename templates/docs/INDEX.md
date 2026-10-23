@@ -15,6 +15,7 @@ This index tracks the real-time status of all living specifications across **Arc
 | **Architecture** | [`architecture/LOGICAL_ARCHITECTURE.md`](architecture/LOGICAL_ARCHITECTURE.md) | 🟡 Progressive Scaffold | Domain entities, Mermaid flows & `FEAT-*` tickets |
 | **Architecture** | [`architecture/TECHNICAL_ARCHITECTURE.md`](architecture/TECHNICAL_ARCHITECTURE.md) | 🟡 Progressive Scaffold | Stack matrix, API routes, DB schemas & ports |
 | **Architecture** | [`architecture/SECURITY_AND_COMPLIANCE.md`](architecture/SECURITY_AND_COMPLIANCE.md) | 🟡 Progressive Scaffold | OAuth providers, masked `.env` contracts & GDPR/App Store rules |
+| **Design & UX** | [`design/DESIGN.md`](design/DESIGN.md) | 🟡 Progressive Scaffold | Synthesized from BRAND_BOOK.md, UX_BRIEF.md, tokens & harvested design docs |
 | **Design & UX** | [`design/UX_BRIEF.md`](design/UX_BRIEF.md) | 🟡 Progressive Scaffold | User journeys, screen/route inventory & UX `.zip` bundles |
 | **Design & UX** | [`design/BRAND_BOOK.md`](design/BRAND_BOOK.md) | 🟡 Progressive Scaffold | Color tokens, typography, radii & `ProfileUISlotsPort` overrides |
 | **Quality & QA** | [`quality/TEST_PLAN_AND_SUITES.md`](quality/TEST_PLAN_AND_SUITES.md) | 🟡 Progressive Scaffold | Unit, contract & E2E test suites + Mandate #6 gates |

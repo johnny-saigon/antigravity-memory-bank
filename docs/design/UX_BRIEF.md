@@ -46,13 +46,13 @@
   - **Feedback Loops**: Instant search/filter, one-click `/backlog-start <ID>` prompt copy, and inline modal task creation with WebSocket/FileSystem Access API persistence.
 
 - **From [`README.md`](../../README.md) (## 🏛️ The Three-Tier Memory & Correlated Planning Architecture)**:
-  ```mermaid
-  flowchart TD
-    subgraph T1["Tier 1: Global Developer Standard (~/.gemini/GEMINI.md, <50 Lines)"]
-      G1["Conventional Commits • TypeScript Strict Mode • <=8-Turn Token Frugality"]
-    end
-    subgraph ROOT["Lean Root Entrypoint (AGENTS.md, <50 Lines, 0 Inline Bloat)"]
-      R1["Tech Stack • Build Commands • Core Mandates • Standard Links"]
-    end
+  ### 🛡️ Feature Guide 1: Using Native Rule Discovery & `model_decision` Progressive Disclosure (`FEAT-118`)
+  Traditional `memory-bank/` setups fail in Antigravity because of three native discovery traps—all of which `antigravity-memory-bank` automatically prevents, heals, and lints:
+  | Trap | Why It Happens in Antigravity | How `antigravity-memory-bank` Fixes It Automatically |
+  | :--- | :--- | :--- |
+  | **1. Silent Discard Trap** | Antigravity only scans `AGENTS.md`, `GEMINI.md`, or immediate `.md` children inside `.agents/rules/*.md`. It ignores standalone `memory-bank/*.md` files and nested subdirectories (like `.agents/rules/ios/swift.md`) unless registered in `.agents/rules.json`. | Automatically generates top-level progressive-disclosure rule bridges in `.agents/rules/` (`memory-architecture.md`, `memory-integrations.md`, `memory-sprint-context.md`) and auto-registers any nested `.agents/rules/<subdir>/` in `.agents/rules.json`. |
+  | **2. Broken Frontmatter Trap** | If a file in `.agents/rules/*.md` is missing YAML frontmatter or uses camelCase (`modelDecision` instead of `model_decision`), Antigravity silently discards the file. | Generates, auto-heals, and lints every `.agents/rules/*.md` file with strict snake_case `trigger: model_decision` + `description: "..."` YAML frontmatter. |
+  | **3. Token Bloat Trap** | Dumping project memory into `GEMINI.md` or using `@[...](memory-bank/...)` inline expansions inside root `AGENTS.md` injects 15KB+ of memory on every single turn. | Enforces a strict **`< 50 lines`** cap on root `AGENTS.md` and `~/.gemini/GEMINI.md` (with `0` inline `@`-expansions), loading `memory-bank/*.md` on demand via `trigger: model_decision`. |
+  #### Step-by-Step: How to Use Progressive Disclosure Rules & Verify with `/context`
 <!-- harvested-repo-context:end -->
 <!-- ag-section:legacy-ux:end -->

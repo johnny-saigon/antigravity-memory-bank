@@ -258,12 +258,13 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       assert.match(ruleContent, /^---\n[\s\S]*?trigger:\s*model_decision[\s\S]*?description:\s*".+"[\s\S]*?\n---/, `.agents/rules/${ruleFile} must have valid model_decision frontmatter`);
     }
 
-    // Verify all 9 Canonical Living Documentation Hierarchy files are created on init (`FEAT-121`)
+    // Verify all 10 Canonical Living Documentation Hierarchy files are created on init (`FEAT-121`)
     for (const livingRel of [
       'docs/INDEX.md',
       'docs/architecture/LOGICAL_ARCHITECTURE.md',
       'docs/architecture/TECHNICAL_ARCHITECTURE.md',
       'docs/architecture/SECURITY_AND_COMPLIANCE.md',
+      'docs/design/DESIGN.md',
       'docs/design/UX_BRIEF.md',
       'docs/design/BRAND_BOOK.md',
       'docs/quality/TEST_PLAN_AND_SUITES.md',
@@ -466,6 +467,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(orgOut, /0 loose root docs/);
     assert.equal(fs.existsSync(path.join(tmpRepo, 'UX_BRIEF.md')), false, 'UX_BRIEF.md must be moved out of root');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'DESIGN.md')), false, 'DESIGN.md must be moved out of root');
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'design', 'DESIGN.md')), true, 'docs/design/DESIGN.md must exist');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'design', 'UX_BRIEF.md')), true, 'docs/design/UX_BRIEF.md must exist');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'design', 'BRAND_BOOK.md')), true, 'docs/design/BRAND_BOOK.md must exist');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'UX_BRIEF.md')), true, 'docs/archive/UX_BRIEF.md must preserve original legacy file');
@@ -473,7 +475,9 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'STRIPE_BILLING_API.md')), true, 'Custom nested STRIPE_BILLING_API.md must be archived after classification');
     assert.equal(fs.existsSync(path.join(tmpRepo, 'docs', 'archive', 'OAUTH_SECURITY_FLOW.md')), true, 'Custom nested OAUTH_SECURITY_FLOW.md must be archived after classification');
     assert.match(fs.readFileSync(path.join(tmpRepo, 'docs', 'design', 'UX_BRIEF.md'), 'utf8'), /Glassmorphic dark mode/, 'Zero content loss when consolidating UX_BRIEF.md');
-    assert.match(fs.readFileSync(path.join(tmpRepo, 'docs', 'design', 'BRAND_BOOK.md'), 'utf8'), /Primary token #0EA5E9/, 'Zero content loss when consolidating DESIGN.md');
+    const designMdContent = fs.readFileSync(path.join(tmpRepo, 'docs', 'design', 'DESIGN.md'), 'utf8');
+    assert.match(designMdContent, /Primary token #0EA5E9/, 'Zero content loss when consolidating DESIGN.md into docs/design/DESIGN.md');
+    assert.match(designMdContent, /Glassmorphic dark mode/, 'docs/design/DESIGN.md must also cross-harvest UX_BRIEF.md and BRAND_BOOK.md specifications');
 
     // FEAT-122 assertions: custom nested docs classified into TECHNICAL_ARCHITECTURE.md and SECURITY_AND_COMPLIANCE.md
     const techArchContent = fs.readFileSync(path.join(tmpRepo, 'docs', 'architecture', 'TECHNICAL_ARCHITECTURE.md'), 'utf8');
@@ -493,7 +497,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
 
     const updatedReadme = fs.readFileSync(path.join(tmpRepo, 'README.md'), 'utf8');
     assert.match(updatedReadme, /\[UX Brief\]\(docs\/design\/UX_BRIEF\.md\)/);
-    assert.match(updatedReadme, /\[Design Spec\]\(docs\/design\/BRAND_BOOK\.md\)/);
+    assert.match(updatedReadme, /\[Design Spec\]\(docs\/design\/DESIGN\.md\)/);
     assert.match(updatedReadme, /\[Stripe Spec\]\(docs\/architecture\/TECHNICAL_ARCHITECTURE\.md\)/);
 
     const gitignore = fs.readFileSync(path.join(tmpRepo, '.gitignore'), 'utf8');

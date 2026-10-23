@@ -73,13 +73,13 @@ flowchart LR
 
 - **From [`README.md`](../../README.md) (## 🔄 The Continuous Session Lifecycle)**:
   Unlike legacy memory systems that require stopping and manually restarting, this brick uses a **2-Phase Continuous Loop**:
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    actor Dev as Developer
-    participant Agent as Antigravity Agent
-    participant VCS as Git & Remote
-    participant Health as Service Health Probe
+  ### The Two-Phase Lifecycle Breakdown
+  Whenever `/update-memory` is triggered (or when a major milestone completes):
+  #### Phase 1: Milestone Closure & Git Synchronization
+  1. **Git Diff & Status Review**: Inspects working tree changes (`git status -s` and `git diff --stat`) to verify what was modified.
+  2. **Context & Progress Updates**: Marks finished acceptance criteria in `memory-bank/progress.md` (`[x]`) and records architectural decisions, schema migrations, and resolved bugs in `memory-bank/activeContext.md`.
+  3. **Token Line Budget Audit**: Automatically verifies that every file in `memory-bank/*.md` remains strictly **`< 150 lines`** (via `scripts/lint-memory.mjs`). If a domain expands, it splits into a linked sub-file (`@[Topic](path.md)`).
+  4. **Infrastructure Invariant Verification**: Checks that no Tier 2 cluster invariants (`.agents/rules/infra.md`), port allocations, or database boundaries were violated.
 
 - **From [`README.md`](../../README.md) (## ⚡ Automated Self-Updating Architecture)**:
   Once installed, the system keeps itself continuously up-to-date across **two distinct dimensions**:
@@ -87,19 +87,19 @@ flowchart LR
   - **Git `post-commit` Hook**: Installed into `.git/hooks/post-commit`. Every `git commit` that introduces new features (`feat:`) or bug fixes (`fix:`) automatically triggers `scripts/sync-memory-context.mjs` in the background. It updates `progress.md` accomplishments and `activeContext.md` sprint state with zero manual typing.
   - **Agent Continuous Cycle (`/update-memory`)**: When pair-programming with Antigravity, the agent executes the 2-phase lifecycle upon task completion—synchronizing diffs, verifying line budgets (< 150 lines), committing to Git, and auto-bootstrapping the next cycle.
   - **CI Context Verification (GitHub Actions)**: `.github/workflows/memory-bank-sync.yml` runs on every PR and push to `main`, validating line budgets (`npm run lint:memory`) and ensuring master branch context is in lockstep with releases.
-  ```bash
-  # Manually trigger an incremental context sync anytime:
-  npm run memory:sync
+  ### 2. Tooling & System Auto-Updating (Upstream Brick Upgrades)
+  - **Non-Destructive In-Place Upgrade**: Upstream enhancements, new skills, and prompt optimizations in `antigravity-memory-bank` can be pulled non-destructively:
+    This updates `.agents/skills/`, `scripts/lint-memory.mjs`, and `.git/hooks/post-commit` while keeping all project-specific domain documents in `memory-bank/*.md` 100% intact.
 
 - **From [`README.md`](../../README.md) (## 📐 5. Structured Planning Mode (`Explore → Plan → Execute`) & 3-Artifact Lifecycle)**:
   In Antigravity, **Planning Mode** transforms the agent from an immediate code generator into an autonomous software architect that explores your codebase, maps out dependencies, and aligns with you on an architectural blueprint *before* touching a single production file.
   Every project initialized (`init`) or updated (`upgrade`) with `antigravity-memory-bank` automatically installs all **Planning Mode** prerequisites (`/backlog-plan` skill, `docs/PLANNING_GUIDE.md`, `npm run backlog:plan`, and the `📐 Plan` Kanban actions) and correlates the **3-Artifact Lifecycle** 1-to-1 with your **Local Backlog (`docs/backlog.json`)** and **Three-Tier Memory Bank (`memory-bank/*.md`)**.
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    actor Dev as Developer
-    participant Board as Backlog & CLI (docs/backlog.json)
-    participant Agent as Antigravity Architect (/backlog-plan)
+  ---
+  ### 5.1 How the Planning Mode Workflow Operates
+  When you trigger Planning Mode (by selecting **Planning** in the mode picker, pressing **`Cmd/Ctrl + .`** or **`Shift + Tab`**, typing **`/plan`**, or invoking **`/backlog-plan <TICKET_ID>`**), Antigravity moves through a structured **3-Artifact Lifecycle** stored inside its session brain (`~/.gemini/antigravity/brain/<session-id>/`) and mirrored in `docs/planning/`:
+  1. **Context Discovery & `task.md` Creation (`docs/planning/task.md` & `<brainDir>/task.md`):**
+     The agent searches your repository, reads your project rules (`GEMINI.md` and `AGENTS.md`), ingests `memory-bank/*.md` and `docs/backlog.json`, and updates **`task.md`**—a live checklist broken into 4 correlated task groups:
+     - **1. Context Discovery & Architectural Baseline**
 
 - **From [`README.md`](../../README.md) (## 🔒 7. Dogfooding & Upstream Package Isolation Architecture)**:
   `antigravity-memory-bank` dogfoods its own **Three-Tier Memory Bank** (`memory-bank/*.md`, `AGENTS.md`, `.agents/`) and **Decoupled Zero-Token Backlog Engine** (`docs/backlog.json`, `docs/BACKLOG.md`) directly inside this repository while guaranteeing **zero interference** with clean installations in downstream projects:

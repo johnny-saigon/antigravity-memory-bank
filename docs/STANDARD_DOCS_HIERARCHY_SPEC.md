@@ -25,6 +25,7 @@ Create structured templates with progressive-fill markers (`<!-- ag-section:... 
 - `docs/architecture/LOGICAL_ARCHITECTURE.md`: System context, domain entities, Mermaid sequence diagrams, and inter-brick event flows.
 - `docs/architecture/TECHNICAL_ARCHITECTURE.md`: Stack matrix, directory archetype, API endpoint inventory, database schema summary, and port/health allocations.
 - `docs/architecture/SECURITY_AND_COMPLIANCE.md`: Auth/OAuth providers, `.env` key contracts (masked), GDPR/App Store account deletion flows, and Tier 2 infrastructure boundaries.
+- `docs/design/DESIGN.md`: Unified Design System & Stitch-ready specification synthesized from `BRAND_BOOK.md`, `UX_BRIEF.md`, discovered codebase tokens/screens, and any other harvested design documents.
 - `docs/design/UX_BRIEF.md`: Core user journeys, screen/route inventory, platform target matrix (`Web`, `iOS`, `Android`), and interaction states.
 - `docs/design/BRAND_BOOK.md`: Color palette tokens (Primary, Surface, Background, Text, Semantic), typography scales, border radii, dark/light mode rules, and UI slot overrides.
 - `docs/quality/TEST_PLAN_AND_SUITES.md`: Unit, contract, and live E2E test suites, exact terminal verification commands, and Mandate #6 live E2E gates.

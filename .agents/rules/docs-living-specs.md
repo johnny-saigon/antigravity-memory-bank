@@ -11,6 +11,7 @@ To keep `memory-bank/*.md` strictly `< 150 lines` per file (`Passive Observer In
    - [`docs/architecture/TECHNICAL_ARCHITECTURE.md`](../../docs/architecture/TECHNICAL_ARCHITECTURE.md): Tech stack, repository archetype, API route/controller inventory, and database schemas.
    - [`docs/architecture/SECURITY_AND_COMPLIANCE.md`](../../docs/architecture/SECURITY_AND_COMPLIANCE.md): OAuth 2.0/OIDC providers, masked `.env` contracts, GDPR/App Store `5.1.1(v)` deletion flows, and Tier 2 boundaries.
 2. **Design & Branding (`docs/design/`)**:
+   - [`docs/design/DESIGN.md`](../../docs/design/DESIGN.md): Unified Design System & Stitch-ready specification synthesized from `BRAND_BOOK.md`, `UX_BRIEF.md`, codebase tokens/screens, and all harvested design docs.
    - [`docs/design/UX_BRIEF.md`](../../docs/design/UX_BRIEF.md): User journeys, screen/route inventory across Web/iOS/Android, and unpacked UX/UI `.zip` bundles.
    - [`docs/design/BRAND_BOOK.md`](../../docs/design/BRAND_BOOK.md): Color tokens (`--ag-profile-*`), typography, radii, dark/light mode rules, and `ProfileUISlotsPort` component slot overrides.
 3. **Quality & Operations (`docs/quality/` & `docs/operations/`)**:

@@ -67,22 +67,22 @@
 - **From [`README.md`](../../README.md) (## ⚡ 3. How to Use the Installer)**:
   ### A. On-the-Fly Installation in Existing Projects (Active Antigravity Window)
   If you are already working inside an active Antigravity session on an existing project (e.g. **`BinaryDay`**, **`RemoveBackGround`**, or any local repository connected to GitHub), you can activate the Memory Bank instantly with **zero IDE restart**:
-  ```bash
-  # Automated on-the-fly execution (auto-detects project stack, git remotes, and ports):
-  npx github:johnny-saigon/antigravity-memory-bank init -y --commit
-  # Or via universal one-line shell installer:
-  curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-bank/main/install.sh | bash -s -- -y --commit
-  ```
+  #### Why It Works on the Fly:
+  Antigravity dynamically ingests workspace rules (`AGENTS.md`, `.agents/rules/`) and workspace skills (`.agents/skills/start`, `.agents/skills/update-memory`) as soon as they appear in the project root.
+  - **Immediate in-chat activation**: Run the command in your terminal or prompt the agent to execute it, and you can invoke `/start` immediately in the same conversation!
+  - **Non-destructive**: Preserves any existing custom `AGENTS.md` guidelines while injecting the Memory Bank links and rules.
+  - **Git synchronization**: When `--commit` is passed, automatically stages and commits the memory baseline to Git, ready to `git push origin main` to GitHub.
+  ---
 
 - **From [`README.md`](../../README.md) (## 📦 4. Context Export & Clean Deinstallation)**:
   ### A. Exporting Project Memory & Context
   You can export the entire project memory bank at any time into a human-readable consolidated snapshot and a compressed raw backup archive:
-  ```bash
-  # Standalone export command:
-  npx github:johnny-saigon/antigravity-memory-bank export
-  # Or via universal one-liner:
-  curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-bank/main/install.sh | bash -s -- export
-  ```
+  Outputs generated in `./memory-backups/`:
+  1. **Consolidated Markdown** (`memory-bank-export-YYYYMMDD-HHmmss.md`): Single consolidated document containing a table of contents, timestamps, and full text of all memory-bank files, rules, and skills. Ideal for sharing with external models, code review, or pasting into team wikis.
+  2. **Compressed Archive** (`memory-bank-backup-YYYYMMDD-HHmmss.tar.gz`): Bit-for-bit compressed tarball of `memory-bank/`, `AGENTS.md`, and `.agents/` for instant restoration anytime.
+  ---
+  ### B. Clean Deinstallation (Zero Context Loss)
+  To completely remove the Memory Bank from a project while **guaranteeing that all project memory is preserved**:
 
 - **From [`README.md`](../../README.md) (## 📄 License)**:
   MIT © [johnny-saigon](https://github.com/johnny-saigon)

@@ -466,6 +466,7 @@ if (fsSync.existsSync(docsIndexFull)) {
     'docs/architecture/LOGICAL_ARCHITECTURE.md',
     'docs/architecture/TECHNICAL_ARCHITECTURE.md',
     'docs/architecture/SECURITY_AND_COMPLIANCE.md',
+    'docs/design/DESIGN.md',
     'docs/design/UX_BRIEF.md',
     'docs/design/BRAND_BOOK.md',
     'docs/quality/TEST_PLAN_AND_SUITES.md',
@@ -495,7 +496,7 @@ if (fsSync.existsSync(docsIndexFull)) {
     }
   }
   if (missingLiving === 0 && brokenLinks === 0) {
-    console.log('✅ Canonical Living Docs Hierarchy verified: 9/9 docs present, 0 broken links in docs/INDEX.md');
+    console.log('✅ Canonical Living Docs Hierarchy verified: 10/10 docs present, 0 broken links in docs/INDEX.md');
   }
 }
 

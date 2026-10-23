@@ -208,7 +208,7 @@ Full documentation is automatically installed in [`docs/BRICK_ARCHITECTURE_GUIDE
 
 To keep `memory-bank/*.md` strictly under **150 lines** (`Passive Observer Invariant`) while ensuring zero architectural, UX, security, or QA detail is ever lost, `antigravity-memory-bank` includes a unified **Canonical Living Documentation Hierarchy & Deep Universal Harvester** ([`scripts/sync-living-docs.mjs`](scripts/sync-living-docs.mjs)) bridged on demand via [`.agents/rules/docs-living-specs.md`](templates/rules/docs-living-specs.md.tpl) (`trigger: model_decision`).
 
-#### 1. The 9 Canonical Living Documents (`docs/INDEX.md` + 4 Pillars)
+#### 1. The 10 Canonical Living Documents (`docs/INDEX.md` + 4 Pillars)
 
 | Pillar | Canonical Living Document | What the Harvester Populates & Consolidates (`0 AI Tokens`) |
 | :--- | :--- | :--- |
@@ -216,6 +216,7 @@ To keep `memory-bank/*.md` strictly under **150 lines** (`Passive Observer Invar
 | **1. Architecture** | [`docs/architecture/LOGICAL_ARCHITECTURE.md`](docs/architecture/LOGICAL_ARCHITECTURE.md) | System context, Mermaid flows, installed Hexagonal Bricks (`bricks/*/brick.json`), progressive `FEAT-*` capability map, and harvested domain sections from `README.md` & `memory-bank/projectbrief.md`. |
 | **1. Architecture** | [`docs/architecture/TECHNICAL_ARCHITECTURE.md`](docs/architecture/TECHNICAL_ARCHITECTURE.md) | Stack matrix, HTTP routes (`app/**/route.ts`, `pages/api/**`, Fastify/Express), CLI binaries, mobile URL schemes (`app.json`, `Info.plist`, `AndroidManifest.xml`), Prisma models (`model <Name>`), SQL tables (`CREATE TABLE`), and harvested `systemPatterns.md` / `infrastructureInvariants.md`. |
 | **1. Architecture** | [`docs/architecture/SECURITY_AND_COMPLIANCE.md`](docs/architecture/SECURITY_AND_COMPLIANCE.md) | OAuth 2.0 / PKCE / Apple `5.1.1(v)` / Meta GDPR rules, masked `.env*` variable contracts (secrets redacted), and harvested `SECURITY.md` & `integrationsAndCustomizations.md`. |
+| **2. Design & UX** | [`docs/design/DESIGN.md`](docs/design/DESIGN.md) | Unified Design System & Stitch-ready specification automatically synthesized from `BRAND_BOOK.md`, `UX_BRIEF.md`, discovered codebase tokens/screens, and all harvested design documents. |
 | **2. Design & UX** | [`docs/design/UX_BRIEF.md`](docs/design/UX_BRIEF.md) | Target platforms, discovered Web/iOS/Android screens & components (`.tsx`, `.swift`, `.kt`), attached UX `.zip` bundles (`docs/attachments/`), and harvested `productContext.md`. |
 | **2. Design & UX** | [`docs/design/BRAND_BOOK.md`](docs/design/BRAND_BOOK.md) | `ProfileBrandThemePort` (`--ag-profile-*`) & `ProfileUISlotsPort` contracts, plus discovered CSS variables and `#hex` tokens from `*theme*`, `tailwind.config.*`, and `.css` files. |
 | **3. Quality & QA** | [`docs/quality/TEST_PLAN_AND_SUITES.md`](docs/quality/TEST_PLAN_AND_SUITES.md) | Mandatory Dual-Test & Live E2E gates (Mandate #6) and auto-discovered unit, contract, and E2E test suites (`**/*.test.*`, `**/*.spec.*`). |

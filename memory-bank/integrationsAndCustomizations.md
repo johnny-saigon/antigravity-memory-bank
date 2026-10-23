@@ -21,7 +21,7 @@
 | **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 13 | ✅ AUTHENTICATED (Key `Y9V6TK5R8A` · Issuer `c06bde3f...` · `credentials/AuthKey.p8` verified) |
 | **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | ✅ AUTHENTICATED (`~/.meta_credentials.json` · App `2199060924286885` (BinaryDay) ready) |
 | **`meta_business`** | `~/.gemini/antigravity/bin/meta_business_mcp.cjs` | 18 | ✅ AUTHENTICATED (`~/.meta_token` & `~/.meta_credentials.json` · Biz `1277193594593819` (Design Engineering) ready) |
-| **`azure-mcp`** | `npx @azure/mcp@latest` | 70 | ✅ AUTHENTICATED (`~/.azure` CLI session · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
+| **`azure-mcp`** | `npx @azure/mcp@latest` | 71 | ✅ AUTHENTICATED (`~/.azure` CLI session · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
 | **`entra`** | `~/.gemini/antigravity/bin/entra_mcp.cjs` | 4 | ✅ AUTHENTICATED (`az` Graph session `~/.azure` · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
 | **`linkedin`** | `~/.local/bin/linkedin-mcp` | 29 | ✅ AUTHENTICATED (`~/.linkedin_mcp` · `jean-baptiste-bouquet` · browser session ready) |
 | **`midjourney`** | `~/.gemini/antigravity/bin/midjourney_mcp.sh` | 25 | ✅ AUTHENTICATED (`~/Library/Application Support/mj` · Camoufox profile & `user_id` ready) |

@@ -30,11 +30,11 @@
 - **From [`README.md`](../../README.md) (## 🗂️ 6. AI-Native Repository Blueprint & Automatic Root Reorganization (`organize`))**:
   Modern software development with autonomous AI coding agents works best when the repository root is kept strictly limited to entrypoints (`AGENTS.md`, `README.md`, `package.json`, `.gitignore`, and compiler/framework configs), while passive memory, operational backlogs, planning artifacts, and living specifications each live in dedicated, predictable directories.
   Every time you run `init`, `upgrade`, or `organize`, `antigravity-memory-bank` automatically enforces this **Best-Practices AI-Native Repository Structure**—both as a fresh scaffold on a new project and as a non-destructive adapter on an existing codebase:
-  ```text
-  <project-root>/
-  ├── AGENTS.md                        # Tier 3 AI Agent Entrypoint & Operational Mandates (<24KB expanded)
-  ├── README.md                        # Human & GitHub Repository Landing Page
-  ├── package.json                     # Lifecycle, Backlog, Planning & Memory CLI scripts
-  ├── .gitignore                       # Hardened AI-native ignore rules (ignores docs/backlog.html, memory-backups/, .env*, .DS_Store)
+  ### How It Works on Fresh Installs vs. Existing Projects
+  1. **Adaptive Archetype Detection (`detectRepoArchetype`)**:
+     Automatically classifies the project into one of 5 archetypes:
+     - **`monorepo`** (`apps/*`, `packages/*`, or `workspaces` in `package.json`, e.g., `SnapCal`)
+     - **`fullstack-hybrid`** (`src/` + `server/`, e.g., `RemoveBackGround`, `Binaryday`)
+     - **`cli-library`** (`bin/` + `lib/`, e.g., `antigravity-memory-bank`)
 <!-- harvested-repo-context:end -->
 <!-- ag-section:legacy-tests:end -->
