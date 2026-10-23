@@ -917,19 +917,19 @@
       "actionItems": [
         {
           "id": "FEAT-121-ACT-1",
-          "text": "Scaffold 9 canonical living documentation templates (docs/INDEX.md + 4 Pillars) and .agents/rules/docs-living-specs.md progressive disclosure rule.",
+          "text": "Scaffold 10 canonical living documentation templates (docs/INDEX.md + 4 Pillars including docs/design/DESIGN.md) and .agents/rules/docs-living-specs.md progressive disclosure rule.",
           "owner": "antigravity",
           "done": true
         },
         {
           "id": "FEAT-121-ACT-2",
-          "text": "Build unified 8-pillar Markdown classifier (docs/**/*.md), non-destructive in-place harvester (README.md, SECURITY.md, CHANGELOG.md, memory-bank/*.md), and deep codebase AST/regex harvesters.",
+          "text": "Build unified Markdown classifier (docs/**/*.md), cross-pillar DESIGN.md harvester (from BRAND_BOOK.md, UX_BRIEF.md & design docs), non-destructive in-place harvester, and deep codebase AST/regex harvesters.",
           "owner": "antigravity",
           "done": true
         },
         {
           "id": "FEAT-121-ACT-3",
-          "text": "Document activation for new/existing projects in README.md and upgrade SnapCal, BinaryDay, RemoveBackGround, and AntigravityRemote.",
+          "text": "Document activation for new/existing projects in README.md and upgrade SnapCal, BinaryDay, RemoveBackGround, and wiro.",
           "owner": "antigravity",
           "done": true
         }

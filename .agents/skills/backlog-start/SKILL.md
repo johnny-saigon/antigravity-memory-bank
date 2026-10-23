@@ -56,7 +56,7 @@ Execute the following 3 phases autonomously:
 > **Core Principle — Frugal on Context, Uncompromising on Quality**:
 > Token frugality means eliminating redundant context re-ingestion, multi-turn task repetition, and bloated memory files (`< 150 lines`). It **NEVER** means cutting corners on engineering quality, visual UX/UI fidelity, root-cause analysis, edge-case coverage, type safety, or verification rigor.
 > - **Memory-First Lookup**: Always check `memory-bank/activeContext.md` and `docs/backlog.json` before running any diagnostic commands. Never re-investigate what is already recorded in `activeContext.md` or `backlog.json`.
-> - **Never Read `transcript.jsonl` or Sibling Repos**: Strictly forbid reading `.system_generated/logs/transcript*.jsonl` or grepping sibling repos (`BinaryDay`, `SnapCal`, `RemoveBackGround`, `AntigravityRemote`) unless explicitly requested for transcript recovery.
+> - **Never Read `transcript.jsonl` or Sibling Repos**: Strictly forbid reading `.system_generated/logs/transcript*.jsonl` or grepping sibling repos (`BinaryDay`, `SnapCal`, `RemoveBackGround`, `wiro`) unless explicitly requested for transcript recovery.
 > - **Hard Turn Budget (`≤ 8 Tool Turns per Fix`)**: Batch all file reads into 1 turn, all edits into 1–2 turns, and all verification/deployment commands into 1–2 chained shell calls.
 
 1. **Targeted Entry, UX/UI Fidelity & Thorough Dependency Inspection**:

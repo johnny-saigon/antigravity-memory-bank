@@ -41,8 +41,8 @@
 ### Harvested Repository & Memory-Bank Context
 
 - **From [`memory-bank/progress.md`](../../memory-bank/progress.md) (Memory Bank Baseline)**:
-  - **Test, Parity & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs bricks/user-profile/testing/contract.spec.ts`) — 25/25 memory & rule files (`< 150 lines`, `< 50 lines` `AGENTS.md`), 14/14 template parity pairs, 9/9 canonical living docs, and 15/15 E2E & contract tests passing (`0` violations).
-  - **Cross-Cluster Upgrade Rollout**: Verified `10/10` Mandatory Baseline Ingestion Checklist and `9/9` Canonical Living Docs (`0` broken links) across `antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `AntigravityRemote`.
+  - **Test, Parity & Line Budget Audit**: `npm test` (`node scripts/lint-memory.mjs && node --test tests/cli-e2e.test.mjs bricks/user-profile/testing/contract.spec.ts`) — 25/25 memory & rule files (`< 150 lines`, `< 50 lines` `AGENTS.md`), 14/14 template parity pairs, 10/10 canonical living docs, and 15/15 E2E & contract tests passing (`0` violations).
+  - **Cross-Cluster Upgrade Rollout**: Verified `10/10` Mandatory Baseline Ingestion Checklist and `10/10` Canonical Living Docs (`0` broken links) across `antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `wiro`.
   - **Package Whitelist Audit**: `npm pack --dry-run` — excludes `memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`, and `.github/`.
   - **Living Documentation Hub**: Indexed in [`docs/INDEX.md`](../docs/INDEX.md) across `docs/{architecture,design,quality,operations}/`.
   - **Active Development Board**: Operational tickets and feature backlogs are managed in [`docs/backlog.json`](../docs/backlog.json) and [`docs/BACKLOG.md`](../docs/BACKLOG.md) (`22/22` `DONE`, `0` pending).

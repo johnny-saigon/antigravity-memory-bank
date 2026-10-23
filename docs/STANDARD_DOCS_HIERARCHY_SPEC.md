@@ -2,7 +2,7 @@
 
 ## 1. Goal Description
 Upgrade `antigravity-memory-bank` so that every initialized (`init`), upgraded (`upgrade`), or organized (`organize`) repository automatically builds and maintains a **Standardized Living Documentation Hierarchy** inside `docs/`.
-- **For Existing Projects (`SnapCal`, `BinaryDay`, `RemoveBackGround`, `AntigravityRemote`):** Automatically ingest, classify, and migrate existing scattered markdown specs (`DESIGN.md`, `UX_BRIEF.md`, `ARCHITECTURE.md`, `BUG_FIX_RECORDS.md`, etc.), database schemas, theme tokens, and test suites into the canonical hierarchy without losing a single line of context, rewriting all relative markdown links automatically.
+- **For Existing Projects (`SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`):** Automatically ingest, classify, and migrate existing scattered markdown specs (`DESIGN.md`, `UX_BRIEF.md`, `ARCHITECTURE.md`, `BUG_FIX_RECORDS.md`, etc.), database schemas, theme tokens, and test suites into the canonical hierarchy without losing a single line of context, rewriting all relative markdown links automatically.
 - **For Greenfield Projects:** Scaffold structured, progressive living documents that automatically populate as features are planned (`/backlog-plan`) and executed (`/backlog-start`, `/update-memory`).
 
 ## 2. User Review Required & Mandates
