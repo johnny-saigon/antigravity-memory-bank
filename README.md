@@ -332,6 +332,35 @@ curl -fsSL https://raw.githubusercontent.com/johnny-saigon/antigravity-memory-ba
 
 ---
 
+### E. Standardized Living Documentation Hierarchy & Memory Bank Rollout Prompt (AGY Prompt)
+
+To have Antigravity automatically roll out or upgrade the **Standardized Living Documentation Hierarchy & Memory Bank** (`FEAT-121`) in any existing or greenfield repository, paste the following prompt directly into the Antigravity chat window:
+
+```markdown
+/effort medium
+
+Execute the Standardized Living Documentation Hierarchy & Memory Bank rollout for this repository in ≤ 6 batched tool turns:
+
+1. **Auto-Detect & Run Upstream CLI Engine (Turn 1)**:
+   - Check if `memory-bank/` or `.agents/` already exists in this workspace:
+     - If YES (Existing Installation): Run `npx github:johnny-saigon/antigravity-memory-bank upgrade -y` (and `npm run docs:sync` / `npm run memory:organize` if available).
+     - If NO (Fresh / Greenfield Repo): Run `npx github:johnny-saigon/antigravity-memory-bank init -y`.
+
+2. **Verify & Synthesize Canonical `docs/` Hierarchy (Turns 2–3)**:
+   - Inspect `docs/INDEX.md` and the canonical subdirectories (`docs/architecture/`, `docs/design/`, `docs/quality/`, `docs/operations/`, `docs/planning/`).
+   - **If this is an Existing Codebase**: Ensure all legacy root or scattered `docs/*.md` specs (`DESIGN.md`, `UX_BRIEF.md`, `ARCHITECTURE.md`, `BRAND_BOOK.md`, `MIGRATION_BOARD.md`, `BUG_FIX_RECORDS.md`, etc.) have been cleanly consolidated into the canonical files (`LOGICAL_ARCHITECTURE.md`, `TECHNICAL_ARCHITECTURE.md`, `SECURITY_AND_COMPLIANCE.md`, `UX_BRIEF.md`, `BRAND_BOOK.md`, `TEST_PLAN_AND_SUITES.md`, `BUG_FIX_RECORDS.md`, `MIGRATION_AND_RELEASE_LOG.md`) with 0 data loss, and enrich any empty sections using our actual database schema, routes, theme tokens, and test suites.
+   - **If this is a New Greenfield Project**: Ensure all 10 canonical living documents are scaffolded in `docs/` with progressive lifecycle markers, correlated with `docs/backlog.json` and `docs/planning/{task.md, implementation_plan.md, walkthrough.md}`.
+
+3. **Enforce Progressive Disclosure & Line Budgets (Turn 4)**:
+   - Verify `.agents/rules/docs-living-specs.md` (and all `.agents/rules/*.md` files) exist at top-level with valid snake_case `trigger: model_decision` YAML frontmatter.
+   - Run `npm run lint:memory` and `npm run memory:sync` to guarantee `AGENTS.md` is `< 50 lines` (0 inline `@`-expansions), all `memory-bank/*.md` files are `< 150 lines`, and all relative markdown links across `README.md`, `AGENTS.md`, `memory-bank/`, and `docs/` resolve cleanly.
+
+4. **Commit, Push & Bootstrap Cycle (Turn 5)**:
+   - Stage, commit (`chore(docs): standardize canonical living documentation hierarchy and sync memory-bank`), and push to the active branch, then output the `/start` session status banner with a summary table of `docs/INDEX.md`.
+```
+
+---
+
 ## 📦 4. Context Export & Clean Deinstallation
 
 ### A. Exporting Project Memory & Context
