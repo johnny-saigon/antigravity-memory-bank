@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(docs): implement FEAT-121 canonical living documentation hierarchy and auto-synthesizer** (`47fc528`)
 <<<<<<< Updated upstream
 - [x] **test(user-profile): upstream BUG-737 dark-mode & BUG-738 mobile Yoga refresh UI regression tests** (`6743d31`)
 =======
