@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci]** (`86d8f52`)
 - [x] **feat(backlog): enforce mandatory /plan ticket creation and atomic splitting (FEAT-122) [skip ci]** (`a546499`)
 - [x] **feat(docs): add canonical docs/design/DESIGN.md and cross-pillar design harvester to FEAT-121 [skip ci]** (`c12d723`)
 - [x] **feat(docs): unify `FEAT-121` canonical living docs hierarchy and deep harvester + roll out across all 5 repositories** (`eea0dde`)

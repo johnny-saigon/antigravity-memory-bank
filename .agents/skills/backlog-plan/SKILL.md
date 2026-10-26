@@ -77,3 +77,9 @@ Draft or refine `<brainDir>/implementation_plan.md` (with `RequestFeedback: true
      - Execute the approved plan following [`.agents/skills/backlog-start/SKILL.md`](../backlog-start/SKILL.md).
      - Check off items in `task.md` (`[x]`) in real time as files are modified and verified.
      - Conclude by updating `<brainDir>/walkthrough.md` and `docs/planning/walkthrough.md` with a summary of all changes made and proof of verification, and mark the ticket `done` via `npm run backlog done <TICKET_ID>` (subject to Live End-to-End Verification Rule #4).
+
+> [!CRITICAL]
+> **Antigravity UI "Proceed" Button Invariant (`modifiedFileUris.length === 0`)**:
+> Antigravity's UI only renders the blue **Proceed** button on `implementation_plan.md` when **zero non-artifact workspace files** are modified via `write_file` or `edit_file` during the planning turn (`c.length === 0`).
+> - In a `/plan` or `/backlog-plan` turn, ONLY call `write_file` / `edit_file` on files inside `<brainDir>/` (`implementation_plan.md` with `RequestFeedback: true, UserFacing: true` and `task.md`).
+> - **NEVER** call `write_file` or `edit_file` on `docs/planning/*`, `docs/backlog.json`, or any workspace file in the same turn as `<brainDir>/implementation_plan.md`. (The `PostToolUse` hook in `scripts/sync-memory-context.mjs` automatically mirrors `<brainDir>/implementation_plan.md` into `docs/planning/` in the background without adding to `modifiedFileUris`).

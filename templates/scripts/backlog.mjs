@@ -564,7 +564,7 @@ function renderMigrationBoard(data, rootDir = REPO_ROOT) {
     ''
   ];
 
-  const activeTasks = data.tasks.filter(t => t.type === 'feature' || t.type === 'bug' || t.type === 'refactor' || !t.type);
+  const activeTasks = data.tasks.filter(t => t.type === 'feature' || t.type === 'feat' || t.type === 'ux' || t.type === 'bug' || t.type === 'refactor' || !t.type);
   for (const task of activeTasks) {
     const statusLabel = task.status === 'done' ? 'Completed (`DONE`)'
       : task.status === 'in_progress' ? 'In Progress (`IN_PROGRESS`)'
@@ -688,7 +688,8 @@ function renderCardServer(task) {
     ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
     : 'bg-slate-500/10 text-slate-400 border-slate-500/20';
 
-  const typeBadge = task.type === 'feature' ? 'FEAT'
+  const typeBadge = (task.type === 'feature' || task.type === 'feat') ? 'FEAT'
+    : task.type === 'ux' ? 'UX'
     : task.type === 'bug' ? 'BUG'
     : task.type === 'qa' ? 'QA'
     : 'TASK';
@@ -880,6 +881,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Type</label>
         <select id="newType" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
           <option value="feature">Feature</option>
+          <option value="ux">UX Improvement</option>
           <option value="bug">Bug Fix</option>
           <option value="qa">QA / Validation</option>
           <option value="refactor">Refactor</option>
@@ -1852,7 +1854,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
         : 'bg-slate-500/10 text-slate-400 border-slate-500/20';
 
-      const typeBadge = task.type === 'feature' ? 'FEAT'
+      const typeBadge = (task.type === 'feature' || task.type === 'feat') ? 'FEAT'
+        : task.type === 'ux' ? 'UX'
         : task.type === 'bug' ? 'BUG'
         : task.type === 'qa' ? 'QA'
         : 'TASK';
@@ -2685,7 +2688,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
 
     // Ensure implementation_plan.md retains the newest updatedAt timestamp when requestFeedback is true
     // so the Antigravity UI "Proceed" button is never overshadowed by background board renders.
-    if (fs.existsSync(planMetaPath)) {
+    if (fs.existsSync(planMetaPath) && (htmlChanged || mdChanged || forceOverwriteBrainPlan)) {
       try {
         const planMeta = JSON.parse(fs.readFileSync(planMetaPath, 'utf8'));
         if (planMeta && planMeta.requestFeedback) {

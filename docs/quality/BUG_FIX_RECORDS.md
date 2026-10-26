@@ -15,6 +15,7 @@
 | **`BUG-105`** | Prevent MILESTONE-* Items from Being Re-Imported as Duplicate Feature Tasks — Discovered while dogfooding upgrade inside antigravity-memory-bank: checklistItemRegex in lib/backlog-adapter.mjs matched - [x] **MILESTONE- | DONE | `lib/backlog-adapter.mjs` |
 | **`BUG-106`** | Fix Stale _npx Cache, Workspace-Dominance Brain Matching & Sandboxed Kickoff Prompt Clipboard/Bridge — Resolved 3 root causes preventing 100% reliable backlog.html generation on upgrade/init and blocking Kickoff Prompt clipboard copy in sandbo | DONE | `scripts/backlog.mjs, templates/scripts/backlog.mjs, bin/cli.mjs` |
 | **`BUG-107`** | Pull API Keys, Env Contracts, MCP Server Configs & Customizations into Memory Bank on Init/Upgrade/Sync — API keys (.env*, eas.json, credentials/*.p8, host token files), MCP server configs (~/.gemini/config/mcp_config.json, .mcp.json), and Antigr | DONE | `lib/customizations-scraper.mjs, bin/cli.mjs, scripts/sync-memory-context.mjs, templates/memory-bank/integrationsAndCustomizations.md.tpl, templates/AGENTS.md.tpl, skills/start/SKILL.md` |
+| **`COMMIT-86d8f52`** | fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci] — Git fix commit `86d8f52` | DONE | `git history` |
 | **`COMMIT-04218b1`** | fix(cli): untrack docs/backlog.html from git index during commit [skip ci] — Git fix commit `04218b1` | DONE | `git history` |
 | **`COMMIT-611658d`** | fix(customizations): ensure <24KB rule shard balance and pre-auth mandate across all repos [skip ci] — Git fix commit `611658d` | DONE | `git history` |
 | **`COMMIT-9557d87`** | fix(backlog): auto-render Review Pane artifacts in lifecycle hooks and add live /api/backlog auto-sync — Git fix commit `9557d87` | DONE | `git history` |
@@ -24,7 +25,6 @@
 | **`COMMIT-f8339bf`** | fix(backlog): resolve BUG-106 stale _npx cache, workspace-dominance brain matching, and sandboxed Kickoff Prompt clipboard bridge — Git fix commit `f8339bf` | DONE | `git history` |
 | **`COMMIT-00ba072`** | fix(backlog): make backlog engine, review artifacts, and skills fully generic upstream — Git fix commit `00ba072` | DONE | `git history` |
 | **`COMMIT-4adb32c`** | fix(backlog): fix findActiveBrainDir scoring/mtime and write docs/backlog.html alongside brain/backlog.html — Git fix commit `4adb32c` | DONE | `git history` |
-| **`COMMIT-35cebe7`** | fix(hook): bypass post-commit hook during rebase, cherry-pick, and merge — Git fix commit `35cebe7` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---
