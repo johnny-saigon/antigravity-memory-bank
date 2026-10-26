@@ -2538,12 +2538,9 @@ function writePlanningArtifacts(data, rootDir = REPO_ROOT, brainDirs = [], force
   const planMd = generateImplementationPlanMd(data, rootDir);
   const walkthroughMd = generateWalkthroughMd(data, rootDir);
 
-  // 1. Always write canonical workspace copies in docs/planning/
+  // 1. Write workspace copies in docs/planning/ (preserving agent-authored brain artifacts if newer)
   const planningDir = path.join(rootDir, 'docs', 'planning');
   fs.mkdirSync(planningDir, { recursive: true });
-  fs.writeFileSync(path.join(planningDir, 'task.md'), taskMd, 'utf8');
-  fs.writeFileSync(path.join(planningDir, 'implementation_plan.md'), planMd, 'utf8');
-  fs.writeFileSync(path.join(planningDir, 'walkthrough.md'), walkthroughMd, 'utf8');
 
   // 2. Write to each matched Antigravity brain directory (preserving custom manual artifacts unless synced or forced)
   const canWriteBrainArtifact = (filePath) => {
@@ -2555,6 +2552,10 @@ function writePlanningArtifacts(data, rootDir = REPO_ROOT, brainDirs = [], force
       return true;
     }
   };
+
+  let customTaskMd = null;
+  let customPlanMd = null;
+  let customWalkMd = null;
 
   const nowIso = new Date().toISOString();
   for (const brainDir of brainDirs) {
@@ -2576,6 +2577,8 @@ function writePlanningArtifacts(data, rootDir = REPO_ROOT, brainDirs = [], force
           ),
           'utf8'
         );
+      } else if (!customTaskMd && fs.existsSync(bTaskPath)) {
+        customTaskMd = fs.readFileSync(bTaskPath, 'utf8');
       }
 
       const bPlanPath = path.join(brainDir, 'implementation_plan.md');
@@ -2595,6 +2598,8 @@ function writePlanningArtifacts(data, rootDir = REPO_ROOT, brainDirs = [], force
           ),
           'utf8'
         );
+      } else if (!customPlanMd && fs.existsSync(bPlanPath)) {
+        customPlanMd = fs.readFileSync(bPlanPath, 'utf8');
       }
 
       const bWalkPath = path.join(brainDir, 'walkthrough.md');
@@ -2614,9 +2619,15 @@ function writePlanningArtifacts(data, rootDir = REPO_ROOT, brainDirs = [], force
           ),
           'utf8'
         );
+      } else if (!customWalkMd && fs.existsSync(bWalkPath)) {
+        customWalkMd = fs.readFileSync(bWalkPath, 'utf8');
       }
     } catch {}
   }
+
+  fs.writeFileSync(path.join(planningDir, 'task.md'), customTaskMd || taskMd, 'utf8');
+  fs.writeFileSync(path.join(planningDir, 'implementation_plan.md'), customPlanMd || planMd, 'utf8');
+  fs.writeFileSync(path.join(planningDir, 'walkthrough.md'), customWalkMd || walkthroughMd, 'utf8');
 }
 
 // Write the Review Pane artifacts to docs/backlog.html, docs/planning/*.md, and all matched conversation brain folders
@@ -2648,22 +2659,41 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
     const htmlMetaPath = path.join(brainDir, 'backlog.html.metadata.json');
     const mdPath = path.join(brainDir, 'backlog-board.md');
     const mdMetaPath = path.join(brainDir, 'backlog-board.md.metadata.json');
+    const planMetaPath = path.join(brainDir, 'implementation_plan.md.metadata.json');
 
-    fs.writeFileSync(htmlPath, htmlContent, 'utf8');
-    fs.writeFileSync(htmlMetaPath, JSON.stringify({
-      summary: `Interactive ${displayProject} Backlog & Sprint Board for zero-token task capture and frugal agent execution.`,
-      userFacing: true,
-      requestFeedback: false,
-      updatedAt: new Date().toISOString()
-    }, null, 2), 'utf8');
+    const htmlChanged = !fs.existsSync(htmlPath) || fs.readFileSync(htmlPath, 'utf8') !== htmlContent;
+    if (htmlChanged || !fs.existsSync(htmlMetaPath)) {
+      fs.writeFileSync(htmlPath, htmlContent, 'utf8');
+      fs.writeFileSync(htmlMetaPath, JSON.stringify({
+        summary: `Interactive ${displayProject} Backlog & Sprint Board for zero-token task capture and frugal agent execution.`,
+        userFacing: true,
+        requestFeedback: false,
+        updatedAt: new Date().toISOString()
+      }, null, 2), 'utf8');
+    }
 
-    fs.writeFileSync(mdPath, mdContent, 'utf8');
-    fs.writeFileSync(mdMetaPath, JSON.stringify({
-      summary: `Markdown Backlog and Sprint Status board for ${displayProject} linking to docs/backlog.json and ${path.relative(rootDir, boardPath)}.`,
-      userFacing: true,
-      requestFeedback: true,
-      updatedAt: new Date().toISOString()
-    }, null, 2), 'utf8');
+    const mdChanged = !fs.existsSync(mdPath) || fs.readFileSync(mdPath, 'utf8') !== mdContent;
+    if (mdChanged || !fs.existsSync(mdMetaPath)) {
+      fs.writeFileSync(mdPath, mdContent, 'utf8');
+      fs.writeFileSync(mdMetaPath, JSON.stringify({
+        summary: `Markdown Backlog and Sprint Status board for ${displayProject} linking to docs/backlog.json and ${path.relative(rootDir, boardPath)}.`,
+        userFacing: true,
+        requestFeedback: false,
+        updatedAt: new Date().toISOString()
+      }, null, 2), 'utf8');
+    }
+
+    // Ensure implementation_plan.md retains the newest updatedAt timestamp when requestFeedback is true
+    // so the Antigravity UI "Proceed" button is never overshadowed by background board renders.
+    if (fs.existsSync(planMetaPath)) {
+      try {
+        const planMeta = JSON.parse(fs.readFileSync(planMetaPath, 'utf8'));
+        if (planMeta && planMeta.requestFeedback) {
+          planMeta.updatedAt = new Date(Date.now() + 50).toISOString();
+          fs.writeFileSync(planMetaPath, JSON.stringify(planMeta, null, 2), 'utf8');
+        }
+      } catch {}
+    }
 
     console.log(`   - [${path.basename(brainDir)}] file://${htmlPath} (+ task.md, implementation_plan.md, walkthrough.md)`);
   }
@@ -3064,7 +3094,8 @@ Usage:
   npm run backlog attach <id> <file1> [file2 ...] [--no-copy]
   npm run backlog unpack <id> [optional_extra_files...]
   npm run backlog actions <id> [--waiting "<summary>"] [--add "<item>" --owner <user|antigravity>] [--done <item_id_or_index>]
-  npm run backlog plan [<id> ...]
+  npm run backlog plan [<id> | "<new_title>"] [--from-plan [path]] [--split ["<sub1>|<sub2>"]]
+  npm run backlog split <parent_id> "<sub_title_1>" ["<sub_title_2>" ...] [--priority <high|medium|low>] [--type <feature|bug|qa|refactor>]
   npm run backlog status <id> <todo|in_progress|testing|done>
   npm run backlog start <id>
   npm run backlog done <id>
@@ -3442,14 +3473,263 @@ function main() {
   }
 
   if (command === 'plan') {
-    const rawIds = args.slice(1).join(' ').split(/[\s,]+/).filter(Boolean);
+    const rawArgs = args.slice(1);
+    const hasFromPlan = rawArgs.includes('--from-plan') || rawArgs.includes('--sync-plan');
+    const hasSplitFlag = rawArgs.includes('--split');
+    let explicitPlanPath = '';
+    let splitSpec = '';
+    let newType = 'feature';
+    let newPriority = 'high';
+    let newDesc = '';
+    let newComponents = [];
+    const positional = [];
+
+    for (let i = 0; i < rawArgs.length; i++) {
+      const a = rawArgs[i];
+      if (a === '--from-plan' || a === '--sync-plan') {
+        if (rawArgs[i + 1] && !rawArgs[i + 1].startsWith('--')) {
+          explicitPlanPath = rawArgs[++i];
+        }
+      } else if (a === '--split') {
+        if (rawArgs[i + 1] && !rawArgs[i + 1].startsWith('--') && rawArgs[i + 1].includes('|')) {
+          splitSpec = rawArgs[++i];
+        }
+      } else if (a === '--type' && rawArgs[i + 1]) {
+        newType = rawArgs[++i];
+      } else if (a === '--priority' && rawArgs[i + 1]) {
+        newPriority = rawArgs[++i];
+      } else if (a === '--desc' && rawArgs[i + 1]) {
+        newDesc = rawArgs[++i];
+      } else if (a === '--components' && rawArgs[i + 1]) {
+        newComponents = rawArgs[++i].split(',').map(s => s.trim()).filter(Boolean);
+      } else if (a === '--force') {
+        // handled below
+      } else if (!a.startsWith('--')) {
+        positional.push(a);
+      }
+    }
+
+    const nextSeqId = (prefix = 'FEAT') => {
+      const re = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+      const maxNum = data.tasks.reduce((max, t) => {
+        const m = String(t.id).match(re);
+        return m ? Math.max(max, parseInt(m[1], 10)) : max;
+      }, 100);
+      return `${prefix.toUpperCase()}-${maxNum + 1}`;
+    };
+
+    const splitParentIntoSubtasks = (parentTask, subSpecs) => {
+      const createdChildren = [];
+      const prefix = String(parentTask.id).startsWith('BUG-') ? 'BUG' : 'FEAT';
+      ensureTaskActionItems(parentTask);
+      for (const specItem of subSpecs) {
+        const subTitle = typeof specItem === 'string' ? specItem.trim() : String(specItem.title || '').trim();
+        if (!subTitle) continue;
+        const existingChild = data.tasks.find(
+          t => t.parentId === parentTask.id && t.title.toLowerCase() === subTitle.toLowerCase()
+        );
+        if (existingChild) {
+          createdChildren.push(existingChild);
+          continue;
+        }
+        const childId = (typeof specItem === 'object' && specItem.id && !data.tasks.some(t => t.id.toLowerCase() === specItem.id.toLowerCase()))
+          ? specItem.id.toUpperCase()
+          : nextSeqId(prefix);
+        const childComps = (typeof specItem === 'object' && Array.isArray(specItem.components) && specItem.components.length > 0)
+          ? specItem.components
+          : parentTask.components || [];
+        const childDesc = (typeof specItem === 'object' && specItem.description)
+          ? specItem.description
+          : `Sub-ticket split from [${parentTask.id}] ${parentTask.title}: ${subTitle}`;
+        const childTask = {
+          id: childId,
+          parentId: parentTask.id,
+          type: parentTask.type || newType,
+          title: subTitle,
+          status: 'todo',
+          priority: parentTask.priority || newPriority,
+          components: childComps,
+          attachments: [],
+          description: childDesc,
+          spec: childDesc,
+          acceptanceCriteria: [
+            `Complete implementation for ${subTitle}`,
+            `Verify deterministic tests and lint checks for [${childId}]`
+          ]
+        };
+        ensureTaskActionItems(childTask);
+        data.tasks.push(childTask);
+        createdChildren.push(childTask);
+
+        const linkText = `[${childId}] ${subTitle}`;
+        if (!parentTask.actionItems.some(a => a.text.includes(childId))) {
+          parentTask.actionItems.push({
+            id: `${parentTask.id}-ACT-${parentTask.actionItems.length + 1}`,
+            text: linkText,
+            owner: 'antigravity',
+            done: false
+          });
+        }
+      }
+      return createdChildren;
+    };
+
     const matchedTasks = [];
-    for (const rawId of rawIds) {
-      const task = data.tasks.find(t => t.id.toLowerCase() === rawId.toLowerCase());
-      if (task) {
-        matchedTasks.push(task);
+
+    // Mode A: Auto-ingest & create/split tickets from implementation_plan.md (`--from-plan`)
+    if (hasFromPlan) {
+      let planFile = explicitPlanPath ? resolveAttachmentPath(explicitPlanPath, REPO_ROOT) : '';
+      if (!planFile || !fs.existsSync(planFile)) {
+        const brainDirs = findWorkspaceBrainDirs(REPO_ROOT);
+        const brainCandidate = brainDirs.length > 0 ? path.join(brainDirs[0], 'implementation_plan.md') : '';
+        const wsCandidate = path.join(REPO_ROOT, 'docs', 'planning', 'implementation_plan.md');
+        if (brainCandidate && fs.existsSync(brainCandidate)) planFile = brainCandidate;
+        else if (fs.existsSync(wsCandidate)) planFile = wsCandidate;
+      }
+
+      if (planFile && fs.existsSync(planFile)) {
+        const planRaw = fs.readFileSync(planFile, 'utf8');
+        const h1Match = planRaw.match(/^#\s+([^\n]+)/m);
+        let rawPlanTitle = h1Match ? h1Match[1].replace(/^Implementation Plan\s*[—:-]\s*/i, '').replace(/`/g, '').trim() : 'Planned Implementation';
+        const goalSecMatch = planRaw.match(/^##\s+(?:1\.\s+)?Goal Description\s*\r?\n([\s\S]*?)(?=\r?\n##\s+|\r?\n---\s*$|$)/im);
+        const goalText = goalSecMatch
+          ? goalSecMatch[1].split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('>') && !l.startsWith('<!--')).join(' ').slice(0, 320)
+          : rawPlanTitle;
+
+        const fileMatches = new Set();
+        const fileLinkRe = /\[[^\]]+\]\(file:\/\/([^)#\s]+)(?:#[^)]*)?\)/g;
+        let fm;
+        while ((fm = fileLinkRe.exec(planRaw)) !== null) {
+          const absP = fm[1];
+          if (absP.startsWith(REPO_ROOT + '/')) {
+            const relP = path.relative(REPO_ROOT, absP);
+            if (!relP.startsWith('.gemini') && !relP.startsWith('docs/planning/')) fileMatches.add(relP);
+          }
+        }
+        const parsedComponents = Array.from(fileMatches).slice(0, 15);
+
+        // Extract ### subsections under ## Proposed Changes
+        const propSecMatch = planRaw.match(/^##\s+(?:3\.\s+)?Proposed Changes\s*\r?\n([\s\S]*?)(?=\r?\n##\s+(?:4\.\s+)?Verification Plan|\r?\n##\s+|\s*$)/im);
+        const propBody = propSecMatch ? propSecMatch[1] : '';
+        const subSections = [];
+        const h3Re = /^###\s+(?:\d+\.\s*)?([^\n]+)\r?\n([\s\S]*?)(?=^###\s+|$)/gm;
+        let sm;
+        while ((sm = h3Re.exec(propBody)) !== null) {
+          const secHeading = sm[1].replace(/`/g, '').trim();
+          const secBody = sm[2] || '';
+          const secFiles = [];
+          let sfm;
+          const secFileRe = /\[[^\]]+\]\(file:\/\/([^)#\s]+)(?:#[^)]*)?\)/g;
+          while ((sfm = secFileRe.exec(secBody)) !== null) {
+            if (sfm[1].startsWith(REPO_ROOT + '/')) {
+              const relP = path.relative(REPO_ROOT, sfm[1]);
+              if (!secFiles.includes(relP)) secFiles.push(relP);
+            }
+          }
+          const explicitIdMatch = secHeading.match(/\b((?:FEAT|BUG|QA|REFACTOR)-\d+)\b/i);
+          subSections.push({
+            id: explicitIdMatch ? explicitIdMatch[1].toUpperCase() : null,
+            title: secHeading.replace(/^\[?(?:FEAT|BUG|QA|REFACTOR)-\d+\]?\s*[:—-]?\s*/i, '').trim() || secHeading,
+            components: secFiles,
+            description: secBody.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('####') && !l.startsWith('---')).join(' ').slice(0, 220)
+          });
+        }
+
+        // Determine if an open ticket already matches
+        const idInTitle = rawPlanTitle.match(/\b((?:FEAT|BUG|QA|REFACTOR)-\d+)\b/i);
+        let primaryTask = null;
+        if (idInTitle) {
+          const candidate = data.tasks.find(t => t.id.toLowerCase() === idInTitle[1].toLowerCase());
+          if (candidate && candidate.status !== 'done') {
+            primaryTask = candidate;
+          }
+        }
+        if (!primaryTask) {
+          const cleanTitle = rawPlanTitle.replace(/^\[?(?:FEAT|BUG|QA|REFACTOR)-\d+\]?\s*(?:Enhancement)?\s*[:—-]?\s*/i, '').trim() || rawPlanTitle;
+          primaryTask = data.tasks.find(t => t.status !== 'done' && t.title.toLowerCase() === cleanTitle.toLowerCase());
+          if (!primaryTask) {
+            const newId = (idInTitle && !data.tasks.some(t => t.id.toLowerCase() === idInTitle[1].toLowerCase()))
+              ? idInTitle[1].toUpperCase()
+              : nextSeqId(newType === 'bug' ? 'BUG' : 'FEAT');
+            primaryTask = {
+              id: newId,
+              type: newType,
+              title: cleanTitle,
+              status: 'todo',
+              priority: newPriority,
+              components: parsedComponents.length > 0 ? parsedComponents : newComponents,
+              attachments: [],
+              description: goalText,
+              spec: goalText,
+              acceptanceCriteria: subSections.map(s => s.title)
+            };
+            ensureTaskActionItems(primaryTask);
+            data.tasks.push(primaryTask);
+            console.log(`  ✓ Auto-created backlog ticket [${primaryTask.id}]: "${primaryTask.title}" from implementation_plan.md`);
+          }
+        }
+        matchedTasks.push(primaryTask);
+
+        if ((hasSplitFlag || subSections.filter(s => s.id && s.id !== primaryTask.id).length > 1) && subSections.length > 1) {
+          const children = splitParentIntoSubtasks(primaryTask, subSections);
+          for (const ch of children) {
+            if (!matchedTasks.includes(ch)) matchedTasks.push(ch);
+          }
+          console.log(`  ✓ Split [${primaryTask.id}] into ${children.length} atomic backlog sub-ticket(s): ${children.map(c => c.id).join(', ')}`);
+        }
+      }
+    }
+
+    // Mode B: Positional IDs or New Ticket Title passed to `npm run backlog plan`
+    if (positional.length > 0) {
+      const joined = positional.join(' ').trim();
+      const looksLikeIdList = /^((?:FEAT|BUG|QA|REFACTOR|TASK)-\d+[\s,]*)+$/i.test(joined);
+      if (looksLikeIdList) {
+        const rawIds = joined.split(/[\s,]+/).filter(Boolean);
+        for (const rawId of rawIds) {
+          const task = data.tasks.find(t => t.id.toLowerCase() === rawId.toLowerCase());
+          if (task) {
+            if (!matchedTasks.includes(task)) matchedTasks.push(task);
+          } else {
+            console.warn(`⚠️  Task ${rawId} not found in backlog.`);
+          }
+        }
       } else {
-        console.warn(`⚠️  Task ${rawId} not found in backlog.`);
+        // Treat `positional` as a new feature/bug title to auto-create in docs/backlog.json!
+        const newTitle = joined;
+        let task = data.tasks.find(t => t.status !== 'done' && t.title.toLowerCase() === newTitle.toLowerCase());
+        if (!task) {
+          const newId = nextSeqId(newType === 'bug' ? 'BUG' : 'FEAT');
+          task = {
+            id: newId,
+            type: newType,
+            title: newTitle,
+            status: 'todo',
+            priority: newPriority,
+            components: newComponents,
+            attachments: [],
+            description: newDesc || newTitle,
+            spec: newDesc || newTitle,
+            acceptanceCriteria: []
+          };
+          ensureTaskActionItems(task);
+          data.tasks.push(task);
+          console.log(`\n✅ Auto-created backlog ticket [${task.id}]: "${task.title}"`);
+        }
+        if (!matchedTasks.includes(task)) matchedTasks.push(task);
+      }
+    }
+
+    // Mode C: If `--split "Sub 1|Sub 2"` was passed along with a matched ticket
+    if (splitSpec && matchedTasks.length > 0) {
+      const parentTask = matchedTasks[0];
+      const parts = splitSpec.split('|').map(s => s.trim()).filter(Boolean);
+      if (parts.length > 0) {
+        const children = splitParentIntoSubtasks(parentTask, parts);
+        for (const ch of children) {
+          if (!matchedTasks.includes(ch)) matchedTasks.push(ch);
+        }
+        console.log(`  ✓ Split [${parentTask.id}] into ${children.length} atomic sub-ticket(s): ${children.map(c => c.id).join(', ')}`);
       }
     }
 
@@ -3483,6 +3763,92 @@ function main() {
     console.log(`💡 1-LINE PLANNING PROMPT ${copied ? '(AUTO-COPIED TO CLIPBOARD — PRESS ⌘V IN CHAT)' : 'TO PASTE INTO ANTIGRAVITY'}:`);
     console.log(`   ${planCmd}`);
     console.log(`------------------------------------------------------------------------\n`);
+    return;
+  }
+
+  if (command === 'split') {
+    const parentId = args[1];
+    if (!parentId) {
+      console.error('❌ Usage: npm run backlog split <parent_id> "<sub_title_1>" ["<sub_title_2>" ...] [--priority <high|medium|low>] [--type <feature|bug|qa|refactor>]');
+      process.exit(1);
+    }
+    const parentTask = data.tasks.find(t => t.id.toLowerCase() === parentId.toLowerCase());
+    if (!parentTask) {
+      console.error(`❌ Parent task ${parentId} not found in docs/backlog.json.`);
+      process.exit(1);
+    }
+
+    let splitPrio = parentTask.priority || 'high';
+    let splitType = parentTask.type || 'feature';
+    const subTitles = [];
+    for (let i = 2; i < args.length; i++) {
+      if (args[i] === '--priority' && args[i + 1]) splitPrio = args[++i];
+      else if (args[i] === '--type' && args[i + 1]) splitType = args[++i];
+      else if (!args[i].startsWith('--')) {
+        subTitles.push(...String(args[i]).split('|').map(s => s.trim()).filter(Boolean));
+      }
+    }
+
+    if (subTitles.length === 0) {
+      console.error('❌ Please provide at least one sub-ticket title to split into.');
+      process.exit(1);
+    }
+
+    const prefix = splitType === 'bug' || String(parentTask.id).startsWith('BUG-') ? 'BUG' : 'FEAT';
+    const nextSeqId = () => {
+      const re = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+      const maxNum = data.tasks.reduce((max, t) => {
+        const m = String(t.id).match(re);
+        return m ? Math.max(max, parseInt(m[1], 10)) : max;
+      }, 100);
+      return `${prefix}-${maxNum + 1}`;
+    };
+
+    ensureTaskActionItems(parentTask);
+    const createdIds = [];
+    for (const subTitle of subTitles) {
+      const childId = nextSeqId();
+      const childDesc = `Atomic sub-ticket split from [${parentTask.id}] (${parentTask.title}): ${subTitle}`;
+      const childTask = {
+        id: childId,
+        parentId: parentTask.id,
+        type: splitType,
+        title: subTitle,
+        status: 'todo',
+        priority: splitPrio,
+        components: Array.isArray(parentTask.components) ? [...parentTask.components] : [],
+        attachments: [],
+        description: childDesc,
+        spec: childDesc,
+        acceptanceCriteria: [
+          `Complete implementation for ${subTitle}`,
+          `Verify deterministic tests and lint checks for [${childId}]`
+        ]
+      };
+      ensureTaskActionItems(childTask);
+      data.tasks.push(childTask);
+      createdIds.push(childId);
+
+      parentTask.actionItems.push({
+        id: `${parentTask.id}-ACT-${parentTask.actionItems.length + 1}`,
+        text: `[${childId}] ${subTitle}`,
+        owner: 'antigravity',
+        done: false
+      });
+    }
+
+    data.activePlanTaskIds = [parentTask.id, ...createdIds];
+    saveBacklog(data);
+    renderMigrationBoard(data);
+    writeReviewPaneArtifacts(data, REPO_ROOT, true);
+    ensureDaemonRunning();
+
+    console.log(`\n✂️  Split [${parentTask.id}] into ${createdIds.length} atomic backlog ticket(s): ${createdIds.join(', ')}`);
+    for (const cid of createdIds) {
+      const ct = data.tasks.find(t => t.id === cid);
+      console.log(`   └─ 📋 [${ct.id}] (${ct.priority.toUpperCase()}) ${ct.title}`);
+    }
+    console.log(`💡 Kick off all split tickets: "/backlog-start ${createdIds.join(', ')}"\n`);
     return;
   }
 

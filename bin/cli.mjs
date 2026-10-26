@@ -836,6 +836,10 @@ async function installSyncAndHooks(targetDir, detected) {
       pkg.scripts['backlog:plan'] = 'node scripts/backlog.mjs plan';
       pkgUpdated = true;
     }
+    if (!pkg.scripts['backlog:split']) {
+      pkg.scripts['backlog:split'] = 'node scripts/backlog.mjs split';
+      pkgUpdated = true;
+    }
     if (!pkg.scripts['backlog:start']) {
       pkg.scripts['backlog:start'] = 'node scripts/backlog.mjs start';
       pkgUpdated = true;

@@ -11,10 +11,22 @@ Transforms the agent into an autonomous software architect that explores the cod
 
 ---
 
-## Phase 1: Context Discovery, Attachment Unpacking & `task.md` Synchronization
+## Phase 1: Context Discovery, Mandatory Ticket Creation/Splitting & `task.md` Synchronization
 
-1. **Resolve Target Backlog Ticket(s) & Attachments**:
-   - Extract ticket ID(s) from the prompt (or if none specified, select the active `in_progress` or top `high`-priority `todo` ticket(s) from `docs/backlog.json`).
+1. **Resolve, Create, or Split Target Backlog Ticket(s) & Attachments (Mandatory Transparency Rule)**:
+   - **Every `/plan` or `implementation_plan.md` MUST Be Backed by Backlog Ticket(s)**:
+     - Extract ticket ID(s) from the prompt. If the user invoked `/plan` or `/backlog-plan` for a new feature, bug fix, or follow-up enhancement that does not yet have an open ticket in `docs/backlog.json` (or if the referenced ticket is already `done`), **immediately create a new ticket** in `docs/backlog.json`:
+       ```bash
+       npm run backlog add "<Feature or Bug Title>" --type <feature|bug|refactor> --priority <high|medium|low> --desc "<Goal summary>" --components "<file1,file2>"
+       ```
+     - **Atomic Ticket Splitting (`split` / `--from-plan --split`)**: If the Implementation Plan covers multiple distinct deliverables, phases, or subsystems, **split it into atomic tickets** in `docs/backlog.json` so each deliverable is independently tracked and verifiable on the Review pane Kanban board (`backlog.html`):
+       ```bash
+       # Split a parent ticket into atomic child tickets:
+       npm run backlog split <PARENT_ID> "<Phase 1 Title>" "<Phase 2 Title>"
+
+       # Or auto-ingest & split tickets directly from implementation_plan.md:
+       npm run backlog plan --from-plan --split
+       ```
    - If any new context files (`.zip` UX/UI bundles, mockups, PDFs, specs) were passed inline, attach and unpack them:
      ```bash
      npm run backlog attach <TICKET_ID> <FILE_PATH>

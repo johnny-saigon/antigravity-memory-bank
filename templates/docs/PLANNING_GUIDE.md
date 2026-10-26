@@ -98,6 +98,13 @@ npm run backlog:plan
 npm run backlog plan FEAT-101
 npm run backlog plan FEAT-101, BUG-102
 
+# Create a new backlog ticket (and optional split sub-tickets) directly from a plan title or implementation_plan.md:
+npm run backlog plan "Implement Multi-Provider OAuth & Theme Adapter" --split "OAuth Verifiers|Host Theme Adapter"
+npm run backlog plan --from-plan --split
+
+# Split an existing backlog ticket into atomic sub-tickets for clear project management:
+npm run backlog split FEAT-101 "Backend Schema & API" "Frontend UI & E2E Tests"
+
 # Force-regenerate planning artifacts even if manually edited:
 npm run backlog plan FEAT-101 --force
 

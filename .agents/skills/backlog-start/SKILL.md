@@ -13,8 +13,9 @@ Execute the following 3 phases autonomously:
 
 ## Phase 1: Ingestion, Attachment Unpacking & Task Activation (0 Token Waste)
 
-1. **Parse Ticket IDs & Inline Attachments**:
+1. **Parse Ticket IDs, Sync Any Unregistered `/plan` Tickets & Ingest Inline Attachments**:
    - Extract the ticket ID(s) from the command argument (e.g. `FEAT-101`, `BUG-102`).
+   - **Mandatory Plan-to-Backlog Ticket Sync**: If executing right after an approved `/plan` (`implementation_plan.md`) whose deliverables have not yet been registered or split into `docs/backlog.json`, run `npm run backlog plan --from-plan [--split]` (or `npm run backlog add` / `npm run backlog split`) first so every planned unit of work has an active ticket in `docs/backlog.json`.
    - Detect any files attached directly in the user's message (`@[...]` mentions, uploaded media/files in the prompt, or file paths such as `~/Downloads/ux-ui.zip` passed alongside the command).
    - If any new file paths were passed inline in the prompt, attach them to the ticket so they are tracked and unpacked:
      ```bash

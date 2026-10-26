@@ -95,6 +95,12 @@ npm run backlog:plan
 # Focus implementation_plan.md and task.md on specific ticket(s) and copy /backlog-plan <ID> to clipboard:
 npm run backlog plan FEAT-101
 npm run backlog plan FEAT-101, BUG-102
+
+# Auto-create (and split) backlog tickets directly from an Implementation Plan (implementation_plan.md):
+npm run backlog plan --from-plan --split
+
+# Split a multi-phase ticket into atomic sub-tickets in docs/backlog.json:
+npm run backlog split FEAT-101 "Phase 1: Core Engine" "Phase 2: Downstream Rollout"
 ```
 
 ### Update Status

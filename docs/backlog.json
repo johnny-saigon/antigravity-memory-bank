@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-23T21:24:39.785Z",
+  "lastUpdated": "2026-10-26T11:50:22.338Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -935,6 +935,30 @@
         }
       ],
       "completedAt": "2026-10-23T21:38:00.000Z"
+    },
+    {
+      "id": "FEAT-122",
+      "type": "feature",
+      "title": "Mandatory Plan-to-Backlog Ticket Creation & Atomic Plan Decomposition (backlog split & plan --from-plan)",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "skills/backlog-plan/SKILL.md",
+        "skills/backlog-start/SKILL.md",
+        "AGENTS.md",
+        "templates/AGENTS.md.tpl",
+        "bin/cli.mjs",
+        "docs/PLANNING_GUIDE.md",
+        "docs/BACKLOG_GUIDE.md"
+      ],
+      "attachments": [],
+      "description": "Enforce that every /plan or implementation_plan.md creates and splits atomic backlog tickets in docs/backlog.json for transparent project management across all installed projects.",
+      "spec": "Enforce that every /plan or implementation_plan.md creates and splits atomic backlog tickets in docs/backlog.json for transparent project management across all installed projects.",
+      "acceptanceCriteria": [],
+      "actionItems": [],
+      "completedAt": "2026-10-26T11:50:22.338Z"
     }
   ],
   "milestones": [

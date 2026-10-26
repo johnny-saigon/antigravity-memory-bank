@@ -329,6 +329,26 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(implPlan, /## 2\. User Review Required/);
     assert.match(implPlan, /## 3\. Proposed Changes/);
     assert.match(implPlan, /## 4\. Verification Plan/);
+
+    // Verify Mandatory Plan-to-Backlog Ticket Creation & Atomic Splitting (`plan "<title>" --split` & `split <ID>`)
+    const planCreateOut = execFileSync(
+      process.execPath,
+      [
+        path.join(tmpRepo, 'scripts', 'backlog.mjs'),
+        'plan',
+        'Multi-Phase Billing & Webhook Overhaul',
+        '--split',
+        'Phase 1: Stripe Webhook Verifier|Phase 2: Invoice Ledger UI'
+      ],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    assert.match(planCreateOut, /Auto-created backlog ticket \[FEAT-\d+\]/);
+    assert.match(planCreateOut, /Split \[FEAT-\d+\] into 2 atomic sub-ticket\(s\)/);
+    const afterSplitBacklog = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const parentTicket = afterSplitBacklog.tasks.find((t) => t.title === 'Multi-Phase Billing & Webhook Overhaul');
+    assert.ok(parentTicket, 'Expected parent ticket to be created in docs/backlog.json during /plan');
+    const splitChildren = afterSplitBacklog.tasks.filter((t) => t.parentId === parentTicket.id);
+    assert.equal(splitChildren.length, 2, 'Expected 2 atomic child tickets linked via parentId in docs/backlog.json');
   });
 
   test('2. upgrade: 100% preserves custom memory-bank/*.md domain files while upgrading AGENTS.md and skills', () => {
