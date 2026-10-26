@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(backlog): add UX ticket type support and Planning Mode Proceed button invariant** (`7387fb4`)
 - [x] **fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci]** (`86d8f52`)
 - [x] **feat(backlog): enforce mandatory /plan ticket creation and atomic splitting (FEAT-122) [skip ci]** (`a546499`)
 - [x] **feat(docs): add canonical docs/design/DESIGN.md and cross-pillar design harvester to FEAT-121 [skip ci]** (`c12d723`)
