@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(backlog): enforce mandatory /plan ticket creation and atomic splitting (FEAT-122) [skip ci]** (`a546499`)
 - [x] **feat(docs): add canonical docs/design/DESIGN.md and cross-pillar design harvester to FEAT-121 [skip ci]** (`c12d723`)
 - [x] **feat(docs): unify `FEAT-121` canonical living docs hierarchy and deep harvester + roll out across all 5 repositories** (`eea0dde`)
 - [x] **test(user-profile): upstream `BUG-737` dark-mode & `BUG-738` mobile Yoga refresh UI regression tests** (`6743d31`)
