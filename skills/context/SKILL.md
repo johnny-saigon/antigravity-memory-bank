@@ -14,4 +14,4 @@ When the user invokes `/context`:
    - **Always-On Root Rules (`~/.gemini/GEMINI.md` & `AGENTS.md`)**: Line counts (`< 50` line cap) and per-turn token footprint.
    - **Progressive Disclosure Rules (`.agents/rules/*.md`)**: Each rule file, its `trigger` mode (`model_decision` vs `always_on`), and estimated tokens saved per turn when not triggered.
    - **Memory Bank Files (`memory-bank/*.md`)**: Line counts (`< 150` line cap) and token sizes.
-   - **Active Conversation History Footprint**: Estimated per-turn token cost from the current session's `transcript.jsonl` size on disk (without reading the transcript into LLM context) and whether `/compact` or `/clear` is recommended.
+   - **Active Delta vs. Preserved Session Archive**: Estimated per-turn token cost from the **active delta** accumulated since the last `/start` / `/clear` watermark (`compaction_watermark.json`) alongside the **100% preserved session archive** (`transcript.jsonl` on disk, never truncated so zero history is ever lost). Recommend `/start` after completing a task (or `/compact` only if active delta overflows `> 25k` tokens).

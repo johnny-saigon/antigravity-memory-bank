@@ -1,6 +1,13 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`cddcc55`)
+- [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`537feee`)
+<<<<<<< Updated upstream
+=======
+- [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`47159ab`)
+- [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`9cff15e`)
+>>>>>>> Stashed changes
 - [x] **fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight)** (`f3e143e`)
 - [x] **feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]** (`80980f0`)
 - [x] **feat(backlog): add UX ticket type support and Planning Mode Proceed button invariant** (`7387fb4`)
