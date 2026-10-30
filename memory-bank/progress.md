@@ -1,13 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
-- [x] **feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]** (`a328674`)
-<<<<<<< Updated upstream
-=======
-- [x] **feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]** (`111b034`)
-- [x] **feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]** (`3e493c7`)
-- [x] **feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]** (`5dd7eef`)
->>>>>>> Stashed changes
+- [x] **feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]** (`80980f0`)
 - [x] **feat(backlog): add UX ticket type support and Planning Mode Proceed button invariant** (`7387fb4`)
 - [x] **fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci]** (`86d8f52`)
 - [x] **feat(backlog): enforce mandatory /plan ticket creation and atomic splitting (FEAT-122) [skip ci]** (`a546499`)
