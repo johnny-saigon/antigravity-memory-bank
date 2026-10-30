@@ -39,4 +39,4 @@ Immediately after closing the previous session, initialize the new working cycle
     - **Current Phase**: [Current project phase from activeContext.md]
     - **Immediate Focus**: [Top pending task / feature / bug in progress]
     - **Proposed Next Action**: [Concrete first step ready for execution + recommended `/effort` tier & `/plan` gate]
-    - **💡 Credit Hygiene**: Run `/clear` (or `/compact`) now to prune completed session history, `/context` to inspect active rules, `/effort` to throttle reasoning on routine tasks, and `/credits` · `/usage` (with the Google One / Antigravity **Overage Toggle disabled**).
+    - **💡 Credit Hygiene**: Run `/start` now (which automatically executes `/clear` & `/compact` pre-flight) to prune completed session history, `/context` to inspect active rules, `/effort` to throttle reasoning on routine tasks, and `/credits` · `/usage` (with the Google One / Antigravity **Overage Toggle disabled**).

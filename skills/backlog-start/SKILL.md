@@ -117,4 +117,4 @@ Execute the following 3 phases autonomously:
      - **Verification**: Test pass count and status.
      - **Board Status**: Review pane Kanban board updated to `DONE`.
      - **Next Up**: List the next recommended ticket from `docs/backlog.json` and its recommended `/effort` level.
-     - **💡 Stop the Credit Bleed**: Recommend running `/clear` (then `/start`) or `/compact` now so this task's token history is not carried into the next task, `/context` to inspect loaded files, and `/credits` or `/usage` to monitor model usage (with the Google One / Antigravity **Overage Toggle disabled**).
+     - **💡 Stop the Credit Bleed**: Recommend running `/start` now (which automatically executes `/clear` & `/compact` pre-flight) so this task's token history is not carried into the next task, `/context` to inspect loaded files, and `/credits` or `/usage` to monitor model usage (with the Google One / Antigravity **Overage Toggle disabled**).

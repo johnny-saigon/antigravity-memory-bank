@@ -188,7 +188,7 @@ To keep per-turn input tokens minimal (~8k tokens/turn instead of ~150k tokens/t
 3. **Throttle Reasoning with `/effort`**:
    - Run **`/effort low`** or **`/effort medium`** for boilerplate UI, routing, CSS, or simple CRUD endpoints; reserve **`/effort high`** only for complex state, concurrency, or architecture logic.
 4. **Prune Context Aggressively with `/clear`, `/compact` & `/context`**:
-   - Immediately after finishing a sub-task or bug fix, run **`/clear`** (then **`/start`**) or **`/compact`** so 50,000-token build histories never carry into your next task.
+   - Immediately after finishing a sub-task or bug fix, run **`/start`** (which automatically executes `/clear` & `/compact` pre-flight) so 50,000-token build histories never carry into your next task.
 5. **Disable Overage Toggle & Monitor `/credits` / `/usage`**:
    - Turn **OFF** the **"Toggle for overage"** in Google One / Antigravity settings so Antigravity hits a hard stop at your 20x baseline limit, and check **`/credits`** and **`/usage`** to see which models are draining your pool.
 

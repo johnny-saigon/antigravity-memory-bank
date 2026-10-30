@@ -89,7 +89,7 @@ function findLatestBrainStats() {
       action = 'Run /compact immediately or start a New Conversation + /start (~95% cost reduction)!';
     } else if (estHistoryTokens > 25000) {
       zone = '🟡 CAUTION ZONE (25k–75k tokens/turn)';
-      action = 'Consider running /compact or /clear after completing your current sub-task.';
+      action = 'Run /start (auto-runs /clear & /compact pre-flight) after completing your current sub-task.';
     }
     return { ...active, estHistoryTokens, zone, action };
   } catch {
