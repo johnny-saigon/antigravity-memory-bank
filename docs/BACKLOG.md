@@ -350,6 +350,16 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-123: Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `skills/start/SKILL.md`, `.agents/skills/start/SKILL.md`, `scripts/lint-memory.mjs`, `bin/cli.mjs`, `AGENTS.md`, `templates/AGENTS.md.tpl`, `rules/AGENTS.md`
+- **Description:** Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.
+- **Technical Specification:**
+  Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[FEAT-123] Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks** (`HIGH` · Status: `done`): Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.
   - **[FEAT-122] Mandatory Plan-to-Backlog Ticket Creation & Atomic Plan Decomposition (backlog split & plan --from-plan)** (`HIGH` · Status: `done`): Enforce that every /plan or implementation_plan.md creates and splits atomic backlog tickets in docs/backlog.json for transparent project management across all installed projects.
   - **[FEAT-121] Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars)** (`P0` · Status: `done`): Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester: every initialized (init), upgraded (upgrade), organized (organize), or synced (docs:sync) repository automatically scaffolds the 9-file living documentation hierarchy inside docs/{architecture,design,quality,operations}/, classifies and consolidates all existing docs/**/*.md specs across the 8 canonical pillars (archiving originals in docs/archive/ and rewriting links repo-wide), non-destructively harvests README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md sections, extracts deep codebase routes/schemas/tokens/tests, and bridges deep specs on demand via .agents/rules/docs-living-specs.md (trigger: model_decision).
   - **[FEAT-120] Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)** (`P0` · Status: `done`): Extract User Profile Management and 4-Provider Social Login (Google, Facebook, Apple, Microsoft) from ../SnapCal into bricks/user-profile/ as a shared, platform-adaptive Hexagonal Brick with a Headless + Design-Token/Slot Theming Engine (ProfileBrandThemePort & ProfileUISlotsPort) across Web, iOS, and Android.
-  - **[FEAT-119] Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)** (`P0` · Status: `done`): Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -25,6 +25,17 @@
 > One or more planned tickets involve third-party integrations, OAuth providers, or external credentials. **NEVER mark these tickets as `done` (`npm run backlog done`) until live server credentials are configured and real end-to-end provider HTTP requests pass.** If external credentials are pending, keep the ticket `in_progress`.
 
 ## 3. Proposed Changes
+### [FEAT-123] Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks *(Completed & Verified Baseline)*
+- **Specification**: Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/start/SKILL.md) (`skills/start/SKILL.md`)
+  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/skills/start/SKILL.md) (`.agents/skills/start/SKILL.md`)
+  - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
+  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
+  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md) (`AGENTS.md`)
+  - `[VERIFIED]` [AGENTS.md.tpl](file:///Users/jbb/Documents/antigravity-memory-bank/templates/AGENTS.md.tpl) (`templates/AGENTS.md.tpl`)
+  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/rules/AGENTS.md) (`rules/AGENTS.md`)
+
 ### [FEAT-122] Mandatory Plan-to-Backlog Ticket Creation & Atomic Plan Decomposition (backlog split & plan --from-plan) *(Completed & Verified Baseline)*
 - **Specification**: Enforce that every /plan or implementation_plan.md creates and splits atomic backlog tickets in docs/backlog.json for transparent project management across all installed projects.
 - **Component Modifications (Dependencies First)**:
@@ -82,14 +93,6 @@
   - Complete separation of platforms/{web,ios,android}/headless/ and platforms/{web,ios,android}/themed-ui/ powered by ProfileBrandThemePort (--ag-profile-* tokens) and ProfileUISlotsPort.
   - bin/cli.mjs supports brick list, brick install user-profile [--platforms web,ios,android | --platforms web] [--with-schema], brick upgrade user-profile (preserving repo-local adapters), and brick doctor user-profile.
   - npm test passes contract.spec.ts for all 4 OAuth providers, profile CRUD, account linking, and theme token injection, and npm run lint:memory passes with 0 violations.
-
-### [FEAT-119] Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage) *(Completed & Verified Baseline)*
-- **Specification**: Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [skills](file:///Users/jbb/Documents/antigravity-memory-bank/skills) (`skills/`)
-  - `[VERIFIED]` [skills](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/skills) (`.agents/skills/`)
-  - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
-  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

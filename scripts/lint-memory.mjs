@@ -288,17 +288,20 @@ if (args.includes('--effort')) {
   process.exit(0);
 }
 
-if (args.includes('--clear')) {
+if (args.includes('--clear') || args.includes('--start')) {
   const brain = findLatestBrainStats();
-  console.log('\n🧹 Antigravity Session State Checkpointed & Ready for Context Reset (/clear)\n');
+  console.log('\n🧹 Antigravity Session State Checkpointed & Pre-Start Context Reset (/clear -> /start)\n');
   console.log('  • [✓] memory-bank/activeContext.md & memory-bank/progress.md synchronized');
   console.log('  • [✓] docs/backlog.json & Review pane artifacts (backlog.html, task.md, implementation_plan.md) up to date');
   if (brain) {
-    console.log(`  • Current Thread History: ${(brain.transcriptBytes / 1024).toFixed(1)} KB (~${brain.estHistoryTokens} tokens/turn)`);
+    console.log(`  • Current Thread History: ${(brain.transcriptBytes / 1024).toFixed(1)} KB (~${brain.estHistoryTokens} tokens/turn) -> ${brain.zone}`);
   }
-  console.log('\n👉 Choose how to prune your chat context now:');
-  console.log('   1. Type `/compact` in chat to compress this conversation history in place, OR');
-  console.log('   2. Click "New Conversation" (Cmd/Ctrl + N) and type `/start` to boot fresh at ~8k tokens (~95% cost reduction).\n');
+  console.log('\n👉 Context Compaction & Pruning Status:');
+  if (brain && brain.estHistoryTokens > 25000) {
+    console.log('   ⚠️ Active thread exceeds 25k tokens/turn! Type `/compact` in chat now (or press Cmd/Ctrl + N -> `/start`).\n');
+  } else {
+    console.log('   ✅ Thread history is in the optimal zone (< 25k tokens/turn). Type `/compact` anytime to compress in place, or Cmd/Ctrl + N -> `/start` for a fresh thread.\n');
+  }
   process.exit(0);
 }
 

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-26T12:56:31.875Z",
+  "lastUpdated": "2026-10-30T11:53:13.612Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -959,6 +959,42 @@
       "acceptanceCriteria": [],
       "actionItems": [],
       "completedAt": "2026-10-26T11:50:22.338Z"
+    },
+    {
+      "id": "FEAT-123",
+      "type": "feature",
+      "title": "Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "skills/start/SKILL.md",
+        ".agents/skills/start/SKILL.md",
+        "scripts/lint-memory.mjs",
+        "bin/cli.mjs",
+        "AGENTS.md",
+        "templates/AGENTS.md.tpl",
+        "rules/AGENTS.md"
+      ],
+      "attachments": [],
+      "description": "Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.",
+      "spec": "Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-123-ACT-1",
+          "text": "Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.",
+          "owner": "antigravity",
+          "done": false
+        },
+        {
+          "id": "FEAT-123-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-123 done",
+          "owner": "antigravity",
+          "done": false
+        }
+      ],
+      "waitingOn": "Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.",
+      "completedAt": "2026-10-30T11:53:13.612Z"
     }
   ],
   "milestones": [

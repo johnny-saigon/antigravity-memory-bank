@@ -41,7 +41,7 @@ Transforms the agent into an autonomous software architect that explores the cod
    - Consult the Canonical Living Documentation Hierarchy (`docs/INDEX.md` and `docs/{architecture,design,quality,operations}/`) via `.agents/rules/docs-living-specs.md`.
    - Inspect all existing files listed in `ticket.components`, connected callers, shared schemas, and any unpacked UX/UI assets in `docs/attachments/<TICKET_ID>/extracted/`.
 3. **Update `task.md` Live Checklist**:
-   - Update `<brainDir>/task.md` and `docs/planning/task.md` with granular sub-tasks grouped into:
+   - Update `<brainDir>/task.md` (ONLY in `<brainDir>/` via `write_file` — `PostToolUse` hook auto-mirrors to `docs/planning/task.md`) with granular sub-tasks grouped into:
      - **1. Context Discovery & Memory Bank Baseline** (`[x]`)
      - **2. Active Sprint & Planning Focus** (`[/]` Research & Architecture Alignment, `[ ]` Component Implementation, `[ ]` Deterministic & Live E2E Verification)
      - **3. Queued Backlog & Next Implementation Wave** (`[ ]`)
@@ -51,7 +51,7 @@ Transforms the agent into an autonomous software architect that explores the cod
 
 ## Phase 2: Drafting `implementation_plan.md` (4-Section Canonical Anatomy)
 
-Draft or refine `<brainDir>/implementation_plan.md` (with `RequestFeedback: true`, `UserFacing: true`) and mirror it to `docs/planning/implementation_plan.md` using the mandatory 4-section structure:
+Draft or refine `<brainDir>/implementation_plan.md` (with `RequestFeedback: true`, `UserFacing: true`) ONLY in `<brainDir>/` via `write_file` (never call `write_file`/`edit_file` on `docs/planning/*` or workspace files during `/plan`, as `PostToolUse` auto-mirrors to `docs/planning/implementation_plan.md` while keeping `modifiedFileUris.length === 0`) using the mandatory 4-section structure:
 
 1. **`## 1. Goal Description`**:
    - Concise summary of the problem, user journey, background context from `memory-bank/`, and what the ticket(s) accomplish.
