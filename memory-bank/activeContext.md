@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `80980f0` — "feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]" (2026-10-30)
+- **Last Synchronized Commit**: `f3e143e` — "fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight)" (2026-10-30)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 

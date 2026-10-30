@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight)** (`f3e143e`)
 - [x] **feat(skills): auto-execute /clear and /compact pre-flight on every /start workflow (FEAT-123) [skip ci]** (`80980f0`)
 - [x] **feat(backlog): add UX ticket type support and Planning Mode Proceed button invariant** (`7387fb4`)
 - [x] **fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci]** (`86d8f52`)
