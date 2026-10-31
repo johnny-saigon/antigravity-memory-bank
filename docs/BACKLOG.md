@@ -290,7 +290,7 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ### FEAT-118: Antigravity Native Rule Discovery & model_decision Progressive Disclosure
 - **Status:** Completed (`DONE`)
-- **Priority:** P0
+- **Priority:** High
 - **Components:** `AGENTS.md`, `.agents/rules/`, `scripts/lint-memory.mjs`, `bin/cli.mjs`
 - **Description:** Eliminate the Silent Discard Trap, Broken Frontmatter Trap (snake_case trigger: model_decision), and Token Bloat Trap (<50-line root AGENTS.md/GEMINI.md without inline @-expansion bloat); bridge memory-bank/*.md via .agents/rules/memory-*.md and lint via scripts/lint-memory.mjs.
 - **Technical Specification:**
@@ -300,7 +300,7 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ### FEAT-119: Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)
 - **Status:** Completed (`DONE`)
-- **Priority:** P0
+- **Priority:** High
 - **Components:** `skills/`, `.agents/skills/`, `scripts/lint-memory.mjs`, `bin/cli.mjs`
 - **Description:** Enforce pre-edit /plan gate on complex features/bugs, /effort reasoning tiering, aggressive /clear + /compact + /context pruning after every task, and Google One / Antigravity Overage Toggle disable + /credits & /usage monitoring across GEMINI.md, AGENTS.md, negative-constraints.md, and skills.
 - **Technical Specification:**
@@ -310,7 +310,7 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ### FEAT-120: Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)
 - **Status:** Completed (`DONE`)
-- **Priority:** P0
+- **Priority:** High
 - **Components:** `bricks/user-profile/brick.json`, `bricks/user-profile/core/`, `bricks/user-profile/platforms/web/`, `bricks/user-profile/platforms/ios/`, `bricks/user-profile/platforms/android/`, `bricks/user-profile/adapters/templates/`, `bricks/user-profile/schemas/`, `bricks/user-profile/testing/contract.spec.ts`, `bin/cli.mjs`, `package.json`, `.agents/rules/brick-governance.md`
 - **Attachments:** `docs/PHASE_1_EXTRACT_SNAPCAL_AUTH_PROFILE_BRICK.md`
 - **Description:** Extract User Profile Management and 4-Provider Social Login (Google, Facebook, Apple, Microsoft) from ../SnapCal into bricks/user-profile/ as a shared, platform-adaptive Hexagonal Brick with a Headless + Design-Token/Slot Theming Engine (ProfileBrandThemePort & ProfileUISlotsPort) across Web, iOS, and Android.
@@ -326,7 +326,7 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ### FEAT-121: Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars)
 - **Status:** Completed (`DONE`)
-- **Priority:** P0
+- **Priority:** High
 - **Components:** `lib/docs-synthesizer.mjs`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `lib/repo-organizer.mjs`, `bin/cli.mjs`, `scripts/backlog.mjs`, `scripts/sync-memory-context.mjs`, `scripts/lint-memory.mjs`, `templates/docs/`, `templates/rules/docs-living-specs.md.tpl`, `tests/cli-e2e.test.mjs`, `README.md`
 - **Attachments:** `docs/attachments/FEAT-121/STANDARD_DOCS_HIERARCHY_SPEC.md`
 - **Description:** Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester: every initialized (init), upgraded (upgrade), organized (organize), or synced (docs:sync) repository automatically scaffolds the 9-file living documentation hierarchy inside docs/{architecture,design,quality,operations}/, classifies and consolidates all existing docs/**/*.md specs across the 8 canonical pillars (archiving originals in docs/archive/ and rewriting links repo-wide), non-destructively harvests README.md, SECURITY.md, CHANGELOG.md, and memory-bank/*.md sections, extracts deep codebase routes/schemas/tokens/tests, and bridges deep specs on demand via .agents/rules/docs-living-specs.md (trigger: model_decision).
@@ -357,6 +357,13 @@ This board tracks active development tickets, feature backlogs, architecture ini
 - **Description:** Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.
 - **Technical Specification:**
   Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.
+
+---
+
+### FEAT-124: Add per-column and global Sort (Oldest to Newest and vice versa) and manual drag-and-drop / up-down ticket reordering across all Backlog instances
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`
 
 ---
 

@@ -235,6 +235,15 @@ function deriveWaitingOnSummary(task, actionItems = []) {
 
 function ensureTaskActionItems(task) {
   if (!task || typeof task !== 'object') return [];
+  const normPrio = String(task.priority || 'medium').toLowerCase();
+  if (normPrio === 'p0' || normPrio === 'p1' || normPrio === 'high') task.priority = 'high';
+  else if (normPrio === 'p2' || normPrio === 'med' || normPrio === 'medium') task.priority = 'medium';
+  else if (normPrio === 'p3' || normPrio === 'low') task.priority = 'low';
+
+  const normType = String(task.type || 'feature').toLowerCase();
+  if (normType === 'feat') task.type = 'feature';
+  else if (normType === 'fix') task.type = 'bug';
+
   if (Array.isArray(task.actionItems) && task.actionItems.length > 0) {
     task.actionItems = task.actionItems.map((item, idx) => {
       if (typeof item === 'string') {
@@ -314,8 +323,185 @@ function ensureTaskActionItems(task) {
 
   if (task.status === 'in_progress' || task.status === 'testing') {
     task.waitingOn = deriveWaitingOnSummary(task, task.actionItems);
+  } else if (task.status === 'done') {
+    delete task.waitingOn;
   }
   return task.actionItems;
+}
+
+// Self-healing ingestion of tickets from implementation_plan.md
+function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT) {
+  if (!planRaw || typeof planRaw !== 'string') return [];
+  const results = [];
+  const seenIds = new Set();
+
+  const extractFilesFromBlock = (block) => {
+    const files = [];
+    const linkRe = /\[[^\]]+\]\(file:\/\/([^)#\s]+)(?:#[^)]*)?\)/g;
+    let m;
+    while ((m = linkRe.exec(block)) !== null) {
+      if (m[1].startsWith(rootDir + '/')) {
+        const rel = path.relative(rootDir, m[1]);
+        if (!rel.startsWith('.gemini') && !rel.startsWith('docs/planning/') && !files.includes(rel)) {
+          files.push(rel);
+        }
+      }
+    }
+    const backtickFileRe = /`((?:src|server|bricks|apps|scripts|tests|public|schema|caddy)\/[^`\s]+)`/g;
+    while ((m = backtickFileRe.exec(block)) !== null) {
+      if (!files.includes(m[1])) files.push(m[1]);
+    }
+    return files.slice(0, 15);
+  };
+
+  // 1. Scan Markdown headings (`##` / `###` / `####`) containing explicit ticket IDs (`FEAT-245`, `BUG-240`, etc.) or `Phase N`
+  const headingRe = /^#{2,4}\s+([^\n]+)\r?\n([\s\S]*?)(?=^#{2,4}\s+|$)/gm;
+  let hm;
+  while ((hm = headingRe.exec(planRaw)) !== null) {
+    const rawHeading = hm[1].replace(/`/g, '').trim();
+    const body = hm[2] || '';
+    const idMatch = rawHeading.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+)\b/i);
+    if (!idMatch) continue;
+    const id = idMatch[1].toUpperCase();
+    if (seenIds.has(id)) continue;
+    seenIds.add(id);
+
+    let title = rawHeading
+      .replace(/^\[?(?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+\]?\s*[:·—-]?\s*/i, '')
+      .replace(/\*\(Completed & Verified Baseline\)\*/i, '')
+      .trim();
+    if (!title || title.startsWith('-')) {
+      title = rawHeading;
+    }
+
+    const prioMatch = `${rawHeading} ${body.slice(0, 300)}`.match(/\b(P0|P1|P2|P3|HIGH|MEDIUM|LOW)\b/i);
+    const rawPrio = prioMatch ? prioMatch[1].toLowerCase() : 'medium';
+    const priority = rawPrio === 'p0' || rawPrio === 'p1' || rawPrio === 'high'
+      ? 'high'
+      : rawPrio === 'p3' || rawPrio === 'low'
+        ? 'low'
+        : 'medium';
+
+    const type = id.startsWith('BUG-') ? 'bug' : id.startsWith('QA-') ? 'qa' : id.startsWith('UX-') ? 'ux' : 'feature';
+    const components = extractFilesFromBlock(body);
+    const descLines = body
+      .split('\n')
+      .map(l => l.replace(/^[-*]\s+/, '').replace(/\*\*Specification\*\*:\s*/i, '').trim())
+      .filter(l => l && !l.startsWith('```') && !l.startsWith('#') && !l.startsWith('>') && !l.startsWith('|'));
+    const description = descLines.join(' ').slice(0, 360) || title;
+
+    results.push({
+      id,
+      type,
+      title,
+      priority,
+      components,
+      description
+    });
+  }
+
+  // 2. Scan Markdown table rows (`| Phase 2 (`FEAT-245`) | **Smart AI Object & Residual Background Eraser** | ... |`)
+  const tableRowRe = /^\|([^\n]+)\|$/gm;
+  let tm;
+  while ((tm = tableRowRe.exec(planRaw)) !== null) {
+    const row = tm[1];
+    const idMatch = row.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\b/i);
+    if (!idMatch) continue;
+    const id = idMatch[1].toUpperCase();
+    if (seenIds.has(id)) continue;
+    const cells = row.split('|').map(c => c.replace(/`/g, '').replace(/\*\*/g, '').trim()).filter(Boolean);
+    if (cells.length < 2) continue;
+    const candidateTitle = cells.find(c => !c.toUpperCase().includes(id) && c.length > 6 && !/^(high|medium|low|p0|p1|p2|todo|done)$/i.test(c));
+    if (!candidateTitle) continue;
+    seenIds.add(id);
+    const descCell = cells.find(c => c !== candidateTitle && !c.toUpperCase().includes(id) && c.length > 12) || candidateTitle;
+    results.push({
+      id,
+      type: id.startsWith('BUG-') ? 'bug' : 'feature',
+      title: candidateTitle,
+      priority: /p0|p1|high/i.test(row) ? 'high' : 'medium',
+      components: extractFilesFromBlock(row),
+      description: descCell.slice(0, 360)
+    });
+  }
+
+  // 3. Scan bullet points under Goal Description / Planning Scope (`- **[FEAT-245] Title** ...: Desc`)
+  const bulletRe = /^[\s*-]+\*\*\[?((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\]?\s+([^*]+)\*\*([^\n]*)/gm;
+  let bm;
+  while ((bm = bulletRe.exec(planRaw)) !== null) {
+    const id = bm[1].toUpperCase();
+    if (seenIds.has(id)) continue;
+    const title = bm[2].replace(/^[:·—-]\s*/, '').trim();
+    if (!title || title.startsWith('-')) continue;
+    seenIds.add(id);
+    const rest = bm[3] || '';
+    const descMatch = rest.match(/:\s*(.+)$/);
+    const description = descMatch ? descMatch[1].trim() : title;
+    results.push({
+      id,
+      type: id.startsWith('BUG-') ? 'bug' : 'feature',
+      title,
+      priority: /p0|p1|high/i.test(rest) ? 'high' : 'medium',
+      components: extractFilesFromBlock(rest),
+      description: description.slice(0, 360)
+    });
+  }
+
+  return results;
+}
+
+function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
+  if (!data || !Array.isArray(data.tasks)) return 0;
+  const candidateFiles = [];
+  const wsPlan = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
+  if (fs.existsSync(wsPlan)) candidateFiles.push(wsPlan);
+
+  try {
+    const brainDirs = findTargetBrainDirs(data, rootDir);
+    for (const bd of brainDirs) {
+      const bp = path.join(bd, 'implementation_plan.md');
+      if (fs.existsSync(bp) && !candidateFiles.includes(bp)) {
+        candidateFiles.unshift(bp);
+      }
+    }
+  } catch {}
+
+  let addedOrHealed = 0;
+  for (const planFile of candidateFiles) {
+    try {
+      const raw = fs.readFileSync(planFile, 'utf8');
+      const extracted = extractPlanTicketsFromMarkdown(raw, rootDir);
+      for (const item of extracted) {
+        const existing = data.tasks.find(t => String(t.id).toUpperCase() === item.id);
+        if (!existing) {
+          const newTask = {
+            id: item.id,
+            type: item.type || 'feature',
+            title: item.title,
+            status: 'todo',
+            priority: item.priority || 'medium',
+            components: item.components || [],
+            attachments: [],
+            description: item.description || item.title,
+            spec: item.description || item.title,
+            acceptanceCriteria: [
+              `Complete implementation and verification for ${item.title}`,
+              `Verify deterministic tests and lint checks for [${item.id}]`
+            ]
+          };
+          ensureTaskActionItems(newTask);
+          data.tasks.push(newTask);
+          addedOrHealed++;
+        } else if (!existing.title || existing.title.startsWith('-')) {
+          existing.title = item.title;
+          if (!existing.description) existing.description = item.description;
+          ensureTaskActionItems(existing);
+          addedOrHealed++;
+        }
+      }
+    } catch {}
+  }
+  return addedOrHealed;
 }
 
 // Load backlog JSON
@@ -338,6 +524,7 @@ function loadBacklog(rootDir = REPO_ROOT) {
         ensureTaskActionItems(t);
       }
     }
+    selfHealPlanTicketsIntoBacklog(parsed, rootDir);
     return parsed;
   } catch (err) {
     console.error(`❌ Failed to parse ${jsonPath}:`, err.message);
@@ -348,6 +535,12 @@ function loadBacklog(rootDir = REPO_ROOT) {
 // Save backlog JSON
 function saveBacklog(data, rootDir = REPO_ROOT) {
   const jsonPath = path.join(rootDir, 'docs', 'backlog.json');
+  selfHealPlanTicketsIntoBacklog(data, rootDir);
+  if (Array.isArray(data.tasks)) {
+    for (const t of data.tasks) {
+      ensureTaskActionItems(t);
+    }
+  }
   data.lastUpdated = new Date().toISOString();
   fs.mkdirSync(path.dirname(jsonPath), { recursive: true });
   fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2) + '\n', 'utf8');
@@ -669,9 +862,38 @@ function escapeAttrServer(str) {
   return String(str).replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
+function getTaskTimestampScoreServer(task, fallbackIdx = 0) {
+  if (task.status === 'done' && task.completedAt) {
+    const t = Date.parse(task.completedAt);
+    if (!Number.isNaN(t)) return t;
+  }
+  if (task.createdAt) {
+    const t = Date.parse(task.createdAt);
+    if (!Number.isNaN(t)) return t;
+  }
+  const numMatch = String(task.id || '').match(/(\d+)/);
+  if (numMatch) {
+    return parseInt(numMatch[1], 10) * 1000 + fallbackIdx;
+  }
+  return fallbackIdx;
+}
+
+function sortColumnTasksServer(tasks, sortMode = 'custom') {
+  if (!Array.isArray(tasks) || sortMode === 'custom') return tasks;
+  const indexed = tasks.map((t, idx) => ({ t, idx, score: getTaskTimestampScoreServer(t, idx) }));
+  indexed.sort((a, b) => {
+    if (a.score !== b.score) {
+      return sortMode === 'newest' ? (b.score - a.score) : (a.score - b.score);
+    }
+    return sortMode === 'newest' ? (b.idx - a.idx) : (a.idx - b.idx);
+  });
+  return indexed.map(x => x.t);
+}
+
 function renderCardServer(task) {
   const isDone = task.status === 'done';
   const isInProgress = task.status === 'in_progress' || task.status === 'testing';
+  const colKey = isDone ? 'done' : isInProgress ? 'in_progress' : 'todo';
   const safeIdAttr = escapeAttrServer(task.id);
   const safeIdHtml = escapeHtmlServer(task.id);
   const safeTitleHtml = escapeHtmlServer(task.title);
@@ -722,15 +944,18 @@ function renderCardServer(task) {
     : '';
 
   return `
-        <div onclick="handleCardClick('${safeIdAttr}', event)" class="bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl p-3 shadow-sm transition group ${isInProgress ? 'cursor-pointer' : ''}">
+        <div data-task-id="${safeIdAttr}" data-col="${colKey}" draggable="true" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl p-3 shadow-sm transition group cursor-grab active:cursor-grabbing">
           <div class="flex items-start justify-between gap-2 mb-1.5">
             <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
               <span class="font-mono text-xs font-bold text-blue-400">${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 ${prioColor}">${escapeHtmlServer(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">${typeBadge}</span>
               ${isInProgress ? `<span onclick="openTaskInspector('${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ ${pendingActions.length} Action${pendingActions.length === 1 ? '' : 's'}</span>` : ''}
             </div>
-            <div class="opacity-80 group-hover:opacity-100 flex items-center gap-1">
+            <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
+              <button onclick="moveTaskManual('${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
+              <button onclick="moveTaskManual('${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
               <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
               ${!isDone
                 ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
@@ -773,10 +998,11 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   const displayProject = getDisplayProjectName(data, rootDir);
   const payload = { ...data, repoRoot: rootDir };
   const jsonString = JSON.stringify(payload).replace(/</g, '\\u003c');
+  const savedSorts = (data.meta && data.meta.columnSorts) || {};
 
-  const initialTodo = (data.tasks || []).filter(t => t.status === 'todo');
-  const initialInProg = (data.tasks || []).filter(t => t.status === 'in_progress' || t.status === 'testing');
-  const initialDone = (data.tasks || []).filter(t => t.status === 'done');
+  const initialTodo = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'todo'), savedSorts.todo || 'custom');
+  const initialInProg = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'in_progress' || t.status === 'testing'), savedSorts.in_progress || 'custom');
+  const initialDone = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'done'), savedSorts.done || 'custom');
 
   const todoHtml = initialTodo.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No to-do tasks</div>';
   const inProgHtml = initialInProg.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress</div>';
@@ -794,6 +1020,20 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+    }
+    .task-card.dragging {
+      opacity: 0.45;
+      transform: scale(0.98);
+    }
+    .task-card.drag-over-top {
+      border-top: 2px solid #3b82f6 !important;
+    }
+    .task-card.drag-over-bottom {
+      border-bottom: 2px solid #3b82f6 !important;
+    }
+    .col-drop-active {
+      background-color: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.5) !important;
     }
   </style>
 </head>
@@ -924,7 +1164,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     </div>
   </div>
 
-  <!-- Filter & Search Toolbar -->
+  <!-- Filter, Global Sort & Search Toolbar -->
   <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
     <div class="flex flex-wrap items-center gap-1.5">
       <button onclick="setFilter('all', this)" class="filter-btn active bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-blue-500 text-white font-bold">All</button>
@@ -932,6 +1172,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       <button onclick="setFilter('in_progress', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-[var(--muted-foreground,#94a3b8)]">In Progress</button>
       <button onclick="setFilter('high', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-rose-400">🔥 High Priority</button>
       <button onclick="setFilter('done', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-emerald-400">Done</button>
+      <span class="text-slate-600 px-1">|</span>
+      <div class="flex items-center gap-1 bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] rounded-md px-2 py-0.5">
+        <span class="text-[11px] text-slate-400 font-medium">⇅ Sort All:</span>
+        <button onclick="setAllColumnsSort('newest')" id="globalSortNewest" class="text-xs px-1.5 py-0.5 rounded hover:bg-slate-700 text-slate-300 cursor-pointer" title="Sort all columns Newest to Oldest">⬇️ Newest</button>
+        <button onclick="setAllColumnsSort('oldest')" id="globalSortOldest" class="text-xs px-1.5 py-0.5 rounded hover:bg-slate-700 text-slate-300 cursor-pointer" title="Sort all columns Oldest to Newest">⬆️ Oldest</button>
+        <button onclick="setAllColumnsSort('custom')" id="globalSortCustom" class="text-xs px-1.5 py-0.5 rounded hover:bg-slate-700 text-blue-300 font-semibold cursor-pointer" title="Use manual drag-and-drop / custom ticket order">✋ Manual</button>
+      </div>
     </div>
     <div class="relative w-full sm:w-64">
       <input id="searchInput" oninput="renderBoard()" type="text" placeholder="Search tasks..." class="w-full bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1 text-xs text-[var(--foreground,#f8fafc)] placeholder-[var(--muted-foreground,#94a3b8)] focus:outline-none focus:border-blue-500">
@@ -1034,39 +1281,48 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     
     <!-- Column: Backlog / To-Do -->
-    <div class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col">
-      <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)]">
+    <div id="wrap-todo" ondragover="handleColumnDragOver(event, 'todo')" ondragleave="handleColumnDragLeave(event, 'todo')" ondrop="handleColumnDrop(event, 'todo')" class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col transition-colors">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)] gap-1">
         <div class="flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-amber-400"></span>
           <h2 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground,#f8fafc)]">To-Do / Backlog</h2>
         </div>
-        <span id="count-todo" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialTodo.length}</span>
+        <div class="flex items-center gap-1.5">
+          <button id="sort-btn-todo" onclick="cycleColumnSort('todo')" class="text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Click to toggle column sort: Newest → Oldest / Oldest → Newest / Manual Order">✋ Manual</button>
+          <span id="count-todo" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialTodo.length}</span>
+        </div>
       </div>
-      <div id="col-todo" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1">${todoHtml}</div>
+      <div id="col-todo" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1 min-h-[120px]">${todoHtml}</div>
     </div>
 
     <!-- Column: In Progress & Testing -->
-    <div class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col">
-      <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)]">
+    <div id="wrap-in_progress" ondragover="handleColumnDragOver(event, 'in_progress')" ondragleave="handleColumnDragLeave(event, 'in_progress')" ondrop="handleColumnDrop(event, 'in_progress')" class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col transition-colors">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)] gap-1">
         <div class="flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
           <h2 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground,#f8fafc)]">In Progress / QA</h2>
         </div>
-        <span id="count-inprogress" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialInProg.length}</span>
+        <div class="flex items-center gap-1.5">
+          <button id="sort-btn-in_progress" onclick="cycleColumnSort('in_progress')" class="text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Click to toggle column sort: Newest → Oldest / Oldest → Newest / Manual Order">✋ Manual</button>
+          <span id="count-inprogress" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialInProg.length}</span>
+        </div>
       </div>
-      <div id="col-inprogress" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1">${inProgHtml}</div>
+      <div id="col-inprogress" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1 min-h-[120px]">${inProgHtml}</div>
     </div>
 
     <!-- Column: Done -->
-    <div class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col">
-      <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)]">
+    <div id="wrap-done" ondragover="handleColumnDragOver(event, 'done')" ondragleave="handleColumnDragLeave(event, 'done')" ondrop="handleColumnDrop(event, 'done')" class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col transition-colors">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)] gap-1">
         <div class="flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
           <h2 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground,#f8fafc)]">Completed (Done)</h2>
         </div>
-        <span id="count-done" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialDone.length}</span>
+        <div class="flex items-center gap-1.5">
+          <button id="sort-btn-done" onclick="cycleColumnSort('done')" class="text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Click to toggle column sort: Newest → Oldest / Oldest → Newest / Manual Order">✋ Manual</button>
+          <span id="count-done" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialDone.length}</span>
+        </div>
       </div>
-      <div id="col-done" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1">${doneHtml}</div>
+      <div id="col-done" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1 min-h-[120px]">${doneHtml}</div>
     </div>
 
   </div>
@@ -1079,6 +1335,22 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     let activeAttachTaskId = null;
     let activeInspectTaskId = null;
     let inspectorOwnerFilter = 'all';
+    let draggedTaskId = null;
+    const initialMetaSorts = (rawData.meta && rawData.meta.columnSorts) || {};
+    let columnSorts = {
+      todo: initialMetaSorts.todo || 'custom',
+      in_progress: initialMetaSorts.in_progress || 'custom',
+      done: initialMetaSorts.done || 'custom'
+    };
+    try {
+      const cachedSorts = localStorage.getItem('agy_backlog_sorts_' + (rawData.project || 'default'));
+      if (cachedSorts) {
+        const parsed = JSON.parse(cachedSorts);
+        if (parsed && typeof parsed === 'object') {
+          columnSorts = { ...columnSorts, ...parsed };
+        }
+      }
+    } catch (e) {}
 
     function inferClientActionOwner(text, task) {
       const lower = String(text || '').toLowerCase();
@@ -1835,9 +2107,287 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
     }
 
+    function getTaskTimestampScore(task, fallbackIdx) {
+      if (task.status === 'done' && task.completedAt) {
+        const t = Date.parse(task.completedAt);
+        if (!Number.isNaN(t)) return t;
+      }
+      if (task.createdAt) {
+        const t = Date.parse(task.createdAt);
+        if (!Number.isNaN(t)) return t;
+      }
+      const numMatch = String(task.id || '').match(/(\d+)/);
+      if (numMatch) {
+        return parseInt(numMatch[1], 10) * 1000 + fallbackIdx;
+      }
+      return fallbackIdx;
+    }
+
+    function sortColumnTasks(tasks, sortMode) {
+      if (!Array.isArray(tasks) || !sortMode || sortMode === 'custom') return tasks;
+      const indexed = tasks.map((t, idx) => ({ t, idx: rawData.tasks.indexOf(t), score: getTaskTimestampScore(t, idx) }));
+      indexed.sort((a, b) => {
+        if (a.score !== b.score) {
+          return sortMode === 'newest' ? (b.score - a.score) : (a.score - b.score);
+        }
+        return sortMode === 'newest' ? (b.idx - a.idx) : (a.idx - b.idx);
+      });
+      return indexed.map(x => x.t);
+    }
+
+    function getSortLabel(mode) {
+      if (mode === 'newest') return '⬇️ Newest → Oldest';
+      if (mode === 'oldest') return '⬆️ Oldest → Newest';
+      return '✋ Manual Order';
+    }
+
+    function saveColumnSortsState() {
+      try {
+        localStorage.setItem('agy_backlog_sorts_' + (rawData.project || 'default'), JSON.stringify(columnSorts));
+      } catch (e) {}
+      if (!rawData.meta) rawData.meta = {};
+      rawData.meta.columnSorts = { ...columnSorts };
+    }
+
+    function updateSortButtonsUI() {
+      ['todo', 'in_progress', 'done'].forEach(col => {
+        const btn = document.getElementById('sort-btn-' + col);
+        if (!btn) return;
+        const mode = columnSorts[col] || 'custom';
+        btn.textContent = getSortLabel(mode);
+        if (mode === 'newest' || mode === 'oldest') {
+          btn.className = 'text-[11px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 border border-blue-500/40 px-2 py-0.5 rounded font-semibold transition cursor-pointer';
+        } else {
+          btn.className = 'text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer';
+        }
+      });
+
+      const allSame = columnSorts.todo === columnSorts.in_progress && columnSorts.in_progress === columnSorts.done ? columnSorts.todo : '';
+      const gNew = document.getElementById('globalSortNewest');
+      const gOld = document.getElementById('globalSortOldest');
+      const gCus = document.getElementById('globalSortCustom');
+      if (gNew && gOld && gCus) {
+        gNew.className = 'text-xs px-1.5 py-0.5 rounded cursor-pointer ' + (allSame === 'newest' ? 'bg-blue-500/25 text-blue-200 font-bold border border-blue-500/40' : 'hover:bg-slate-700 text-slate-300');
+        gOld.className = 'text-xs px-1.5 py-0.5 rounded cursor-pointer ' + (allSame === 'oldest' ? 'bg-blue-500/25 text-blue-200 font-bold border border-blue-500/40' : 'hover:bg-slate-700 text-slate-300');
+        gCus.className = 'text-xs px-1.5 py-0.5 rounded cursor-pointer ' + (allSame === 'custom' ? 'bg-blue-500/25 text-blue-200 font-bold border border-blue-500/40' : 'hover:bg-slate-700 text-slate-300');
+      }
+    }
+
+    async function cycleColumnSort(col) {
+      const current = columnSorts[col] || 'custom';
+      const next = current === 'custom' ? 'newest' : current === 'newest' ? 'oldest' : 'custom';
+      columnSorts[col] = next;
+      saveColumnSortsState();
+      renderBoard();
+      const colTitle = col === 'todo' ? 'To-Do' : col === 'in_progress' ? 'In Progress' : 'Done';
+      showToast('⇅ Sorted ' + colTitle + ': ' + getSortLabel(next));
+      await callLocalBridge('/api/reorder', {
+        repoRoot: rawData.repoRoot,
+        orderedIds: rawData.tasks.map(t => t.id),
+        columnSorts
+      });
+    }
+
+    async function setAllColumnsSort(mode) {
+      columnSorts.todo = mode;
+      columnSorts.in_progress = mode;
+      columnSorts.done = mode;
+      saveColumnSortsState();
+      renderBoard();
+      showToast('⇅ All columns sorted: ' + getSortLabel(mode));
+      await callLocalBridge('/api/reorder', {
+        repoRoot: rawData.repoRoot,
+        orderedIds: rawData.tasks.map(t => t.id),
+        columnSorts
+      });
+    }
+
+    function getColumnKeyForTask(t) {
+      if (t.status === 'done') return 'done';
+      if (t.status === 'in_progress' || t.status === 'testing') return 'in_progress';
+      return 'todo';
+    }
+
+    function materializeColumnVisualOrder(colKey) {
+      if (columnSorts[colKey] && columnSorts[colKey] !== 'custom') {
+        const colTasks = sortColumnTasks(rawData.tasks.filter(t => getColumnKeyForTask(t) === colKey), columnSorts[colKey]);
+        let ptr = 0;
+        rawData.tasks = rawData.tasks.map(t => (getColumnKeyForTask(t) === colKey ? colTasks[ptr++] : t));
+        columnSorts[colKey] = 'custom';
+        saveColumnSortsState();
+      }
+    }
+
+    async function persistTaskOrderAndStatus(movedTask, toastMsg) {
+      lastTaskSignature = JSON.stringify((rawData.tasks || []).map(t => t.id + ':' + t.status + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
+      renderBoard();
+      const bridgeRes = await callLocalBridge('/api/reorder', {
+        repoRoot: rawData.repoRoot,
+        orderedIds: rawData.tasks.map(t => t.id),
+        movedId: movedTask ? movedTask.id : '',
+        newStatus: movedTask ? movedTask.status : '',
+        columnSorts
+      });
+      if (toastMsg) {
+        showToast(toastMsg + (bridgeRes && bridgeRes.ok ? ' (saved to docs/backlog.json)' : ''));
+      }
+    }
+
+    async function moveTaskManual(taskId, direction, event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      const task = rawData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      const colKey = getColumnKeyForTask(task);
+      materializeColumnVisualOrder(colKey);
+
+      const colTasks = rawData.tasks.filter(t => getColumnKeyForTask(t) === colKey);
+      const colIdx = colTasks.findIndex(t => t.id === taskId);
+      if (colIdx === -1) return;
+      const swapColIdx = direction === 'up' ? colIdx - 1 : colIdx + 1;
+      if (swapColIdx < 0 || swapColIdx >= colTasks.length) {
+        showToast('ℹ️ [' + taskId + '] is already at the ' + (direction === 'up' ? 'top' : 'bottom') + ' of this column.');
+        return;
+      }
+      const neighborTask = colTasks[swapColIdx];
+      const idxA = rawData.tasks.indexOf(task);
+      const idxB = rawData.tasks.indexOf(neighborTask);
+      if (idxA !== -1 && idxB !== -1) {
+        rawData.tasks[idxA] = neighborTask;
+        rawData.tasks[idxB] = task;
+        await persistTaskOrderAndStatus(task, (direction === 'up' ? '⬆️ Moved [' : '⬇️ Moved [') + taskId + '] ' + direction);
+      }
+    }
+
+    function handleDragStart(event, taskId) {
+      draggedTaskId = taskId;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', taskId);
+      }
+      const cardEl = event.currentTarget;
+      if (cardEl) {
+        setTimeout(() => cardEl.classList.add('dragging'), 0);
+      }
+    }
+
+    function handleDragEnd(event) {
+      draggedTaskId = null;
+      document.querySelectorAll('.task-card').forEach(el => {
+        el.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+      });
+      document.querySelectorAll('[id^="wrap-"]').forEach(el => {
+        el.classList.remove('col-drop-active');
+      });
+    }
+
+    function handleCardDragOver(event, targetTaskId) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!draggedTaskId || draggedTaskId === targetTaskId) return;
+      const cardEl = event.currentTarget;
+      if (!cardEl) return;
+      const rect = cardEl.getBoundingClientRect();
+      const isTopHalf = (event.clientY - rect.top) < (rect.height / 2);
+      cardEl.classList.toggle('drag-over-top', isTopHalf);
+      cardEl.classList.toggle('drag-over-bottom', !isTopHalf);
+    }
+
+    function handleCardDragLeave(event) {
+      const cardEl = event.currentTarget;
+      if (cardEl) {
+        cardEl.classList.remove('drag-over-top', 'drag-over-bottom');
+      }
+    }
+
+    async function handleCardDrop(event, targetTaskId) {
+      event.preventDefault();
+      event.stopPropagation();
+      const cardEl = event.currentTarget;
+      const sourceId = draggedTaskId || (event.dataTransfer && event.dataTransfer.getData('text/plain'));
+      handleDragEnd(event);
+      if (!sourceId || sourceId === targetTaskId) return;
+
+      const sourceTask = rawData.tasks.find(t => t.id === sourceId);
+      const targetTask = rawData.tasks.find(t => t.id === targetTaskId);
+      if (!sourceTask || !targetTask) return;
+
+      const targetColKey = getColumnKeyForTask(targetTask);
+      materializeColumnVisualOrder(targetColKey);
+
+      let insertBefore = true;
+      if (cardEl) {
+        const rect = cardEl.getBoundingClientRect();
+        insertBefore = (event.clientY - rect.top) < (rect.height / 2);
+      }
+
+      const prevStatus = sourceTask.status;
+      if (targetColKey === 'done') sourceTask.status = 'done';
+      else if (targetColKey === 'in_progress') {
+        if (sourceTask.status !== 'testing') sourceTask.status = 'in_progress';
+      } else {
+        sourceTask.status = 'todo';
+      }
+
+      rawData.tasks = rawData.tasks.filter(t => t.id !== sourceId);
+      const targetIdx = rawData.tasks.findIndex(t => t.id === targetTaskId);
+      const insertIdx = insertBefore ? targetIdx : targetIdx + 1;
+      rawData.tasks.splice(Math.max(0, insertIdx), 0, sourceTask);
+
+      const statusNote = prevStatus !== sourceTask.status ? (' → ' + sourceTask.status.toUpperCase()) : '';
+      await persistTaskOrderAndStatus(
+        sourceTask,
+        '✋ Moved [' + sourceId + '] ' + (insertBefore ? 'before ' : 'after ') + '[' + targetTaskId + ']' + statusNote
+      );
+    }
+
+    function handleColumnDragOver(event, colKey) {
+      event.preventDefault();
+      const wrapEl = document.getElementById('wrap-' + colKey);
+      if (wrapEl) wrapEl.classList.add('col-drop-active');
+    }
+
+    function handleColumnDragLeave(event, colKey) {
+      const wrapEl = document.getElementById('wrap-' + colKey);
+      if (wrapEl && !wrapEl.contains(event.relatedTarget)) {
+        wrapEl.classList.remove('col-drop-active');
+      }
+    }
+
+    async function handleColumnDrop(event, colKey) {
+      event.preventDefault();
+      const sourceId = draggedTaskId || (event.dataTransfer && event.dataTransfer.getData('text/plain'));
+      handleDragEnd(event);
+      if (!sourceId) return;
+
+      const sourceTask = rawData.tasks.find(t => t.id === sourceId);
+      if (!sourceTask) return;
+
+      materializeColumnVisualOrder(colKey);
+      const prevStatus = sourceTask.status;
+      if (colKey === 'done') sourceTask.status = 'done';
+      else if (colKey === 'in_progress') {
+        if (sourceTask.status !== 'testing') sourceTask.status = 'in_progress';
+      } else {
+        sourceTask.status = 'todo';
+      }
+
+      rawData.tasks = rawData.tasks.filter(t => t.id !== sourceId);
+      rawData.tasks.push(sourceTask);
+
+      const colLabel = colKey === 'todo' ? 'To-Do' : colKey === 'in_progress' ? 'In Progress' : 'Done';
+      await persistTaskOrderAndStatus(
+        sourceTask,
+        '✋ Moved [' + sourceId + '] to ' + colLabel + (prevStatus !== sourceTask.status ? ' (' + sourceTask.status.toUpperCase() + ')' : '')
+      );
+    }
+
     function renderCard(task) {
       const isDone = task.status === 'done';
       const isInProgress = task.status === 'in_progress' || task.status === 'testing';
+      const colKey = isDone ? 'done' : isInProgress ? 'in_progress' : 'todo';
       const safeIdAttr = escapeAttr(task.id);
       const safeIdHtml = escapeHtml(task.id);
       const safeTitleHtml = escapeHtml(task.title);
@@ -1888,17 +2438,20 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       \` : '';
 
       return \`
-        <div onclick="handleCardClick('\${safeIdAttr}', event)" class="bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl p-3 shadow-sm transition group \${isInProgress ? 'cursor-pointer' : ''}">
+        <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" draggable="true" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl p-3 shadow-sm transition group cursor-grab active:cursor-grabbing">
           <div class="flex items-start justify-between gap-2 mb-1.5">
             <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
               <span class="font-mono text-xs font-bold text-blue-400">\${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 \${prioColor}">\${escapeHtml(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">\${typeBadge}</span>
               \${isInProgress ? \`<span onclick="openTaskInspector('\${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ \${pendingActions.length} Action\${pendingActions.length === 1 ? '' : 's'}</span>\` : ''}
             </div>
             
-            <!-- Quick Status Toggles -->
-            <div class="opacity-80 group-hover:opacity-100 flex items-center gap-1">
+            <!-- Quick Reorder & Status Toggles -->
+            <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
+              <button onclick="moveTaskManual('\${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
+              <button onclick="moveTaskManual('\${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
               <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
               \${!isDone ? \`
                 <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
@@ -1968,6 +2521,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
     function renderBoard() {
       const q = document.getElementById('searchInput').value.toLowerCase();
+      updateSortButtonsUI();
       
       const filterTask = (t) => {
         const matchesQuery = !q || t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q));
@@ -1980,13 +2534,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         return true;
       };
 
-      const todoTasks = rawData.tasks.filter(t => t.status === 'todo' && filterTask(t));
-      const inProgressTasks = rawData.tasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && filterTask(t));
-      const doneTasks = rawData.tasks.filter(t => t.status === 'done' && filterTask(t));
+      const todoTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'todo' && filterTask(t)), columnSorts.todo);
+      const inProgressTasks = sortColumnTasks(rawData.tasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && filterTask(t)), columnSorts.in_progress);
+      const doneTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'done' && filterTask(t)), columnSorts.done);
 
-      document.getElementById('col-todo').innerHTML = todoTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No to-do tasks</div>';
-      document.getElementById('col-inprogress').innerHTML = inProgressTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress</div>';
-      document.getElementById('col-done').innerHTML = doneTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks</div>';
+      document.getElementById('col-todo').innerHTML = todoTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No to-do tasks — drag a ticket here</div>';
+      document.getElementById('col-inprogress').innerHTML = inProgressTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress — drag a ticket here</div>';
+      document.getElementById('col-done').innerHTML = doneTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks — drag a ticket here</div>';
 
       document.getElementById('count-todo').textContent = todoTasks.length;
       document.getElementById('count-inprogress').textContent = inProgressTasks.length;
@@ -2702,7 +3256,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 }
 
-const BRIDGE_VERSION = '1.5.0';
+const BRIDGE_VERSION = '1.6.0';
 
 function spawnBridgeDaemon() {
   try {
@@ -2868,6 +3422,9 @@ function startBridgeServer(port = DEFAULT_PORT) {
           return { status: 404, payload: { ok: false, error: 'Task not found' } };
         }
         task.status = newStatus;
+        if (newStatus === 'done' && !task.completedAt) {
+          task.completedAt = new Date().toISOString();
+        }
         if (newStatus === 'in_progress') {
           ensureTaskActionItems(task);
           unpackTaskAttachments(task, targetRoot);
@@ -2876,6 +3433,44 @@ function startBridgeServer(port = DEFAULT_PORT) {
         renderMigrationBoard(data, targetRoot);
         writeReviewPaneArtifacts(data, targetRoot);
         return { status: 200, payload: { ok: true, id: task.id, status: task.status } };
+      }
+
+      if (endpoint === '/api/reorder') {
+        const data = loadBacklog(targetRoot);
+        const movedId = String(body.movedId || '').trim();
+        const newStatus = String(body.newStatus || '').trim().toLowerCase();
+        if (movedId && newStatus) {
+          const movedTask = data.tasks.find(t => t.id.toLowerCase() === movedId.toLowerCase());
+          if (movedTask) {
+            movedTask.status = newStatus;
+            if (newStatus === 'done' && !movedTask.completedAt) {
+              movedTask.completedAt = new Date().toISOString();
+            }
+            if (newStatus === 'in_progress') {
+              ensureTaskActionItems(movedTask);
+              unpackTaskAttachments(movedTask, targetRoot);
+            }
+          }
+        }
+        if (Array.isArray(body.orderedIds) && body.orderedIds.length > 0) {
+          const idRank = new Map(body.orderedIds.map((id, idx) => [String(id).toLowerCase(), idx]));
+          data.tasks.sort((a, b) => {
+            const ra = idRank.has(String(a.id).toLowerCase()) ? idRank.get(String(a.id).toLowerCase()) : 999999;
+            const rb = idRank.has(String(b.id).toLowerCase()) ? idRank.get(String(b.id).toLowerCase()) : 999999;
+            return ra - rb;
+          });
+        }
+        if (body.columnSorts && typeof body.columnSorts === 'object') {
+          if (!data.meta) data.meta = {};
+          data.meta.columnSorts = {
+            ...(data.meta.columnSorts || {}),
+            ...body.columnSorts
+          };
+        }
+        saveBacklog(data, targetRoot);
+        renderMigrationBoard(data, targetRoot);
+        writeReviewPaneArtifacts(data, targetRoot);
+        return { status: 200, payload: { ok: true, count: data.tasks.length, columnSorts: (data.meta && data.meta.columnSorts) || {} } };
       }
 
       if (endpoint === '/api/action-items') {
@@ -3100,6 +3695,8 @@ Usage:
   npm run backlog plan [<id> | "<new_title>"] [--from-plan [path]] [--split ["<sub1>|<sub2>"]]
   npm run backlog split <parent_id> "<sub_title_1>" ["<sub_title_2>" ...] [--priority <high|medium|low>] [--type <feature|bug|qa|refactor>]
   npm run backlog status <id> <todo|in_progress|testing|done>
+  npm run backlog move <id> <up|down|top|bottom|before:ID|after:ID>
+  npm run backlog sort <todo|in_progress|done|all> <newest|oldest|custom>
   npm run backlog start <id>
   npm run backlog done <id>
   npm run backlog render
@@ -3167,12 +3764,7 @@ function main() {
   }
 
   if (command === 'add') {
-    const title = args[1];
-    if (!title) {
-      console.error('❌ Please specify a title: npm run backlog add "Feature title"');
-      process.exit(1);
-    }
-
+    let title = '';
     let id = null;
     let type = 'feature';
     let priority = 'medium';
@@ -3180,16 +3772,33 @@ function main() {
     let components = [];
     let rawAttachments = [];
 
-    for (let i = 2; i < args.length; i++) {
+    for (let i = 1; i < args.length; i++) {
       if (args[i] === '--id' && args[i + 1]) id = args[++i];
+      else if (args[i] === '--title' && args[i + 1]) title = args[++i];
       else if (args[i] === '--type' && args[i + 1]) type = args[++i];
       else if (args[i] === '--priority' && args[i + 1]) priority = args[++i];
-      else if (args[i] === '--desc' && args[i + 1]) desc = args[++i];
+      else if ((args[i] === '--desc' || args[i] === '--description') && args[i + 1]) desc = args[++i];
       else if (args[i] === '--components' && args[i + 1]) components = args[++i].split(',').map(s => s.trim()).filter(Boolean);
       else if ((args[i] === '--attach' || args[i] === '--attachments') && args[i + 1]) {
         rawAttachments.push(...args[++i].split(',').map(s => s.trim()).filter(Boolean));
+      } else if (!args[i].startsWith('--') && !title) {
+        title = args[i];
       }
     }
+
+    if (!title || title.startsWith('--')) {
+      console.error('❌ Please specify a title: npm run backlog add "Feature title" (or --title "Feature title")');
+      process.exit(1);
+    }
+
+    const normPrio = String(priority || 'medium').toLowerCase();
+    if (normPrio === 'p0' || normPrio === 'p1' || normPrio === 'high') priority = 'high';
+    else if (normPrio === 'p2' || normPrio === 'med' || normPrio === 'medium') priority = 'medium';
+    else if (normPrio === 'p3' || normPrio === 'low') priority = 'low';
+
+    const normType = String(type || 'feature').toLowerCase();
+    if (normType === 'feat') type = 'feature';
+    else if (normType === 'fix') type = 'bug';
 
     if (!id) {
       const maxNum = data.tasks.reduce((max, t) => {
@@ -3199,24 +3808,40 @@ function main() {
       id = `FEAT-${maxNum + 1}`;
     }
 
-    const newTask = {
-      id,
-      type,
-      title,
-      status: 'todo',
-      priority,
-      components,
-      attachments: [],
-      description: desc,
-      spec: desc,
-      acceptanceCriteria: []
-    };
+    const existingIdx = data.tasks.findIndex(t => String(t.id).toLowerCase() === String(id).toLowerCase());
+    let newTask;
+    if (existingIdx !== -1) {
+      newTask = data.tasks[existingIdx];
+      newTask.title = title;
+      newTask.type = type;
+      newTask.priority = priority;
+      if (components.length > 0) newTask.components = components;
+      if (desc) {
+        newTask.description = desc;
+        newTask.spec = desc;
+      }
+      if (!Array.isArray(newTask.attachments)) newTask.attachments = [];
+      if (!Array.isArray(newTask.acceptanceCriteria)) newTask.acceptanceCriteria = [];
+    } else {
+      newTask = {
+        id,
+        type,
+        title,
+        status: 'todo',
+        priority,
+        components,
+        attachments: [],
+        description: desc,
+        spec: desc,
+        acceptanceCriteria: []
+      };
+      data.tasks.push(newTask);
+    }
 
     if (rawAttachments.length > 0) {
       attachFilesToTask(newTask, rawAttachments, REPO_ROOT, true);
     }
 
-    data.tasks.push(newTask);
     saveBacklog(data);
     renderMigrationBoard(data);
     writeReviewPaneArtifacts(data);
@@ -3310,6 +3935,90 @@ function main() {
     return;
   }
 
+  if (command === 'move') {
+    const id = args[1];
+    const target = String(args[2] || '').trim().toLowerCase();
+    if (!id || !target) {
+      console.error('❌ Usage: npm run backlog move <id> <up|down|top|bottom|before:ID|after:ID>');
+      process.exit(1);
+    }
+    const idx = data.tasks.findIndex(t => t.id.toLowerCase() === id.toLowerCase());
+    if (idx === -1) {
+      console.error(`❌ Task ${id} not found in backlog.`);
+      process.exit(1);
+    }
+    const task = data.tasks[idx];
+    const colOf = (t) => (t.status === 'done' ? 'done' : (t.status === 'in_progress' || t.status === 'testing') ? 'in_progress' : 'todo');
+    const colKey = colOf(task);
+    if (!data.meta) data.meta = {};
+    if (!data.meta.columnSorts) data.meta.columnSorts = {};
+    data.meta.columnSorts[colKey] = 'custom';
+
+    const colTasks = data.tasks.filter(t => colOf(t) === colKey);
+    const colIdx = colTasks.findIndex(t => t.id === task.id);
+
+    if (target === 'up' && colIdx > 0) {
+      const neighbor = colTasks[colIdx - 1];
+      const nIdx = data.tasks.indexOf(neighbor);
+      data.tasks[idx] = neighbor;
+      data.tasks[nIdx] = task;
+    } else if (target === 'down' && colIdx < colTasks.length - 1) {
+      const neighbor = colTasks[colIdx + 1];
+      const nIdx = data.tasks.indexOf(neighbor);
+      data.tasks[idx] = neighbor;
+      data.tasks[nIdx] = task;
+    } else if (target === 'top') {
+      data.tasks.splice(idx, 1);
+      const firstColIdx = data.tasks.findIndex(t => colOf(t) === colKey);
+      data.tasks.splice(firstColIdx === -1 ? 0 : firstColIdx, 0, task);
+    } else if (target === 'bottom') {
+      data.tasks.splice(idx, 1);
+      data.tasks.push(task);
+    } else if (target.startsWith('before:') || target.startsWith('after:')) {
+      const [mode, refId] = target.split(':');
+      const refTask = data.tasks.find(t => t.id.toLowerCase() === String(refId || '').toLowerCase());
+      if (!refTask) {
+        console.error(`❌ Reference task ${refId} not found.`);
+        process.exit(1);
+      }
+      data.tasks.splice(idx, 1);
+      const refIdx = data.tasks.indexOf(refTask);
+      data.tasks.splice(mode === 'before' ? refIdx : refIdx + 1, 0, task);
+    }
+
+    saveBacklog(data);
+    renderMigrationBoard(data);
+    writeReviewPaneArtifacts(data);
+    ensureDaemonRunning();
+    console.log(`\n✋ Moved [${task.id}] (${target}) and saved manual order to docs/backlog.json.`);
+    return;
+  }
+
+  if (command === 'sort') {
+    const colArg = String(args[1] || 'all').trim().toLowerCase();
+    const dirArg = String(args[2] || 'newest').trim().toLowerCase();
+    const mode = (dirArg === 'oldest' || dirArg === 'asc') ? 'oldest'
+      : (dirArg === 'custom' || dirArg === 'manual') ? 'custom'
+      : 'newest';
+
+    if (!data.meta) data.meta = {};
+    if (!data.meta.columnSorts) data.meta.columnSorts = { todo: 'custom', in_progress: 'custom', done: 'custom' };
+
+    const cols = colArg === 'all' ? ['todo', 'in_progress', 'done'] : [colArg === 'inprogress' ? 'in_progress' : colArg];
+    for (const c of cols) {
+      if (['todo', 'in_progress', 'done'].includes(c)) {
+        data.meta.columnSorts[c] = mode;
+      }
+    }
+
+    saveBacklog(data);
+    renderMigrationBoard(data);
+    writeReviewPaneArtifacts(data);
+    ensureDaemonRunning();
+    console.log(`\n⇅ Sorted column(s) [${cols.join(', ')}] -> ${mode.toUpperCase()} in docs/backlog.json & backlog.html.`);
+    return;
+  }
+
   if (command === 'start') {
     const rawIds = args.slice(1).join(' ').split(/[\s,]+/).filter(Boolean);
     if (rawIds.length === 0) {
@@ -3367,6 +4076,10 @@ function main() {
       if (task) {
         task.status = 'done';
         task.completedAt = new Date().toISOString();
+        if (Array.isArray(task.actionItems)) {
+          task.actionItems.forEach(item => { item.done = true; });
+        }
+        delete task.waitingOn;
         matchedTasks.push(task);
       } else {
         console.warn(`⚠️  Task ${rawId} not found in backlog.`);
@@ -3871,6 +4584,7 @@ function main() {
   }
 
   if (command === 'render') {
+    saveBacklog(data);
     renderMigrationBoard(data);
     writeReviewPaneArtifacts(data);
     ensureDaemonRunning();

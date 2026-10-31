@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-30T11:53:13.612Z",
+  "lastUpdated": "2026-10-31T01:42:44.796Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -791,7 +791,7 @@
       "type": "feature",
       "title": "Antigravity Native Rule Discovery & model_decision Progressive Disclosure",
       "status": "done",
-      "priority": "P0",
+      "priority": "high",
       "components": [
         "AGENTS.md",
         ".agents/rules/",
@@ -810,7 +810,7 @@
       "type": "feature",
       "title": "Stop the Credit Bleed Controls & Executable Slash-Command Skills (/context, /clear, /effort, /credits, /usage)",
       "status": "done",
-      "priority": "P0",
+      "priority": "high",
       "components": [
         "skills/",
         ".agents/skills/",
@@ -829,7 +829,7 @@
       "type": "feature",
       "title": "Phase 1: Extract SnapCal Multi-Platform OAuth, User Profile & Pluggable UX/UI Brick (bricks/user-profile/)",
       "status": "done",
-      "priority": "P0",
+      "priority": "high",
       "components": [
         "bricks/user-profile/brick.json",
         "bricks/user-profile/core/",
@@ -880,7 +880,6 @@
           "done": true
         }
       ],
-      "waitingOn": "Review and approve implementation_plan.md before executing Phase 1 code extraction.",
       "completedAt": "2026-10-22T21:56:58.738Z"
     },
     {
@@ -888,7 +887,7 @@
       "type": "feature",
       "title": "Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars)",
       "status": "done",
-      "priority": "P0",
+      "priority": "high",
       "components": [
         "lib/docs-synthesizer.mjs",
         "scripts/sync-living-docs.mjs",
@@ -984,17 +983,33 @@
           "id": "FEAT-123-ACT-1",
           "text": "Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.",
           "owner": "antigravity",
-          "done": false
+          "done": true
         },
         {
           "id": "FEAT-123-ACT-2",
           "text": "Run deterministic & live E2E verification and mark FEAT-123 done",
           "owner": "antigravity",
-          "done": false
+          "done": true
         }
       ],
-      "waitingOn": "Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.",
       "completedAt": "2026-10-30T11:53:13.612Z"
+    },
+    {
+      "id": "FEAT-124",
+      "type": "ux",
+      "title": "Add per-column and global Sort (Oldest to Newest and vice versa) and manual drag-and-drop / up-down ticket reordering across all Backlog instances",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs"
+      ],
+      "attachments": [],
+      "description": "",
+      "spec": "",
+      "acceptanceCriteria": [],
+      "actionItems": [],
+      "completedAt": "2026-10-31T01:42:36.977Z"
     }
   ],
   "milestones": [
@@ -1015,8 +1030,8 @@
     }
   ],
   "meta": {
-    "effortLevel": "high",
-    "effortUpdatedAt": "2026-10-23T22:41:18.437Z"
+    "effortLevel": "low",
+    "effortUpdatedAt": "2026-10-31T01:38:26.918Z"
   },
   "activePlanTaskIds": []
 }

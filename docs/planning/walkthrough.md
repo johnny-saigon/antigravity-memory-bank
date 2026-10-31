@@ -7,7 +7,7 @@
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-- **Backlog Completion**: **30 / 30** tickets verified `DONE` (0 in progress, 0 queued).
+- **Backlog Completion**: **31 / 31** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
 - **feat(docs): unify `FEAT-121` Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/design/DESIGN.md`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `.agents/rules/docs-living-specs.md`, `README.md`) and roll out `upgrade` across `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `wiro` (`10/10` canonical docs active, custom/nested docs classified & archived with repo-wide link rewriting, `10/10` ingestion checklist passed)**
@@ -17,6 +17,9 @@
 - **feat(organize): implement `FEAT-117` AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
+### ✅ [FEAT-124]: Add per-column and global Sort (Oldest to Newest and vice versa) and manual drag-and-drop / up-down ticket reordering across all Backlog instances *(Verified 2026-10-31)*
+- **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs)
+
 ### ✅ [FEAT-123]: Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks *(Verified 2026-10-30)*
 - **Summary**: Modify /start workflow (skills/start/SKILL.md, AGENTS.md, templates/AGENTS.md.tpl, rules/AGENTS.md, scripts/lint-memory.mjs, and bin/cli.mjs) so that every /start invocation automatically executes /clear and /compact pre-flight checkpointing first, and deploy across all installed Memory Banks.
 - **Verified Components**: [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/start/SKILL.md), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/skills/start/SKILL.md), [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs), [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs), [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md), [AGENTS.md.tpl](file:///Users/jbb/Documents/antigravity-memory-bank/templates/AGENTS.md.tpl), [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/rules/AGENTS.md)
@@ -196,7 +199,7 @@
 | :--- | :--- | :--- |
 | **Memory Bank Line Budget (`< 150 lines`)** | `npm run lint:memory` | ✅ Verified (`0` violations) |
 | **10-Point Baseline Ingestion Checklist** | `npx antigravity-memory-bank upgrade` | ✅ `10/10` Passed |
-| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (30/30 Done) |
+| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (31/31 Done) |
 | **Automated Verification Command** | `npm run lint:memory` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm test` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm run test:e2e` | ✅ Configured & Active |
