@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(backlog): enforce exact repoRoot ownership in findTargetBrainDirs to prevent sibling repo collision** (`c9b5ee9`)
 - [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`22e63f4`)
 - [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`cddcc55`)
 - [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`537feee`)
