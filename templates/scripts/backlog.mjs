@@ -145,15 +145,22 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
       let ownedByOther = false;
       if (fs.existsSync(existingBacklogHtml)) {
         try {
-          const htmlSample = fs.readFileSync(existingBacklogHtml, 'utf8').slice(0, 4000);
-          if (
-            htmlSample.includes(`<title>${displayProject} Backlog`) ||
-            htmlSample.includes(`"project":"${projectSlug}"`) ||
-            htmlSample.includes(`"repoRoot":${JSON.stringify(resolvedRoot)}`)
-          ) {
+          const htmlText = fs.readFileSync(existingBacklogHtml, 'utf8');
+          const repoRootTag = `"repoRoot":${JSON.stringify(resolvedRoot)}`;
+          if (htmlText.includes(repoRootTag)) {
             ownsExisting = true;
-          } else if (htmlSample.includes('"repoRoot":') || htmlSample.includes('Backlog & Sprint Board</title>')) {
+          } else if (htmlText.includes('"repoRoot":')) {
             ownedByOther = true;
+          } else {
+            const htmlSample = htmlText.slice(0, 4000);
+            if (
+              htmlSample.includes(`<title>${displayProject} Backlog`) ||
+              htmlSample.includes(`"project":"${projectSlug}"`)
+            ) {
+              ownsExisting = true;
+            } else if (htmlSample.includes('Backlog & Sprint Board</title>')) {
+              ownedByOther = true;
+            }
           }
         } catch {}
       }
