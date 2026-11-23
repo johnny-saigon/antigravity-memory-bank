@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(credits): evolve Save Credits paradigm for full AGY 3-family model roster & ticket Q/C ROI (FEAT-125..127) [skip ci]** (`d34c754`)
 - [x] **fix(backlog): enforce exact repoRoot ownership in findTargetBrainDirs to prevent sibling repo collision** (`c9b5ee9`)
 - [x] **feat(backlog): add per-column/global Oldest<->Newest sort and manual drag-and-drop reordering [skip ci]** (`7c2d83e`)
 - [x] **feat(memory): add non-destructive compaction watermark delta tracking on /start and /clear [skip ci]** (`22e63f4`)
