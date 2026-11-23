@@ -626,6 +626,37 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     });
     assert.match(xhighOut, /XHIGH/);
 
+    // 1c. BUG-108 / FEAT-129 non-regression & E2E: adaptExistingBoards normalizes legacy tickets[] without milestones[], and render removes duplicate backlog_kanban.html / root backlog.html
+    const legacyBacklogRaw = JSON.stringify({
+      project: 'Acme Legacy',
+      tickets: [
+        { id: 'FEAT-901', title: 'Legacy Ticket Schema', type: 'feature', priority: 'high', status: 'todo', description: 'Verify normalization' }
+      ]
+    }, null, 2);
+    fs.writeFileSync(backlogJsonPath, legacyBacklogRaw, 'utf8');
+    const testBrainDir = path.join(testEnv.HOME, '.gemini', 'antigravity', 'brain', 'e2e-test-cid-0001');
+    fs.writeFileSync(path.join(tmpRepo, 'backlog.html'), '<html>legacy root kanban</html>', 'utf8');
+    fs.writeFileSync(path.join(testBrainDir, 'backlog_kanban.html'), '<html>duplicate brain kanban</html>', 'utf8');
+
+    const upgradeLegacyOut = execFileSync(process.execPath, [CLI_PATH, 'upgrade', tmpRepo, '-y'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    assert.match(upgradeLegacyOut, /Antigravity Memory Bank successfully upgraded on the fly/);
+    assert.equal(fs.existsSync(path.join(tmpRepo, 'backlog.html')), false, 'Legacy root backlog.html should be pruned on render');
+    assert.equal(fs.existsSync(path.join(testBrainDir, 'backlog_kanban.html')), false, 'Duplicate brain backlog_kanban.html should be pruned on render');
+    const canonicalHtml = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(canonicalHtml, /openCreditAdvisor/);
+    assert.match(canonicalHtml, /Save Credits &amp; Models/);
+
+    // Re-add FEAT-244 for step 2
+    execFileSync(
+      process.execPath,
+      [backlogScriptPath, 'add', '--id', 'FEAT-244', '--title', 'Interactive 120 FPS Mask Brush', '--priority', 'P0', '--type', 'feat'],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+
     // 2. Start & Done lifecycle completes actionItems and clears waitingOn
     execFileSync(process.execPath, [backlogScriptPath, 'start', 'FEAT-244'], {
       cwd: tmpRepo,

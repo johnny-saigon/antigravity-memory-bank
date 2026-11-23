@@ -407,6 +407,16 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-129: Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `lib/backlog-adapter.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `tests/cli-e2e.test.mjs`, `docs/quality/BUG_FIX_RECORDS.md`
+- **Description:** Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before rendering backlog.html in SnapMail and Design Engineering Website), unify SSR/client card ROI rendering in scripts/backlog.mjs, auto-prune duplicate non-canonical backlog_kanban.html/root backlog.html artifacts, and re-render identical Kanban boards across all 10 projects.
+- **Technical Specification:**
+  Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before rendering backlog.html in SnapMail and Design Engineering Website), unify SSR/client card ROI rendering in scripts/backlog.mjs, auto-prune duplicate non-canonical backlog_kanban.html/root backlog.html artifacts, and re-render identical Kanban boards across all 10 projects.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

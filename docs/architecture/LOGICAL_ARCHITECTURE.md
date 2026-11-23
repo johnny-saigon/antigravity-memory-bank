@@ -34,7 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-109`** | Automated Board & Bug Record Adapter During init / upgrade | 🟢 DONE | `lib/backlog-adapter.mjs`, `bin/cli.mjs` |
 | **`FEAT-110`** | Dogfooding & Strict Upstream Package Isolation Architecture | 🟢 DONE | `package.json`, `bin/cli.mjs`, `.gitignore` |
 | **`FEAT-111`** | Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall) | 🟢 DONE | `bin/cli.mjs`, `scripts/lint-memory.mjs` |
 | **`FEAT-112`** | Automated Byte-Parity Check Between scripts/backlog.mjs and templates/scripts/backlog.mjs | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
@@ -54,6 +53,7 @@ flowchart LR
 | **`FEAT-126`** | Interactive Kanban Credit-Saving & AGY Model Advisor UI and CLI | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-127`** | Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout | 🟢 DONE | `skills/effort/SKILL.md`, `skills/credits/SKILL.md`, `skills/usage/SKILL.md` |
 | **`FEAT-128`** | Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects | 🟢 DONE | `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `bin/cli.mjs` |
+| **`FEAT-129`** | Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization | 🟢 DONE | `lib/backlog-adapter.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 <!-- ag-section:logical-features:end -->
 
 ---

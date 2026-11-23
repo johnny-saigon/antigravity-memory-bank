@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-23T14:30:35.973Z",
+  "lastUpdated": "2026-11-23T15:57:01.206Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1145,6 +1145,26 @@
         }
       ],
       "completedAt": "2026-11-23T13:58:06.649Z"
+    },
+    {
+      "id": "FEAT-129",
+      "type": "bug",
+      "title": "Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "lib/backlog-adapter.mjs",
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "tests/cli-e2e.test.mjs",
+        "docs/quality/BUG_FIX_RECORDS.md"
+      ],
+      "attachments": [],
+      "description": "Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before rendering backlog.html in SnapMail and Design Engineering Website), unify SSR/client card ROI rendering in scripts/backlog.mjs, auto-prune duplicate non-canonical backlog_kanban.html/root backlog.html artifacts, and re-render identical Kanban boards across all 10 projects.",
+      "spec": "Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before rendering backlog.html in SnapMail and Design Engineering Website), unify SSR/client card ROI rendering in scripts/backlog.mjs, auto-prune duplicate non-canonical backlog_kanban.html/root backlog.html artifacts, and re-render identical Kanban boards across all 10 projects.",
+      "acceptanceCriteria": [],
+      "actionItems": [],
+      "completedAt": "2026-11-23T15:57:01.205Z"
     }
   ],
   "milestones": [

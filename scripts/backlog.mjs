@@ -897,6 +897,42 @@ function sortColumnTasksServer(tasks, sortMode = 'custom') {
   return indexed.map(x => x.t);
 }
 
+function computeTicketCreditAdviceServer(task) {
+  const text = task
+    ? `${task.id || ''} ${task.title || ''} ${task.description || ''} ${task.spec || ''} ${(task.components || []).join(' ')}`.toLowerCase()
+    : '';
+  const compCount = task && Array.isArray(task.components) ? task.components.length : 0;
+  const prio = String((task && task.priority) || 'medium').toLowerCase();
+  const type = String((task && task.type) || 'feature').toLowerCase();
+
+  const isSwarm = /\b(swarm|multi-repo|all repos|parallel|migration across|5 repositories|cross-repo)\b/.test(text) || compCount >= 6;
+  const isHighRisk = /\b(oauth|auth|security|schema|migration|concurrency|race|webgl|worker|stripe|billing|brick|architect|p0|production)\b/.test(text);
+  const isMicro = /\b(copy|typo|label|css|color|badge|sort|readme|comment|spacing|padding|icon)\b/.test(text) && compCount <= 1 && prio !== 'high';
+
+  if (isSwarm) {
+    return {
+      pillClass: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/35 hover:border-fuchsia-400',
+      shortBadge: '🎛️ Orchestrator (Carbon/Neon) · Plan & Split First'
+    };
+  }
+  if (compCount >= 3 || prio === 'high' || isHighRisk || type === 'refactor') {
+    return {
+      pillClass: 'bg-purple-500/15 text-purple-300 border-purple-500/35 hover:border-purple-400',
+      shortBadge: '🧠 Plan: Argon/Opus → Exec: Neon/Sonnet (Saves ~65%)'
+    };
+  }
+  if (isMicro || prio === 'low') {
+    return {
+      pillClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35 hover:border-emerald-400',
+      shortBadge: '⚡ Gemini 3.8 Flash (Low) · Direct Start (Skip /plan)'
+    };
+  }
+  return {
+    pillClass: 'bg-sky-500/15 text-sky-300 border-sky-500/35 hover:border-sky-400',
+    shortBadge: '⚙️ Gemini 4 Neon (Med) / Sonnet 5.5 · Direct Start'
+  };
+}
+
 function renderCardServer(task) {
   const isDone = task.status === 'done';
   const isInProgress = task.status === 'in_progress' || task.status === 'testing';
@@ -978,6 +1014,12 @@ function renderCardServer(task) {
           </h3>
           ${safeDescHtml ? `<p class="text-xs text-[var(--muted-foreground,#94a3b8)] line-clamp-2 mb-2 leading-relaxed">${safeDescHtml}</p>` : ''}
           ${actionItemsPreviewHtml}
+          ${!isDone
+            ? (() => {
+                const adv = computeTicketCreditAdviceServer(task);
+                return `<div onclick="openCreditAdvisor('${safeIdAttr}', event)" class="mb-2 px-2 py-1 rounded-lg border text-[11px] font-medium flex items-center justify-between gap-1.5 cursor-pointer transition ${adv.pillClass}" title="Click for verbose Save Credits &amp; AGY Model ROI guide (Google, External, Orchestrators)"><span class="truncate">${escapeHtmlServer(adv.shortBadge)}</span><span class="shrink-0 opacity-80">ROI ↗</span></div>`;
+              })()
+            : ''}
           ${task.components && task.components.length > 0
             ? `<div class="flex flex-wrap gap-1 mb-2">${task.components.map(c => `<span class="text-xs font-mono bg-slate-800/80 text-slate-300 px-1.5 py-0.5 rounded">${escapeHtmlServer(String(c).split('/').pop())}</span>`).join('')}</div>`
             : ''}
@@ -3420,6 +3462,16 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   fs.mkdirSync(path.dirname(localHtmlPath), { recursive: true });
   fs.writeFileSync(localHtmlPath, htmlContent, 'utf8');
 
+  // If a legacy/ad-hoc root backlog.html or backlog_kanban.html exists in the repo, remove or replace it so only the canonical Kanban design is served
+  for (const legacyRootHtml of ['backlog.html', 'backlog_kanban.html', 'docs/backlog_kanban.html']) {
+    const legacyFull = path.join(rootDir, legacyRootHtml);
+    if (fs.existsSync(legacyFull)) {
+      try {
+        fs.unlinkSync(legacyFull);
+      } catch {}
+    }
+  }
+
   const brainDirs = findTargetBrainDirs(data, rootDir);
   writePlanningArtifacts(data, rootDir, brainDirs, forceOverwriteBrainPlan);
 
@@ -3434,6 +3486,17 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   console.log(`   - file://${path.join(rootDir, 'docs', 'planning', 'implementation_plan.md')}`);
 
   for (const brainDir of brainDirs) {
+    // Remove any duplicate non-canonical Kanban HTML artifacts (e.g. backlog_kanban.html, kanban.html) in the brain directory
+    // so the Antigravity Review pane always displays the single canonical backlog.html design.
+    for (const duplicateKanban of ['backlog_kanban.html', 'backlog_kanban.html.metadata.json', 'kanban.html', 'kanban.html.metadata.json']) {
+      const dupPath = path.join(brainDir, duplicateKanban);
+      if (fs.existsSync(dupPath)) {
+        try {
+          fs.unlinkSync(dupPath);
+        } catch {}
+      }
+    }
+
     const htmlPath = path.join(brainDir, 'backlog.html');
     const htmlMetaPath = path.join(brainDir, 'backlog.html.metadata.json');
     const mdPath = path.join(brainDir, 'backlog-board.md');
