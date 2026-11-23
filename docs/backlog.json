@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-10-31T01:42:44.796Z",
+  "lastUpdated": "2026-11-23T08:44:15.280Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1010,6 +1010,106 @@
       "acceptanceCriteria": [],
       "actionItems": [],
       "completedAt": "2026-10-31T01:42:36.977Z"
+    },
+    {
+      "id": "FEAT-125",
+      "type": "feature",
+      "title": "Verbose AGY Model Roster, Quota-Pool & Ticket Quality-to-Credit ROI Engine",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/lint-memory.mjs",
+        "tests/cli-e2e.test.mjs"
+      ],
+      "attachments": [],
+      "description": "Evolve scripts/lint-memory.mjs (--effort, --credits, --usage, --context, --advise) with all 27 deployed AGY models (Google Gemini 3.8/4, Google Orchestrators, External Claude 5.5 / GPT-OSS 120B), xhigh effort tier, Two-Stage Split Model Routing, Dual Quota-Pool balancing, and Backlog-First planning economics.",
+      "spec": "Evolve scripts/lint-memory.mjs (--effort, --credits, --usage, --context, --advise) with all 27 deployed AGY models (Google Gemini 3.8/4, Google Orchestrators, External Claude 5.5 / GPT-OSS 120B), xhigh effort tier, Two-Stage Split Model Routing, Dual Quota-Pool balancing, and Backlog-First planning economics.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-125-ACT-1",
+          "text": "Evolve scripts/lint-memory.mjs (--effort, --credits, --usage, --context, --advise) with all 27 deployed AGY models (Google Gemini 3.8/4, Google Orchestrators, External Claude 5.5 / GPT-OSS 120B), xhigh effort tier, Two-Stage Split Model Routing, Dual Quota-Pool balancing, and Backlog-First planning economics.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-125-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-125 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-23T08:39:06.194Z"
+    },
+    {
+      "id": "FEAT-126",
+      "type": "feature",
+      "title": "Interactive Kanban Credit-Saving & AGY Model Advisor UI and CLI",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs"
+      ],
+      "attachments": [],
+      "description": "Add per-card AGY Model & Quality-to-Credit ROI pills, interactive Save Credits & AGY Model Advisor modal, Quick-Add live ROI banner, and npm run backlog advise CLI across scripts/backlog.mjs and templates/scripts/backlog.mjs.",
+      "spec": "Add per-card AGY Model & Quality-to-Credit ROI pills, interactive Save Credits & AGY Model Advisor modal, Quick-Add live ROI banner, and npm run backlog advise CLI across scripts/backlog.mjs and templates/scripts/backlog.mjs.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-126-ACT-1",
+          "text": "Add per-card AGY Model & Quality-to-Credit ROI pills, interactive Save Credits & AGY Model Advisor modal, Quick-Add live ROI banner, and npm run backlog advise CLI across scripts/backlog.mjs and templates/scripts/backlog.mjs.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-126-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-126 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-23T08:39:06.289Z"
+    },
+    {
+      "id": "FEAT-127",
+      "type": "feature",
+      "title": "Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "skills/effort/SKILL.md",
+        "skills/credits/SKILL.md",
+        "skills/usage/SKILL.md",
+        "skills/start/SKILL.md",
+        "skills/backlog-plan/SKILL.md",
+        "skills/backlog-start/SKILL.md",
+        "AGENTS.md",
+        "templates/AGENTS.md.tpl",
+        "rules/AGENTS.md",
+        "docs/BACKLOG_GUIDE.md",
+        "docs/PLANNING_GUIDE.md",
+        "README.md"
+      ],
+      "attachments": [],
+      "description": "Upgrade all credit/planning skills, AGENTS directives (<50 lines), living guides, and README with verbose AGY model routing and ticket-first motivation, then deploy upgrade across all installed Memory Bank repos.",
+      "spec": "Upgrade all credit/planning skills, AGENTS directives (<50 lines), living guides, and README with verbose AGY model routing and ticket-first motivation, then deploy upgrade across all installed Memory Bank repos.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-127-ACT-1",
+          "text": "Upgrade all credit/planning skills, AGENTS directives (<50 lines), living guides, and README with verbose AGY model routing and ticket-first motivation, then deploy upgrade across all installed Memory Bank repos.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-127-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-127 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-23T08:39:06.393Z"
     }
   ],
   "milestones": [

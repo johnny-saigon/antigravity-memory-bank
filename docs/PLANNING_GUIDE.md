@@ -171,3 +171,13 @@ If the agent presents a plan and you aren't sure whether Approach A or Approach 
 - **Throttle Reasoning with `/effort`**: After locking down the plan, dial down `/effort low` or `/effort medium` if execution is straightforward UI/CRUD wiring, or keep `/effort high` for intricate state or concurrency logic.
 - **Verify Rules & Prune History (`/context` & `/clear`)**: Run **`/context`** to verify that `.agents/rules/memory-*.md` (`trigger: model_decision`) are active without root `AGENTS.md` bloat (`< 50 lines`), and run **`/start`** (which automatically executes `/clear` & `/compact` pre-flight) immediately after completing the ticket. Keep the Google One / Antigravity **Overage Toggle disabled** and monitor **`/credits`** and **`/usage`**.
 
+
+---
+
+## 💰 Two-Stage Split Model Routing (Separate Planning Credits vs. Execution Credits)
+
+To achieve the highest **Quality-to-Used-Credits Ratio (`Q/C ROI`)** across Antigravity's deployed models:
+1. **Stage A — Plan & Split (`/effort high /backlog-plan <ID>`)**: Invest `1–2` turns on a frontier architect model (**Gemini 4 Argon/Carbon (High)** or **Claude Opus 5.5 (Med/High)**) to lock down `implementation_plan.md` and split multi-phase work into atomic sub-tickets (`npm run backlog plan --from-plan --split`).
+2. **Stage B — Switch Model Down & Execute (`/effort medium /backlog-start <SUB_ID>`)**: Before clicking **Proceed**, switch your AGY model picker down to a fast workhorse model (**Gemini 4 Neon (Medium/High)** or **Claude Sonnet 5.5 (Medium)** — or **Gemini 3.8 Flash (High)** for simple sub-tickets) to save **`55%–80%` execution credits** while preserving 100% blueprint fidelity.
+3. **Orchestrator Guardrail**: Only select **Orchestrator (Neon / Carbon / Argon)** when executing `3+` independent non-overlapping sub-tickets in parallel via `/teamwork`; switch back to `Gemini 4 Neon` or `3.8 Flash` immediately afterward.
+4. **Post-Ticket Reset**: Run `/start` after completing each atomic ticket so `0.0 KB` of stale history carries into the next turn.

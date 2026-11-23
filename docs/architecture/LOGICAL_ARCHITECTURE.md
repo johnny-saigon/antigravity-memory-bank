@@ -34,9 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-105`** | Automated Historical Context Scraper (Git, Docs & Antigravity Transcripts) | 🟢 DONE | `lib/context-scraper.mjs`, `bin/cli.mjs` |
-| **`FEAT-106`** | Incremental Context Auto-Synchronizer, Git Post-Commit Hook & CI Workflow | 🟢 DONE | `scripts/sync-memory-context.mjs`, `templates/git/hooks/post-commit.tpl`, `templates/github/workflows/memory-bank-sync.yml.tpl` |
-| **`FEAT-107`** | Passive Observer Invariant & Operational Board Separation into docs/ | 🟢 DONE | `templates/AGENTS.md.tpl`, `rules/AGENTS.md`, `skills/update-memory/SKILL.md` |
 | **`FEAT-108`** | Decoupled Zero-Token Backlog Engine, /backlog-start Skill & Review Pane Kanban | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `skills/backlog-start/SKILL.md` |
 | **`FEAT-109`** | Automated Board & Bug Record Adapter During init / upgrade | 🟢 DONE | `lib/backlog-adapter.mjs`, `bin/cli.mjs` |
 | **`FEAT-110`** | Dogfooding & Strict Upstream Package Isolation Architecture | 🟢 DONE | `package.json`, `bin/cli.mjs`, `.gitignore` |
@@ -54,6 +51,9 @@ flowchart LR
 | **`FEAT-122`** | Mandatory Plan-to-Backlog Ticket Creation & Atomic Plan Decomposition (backlog split & plan --from-plan) | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `skills/backlog-plan/SKILL.md` |
 | **`FEAT-123`** | Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks | 🟢 DONE | `skills/start/SKILL.md`, `.agents/skills/start/SKILL.md`, `scripts/lint-memory.mjs` |
 | **`FEAT-124`** | Add per-column and global Sort (Oldest to Newest and vice versa) and manual drag-and-drop / up-down ticket reordering across all Backlog instances | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
+| **`FEAT-125`** | Verbose AGY Model Roster, Quota-Pool & Ticket Quality-to-Credit ROI Engine | 🟢 DONE | `scripts/lint-memory.mjs`, `tests/cli-e2e.test.mjs` |
+| **`FEAT-126`** | Interactive Kanban Credit-Saving & AGY Model Advisor UI and CLI | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
+| **`FEAT-127`** | Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout | 🟢 DONE | `skills/effort/SKILL.md`, `skills/credits/SKILL.md`, `skills/usage/SKILL.md` |
 <!-- ag-section:logical-features:end -->
 
 ---

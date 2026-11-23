@@ -69,8 +69,9 @@ Draft or refine `<brainDir>/implementation_plan.md` (with `RequestFeedback: true
 
 ## Phase 3: Interactive Review, Iteration & Handoff to `/backlog-start`
 
-1. **Request Review & Inline Comment Alignment**:
+1. **Request Review, Inline Comment Alignment & Two-Stage Split Model Switch Recommendation**:
    - Present the `implementation_plan.md` artifact to the user for review (supporting inline Google Docs-style comments or `/fork` for weighing alternative architectures).
+   - **Verbose Two-Stage Model Switch Coaching**: Explicitly remind the user that because planning credits were invested separately here to lock the architecture and split atomic tickets, they can now **switch their AGY model picker down** before clicking **Proceed** or running `/backlog-start <ID>` (e.g., from `Gemini 4 Argon (High)` / `Claude Opus 5.5 (High)` down to **`Gemini 4 Neon (Medium/High)`**, **`Gemini 4 Carbon (Medium)`**, or **`Claude Sonnet 5.5 (Medium)`** — or **`Gemini 3.8 Flash (High)`** for simple sub-tickets — saving **`55%–80%` execution credits** while preserving 100% blueprint fidelity). Only recommend **`Orchestrator (Neon/Carbon)`** if executing `3+` independent sub-tickets in parallel.
    - If the user leaves inline comments or requests adjustments, re-research the affected constraints and update `implementation_plan.md` and `task.md` in place.
 2. **Execution & `walkthrough.md` Closure**:
    - Once the user clicks **Proceed** or triggers `/backlog-start <TICKET_ID>`:

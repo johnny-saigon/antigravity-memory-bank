@@ -15,6 +15,7 @@
 | **`BUG-105`** | Prevent MILESTONE-* Items from Being Re-Imported as Duplicate Feature Tasks — Discovered while dogfooding upgrade inside antigravity-memory-bank: checklistItemRegex in lib/backlog-adapter.mjs matched - [x] **MILESTONE- | DONE | `lib/backlog-adapter.mjs` |
 | **`BUG-106`** | Fix Stale _npx Cache, Workspace-Dominance Brain Matching & Sandboxed Kickoff Prompt Clipboard/Bridge — Resolved 3 root causes preventing 100% reliable backlog.html generation on upgrade/init and blocking Kickoff Prompt clipboard copy in sandbo | DONE | `scripts/backlog.mjs, templates/scripts/backlog.mjs, bin/cli.mjs` |
 | **`BUG-107`** | Pull API Keys, Env Contracts, MCP Server Configs & Customizations into Memory Bank on Init/Upgrade/Sync — API keys (.env*, eas.json, credentials/*.p8, host token files), MCP server configs (~/.gemini/config/mcp_config.json, .mcp.json), and Antigr | DONE | `lib/customizations-scraper.mjs, bin/cli.mjs, scripts/sync-memory-context.mjs, templates/memory-bank/integrationsAndCustomizations.md.tpl, templates/AGENTS.md.tpl, skills/start/SKILL.md` |
+| **`COMMIT-c9b5ee9`** | fix(backlog): enforce exact repoRoot ownership in findTargetBrainDirs to prevent sibling repo collision — Git fix commit `c9b5ee9` | DONE | `git history` |
 | **`COMMIT-f3e143e`** | fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight) — Git fix commit `f3e143e` | DONE | `git history` |
 | **`COMMIT-86d8f52`** | fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci] — Git fix commit `86d8f52` | DONE | `git history` |
 | **`COMMIT-04218b1`** | fix(cli): untrack docs/backlog.html from git index during commit [skip ci] — Git fix commit `04218b1` | DONE | `git history` |
@@ -24,7 +25,6 @@
 | **`COMMIT-5c62ad9`** | fix(backlog): enforce strict 1-to-1 workspace dominance and home-relative path isolation in findTargetBrainDirs — Git fix commit `5c62ad9` | DONE | `git history` |
 | **`COMMIT-3796852`** | fix(backlog): guard brain directory fallback against cross-workspace pollution — Git fix commit `3796852` | DONE | `git history` |
 | **`COMMIT-f8339bf`** | fix(backlog): resolve BUG-106 stale _npx cache, workspace-dominance brain matching, and sandboxed Kickoff Prompt clipboard bridge — Git fix commit `f8339bf` | DONE | `git history` |
-| **`COMMIT-00ba072`** | fix(backlog): make backlog engine, review artifacts, and skills fully generic upstream — Git fix commit `00ba072` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

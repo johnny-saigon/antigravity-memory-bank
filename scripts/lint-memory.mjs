@@ -2,15 +2,16 @@
 
 /**
  * Antigravity Memory Bank — Line Budget, Progressive Disclosure, Rule Frontmatter Linter
- * & Zero-Token Context / Credit / Effort / Usage Controller
+ * & Verbose AGY Model Roster / Quality-to-Credit ROI Controller
  *
  * Modes:
- *   node scripts/lint-memory.mjs                  -> Full Memory Bank, Root (<50 lines) & Frontmatter Linter
- *   node scripts/lint-memory.mjs --context        -> /context: Active rules, progressive disclosure & token footprint
- *   node scripts/lint-memory.mjs --credits        -> /credits: Per-turn credit drain, savings & overage hard-stop audit
- *   node scripts/lint-memory.mjs --usage          -> /usage: Session transcript telemetry, effort tier & model guidance
- *   node scripts/lint-memory.mjs --effort [tier]  -> /effort [low|medium|high|auto]: Set & display reasoning effort profile
- *   node scripts/lint-memory.mjs --clear          -> /clear: Verify state checkpoint & output context reset summary
+ *   node scripts/lint-memory.mjs                    -> Full Memory Bank, Root (<50 lines) & Frontmatter Linter
+ *   node scripts/lint-memory.mjs --context          -> /context: Active rules, progressive disclosure & token footprint
+ *   node scripts/lint-memory.mjs --credits          -> /credits: Verbose credit drain, Dual Quota-Pool & AGY model ROI audit
+ *   node scripts/lint-memory.mjs --usage            -> /usage: Session transcript telemetry, effort tier & AGY model guidance
+ *   node scripts/lint-memory.mjs --effort [tier]    -> /effort [low|medium|high|xhigh|auto]: Set effort & verbose model ROI guide
+ *   node scripts/lint-memory.mjs --advise [id]      -> Verbose ticket-specific Quality-to-Credit ROI & AGY model advisor
+ *   node scripts/lint-memory.mjs --clear            -> /clear: Verify state checkpoint & output context reset summary
  */
 
 import fsSync, { promises as fs } from 'node:fs';
@@ -144,7 +145,195 @@ function findLatestBrainStats({ resetWatermark = false } = {}) {
   }
 }
 
-function getOrSetEffortProfile(requestedTier = null) {
+const AGY_MODEL_FAMILIES = {
+  googleGemini: [
+    {
+      name: 'Gemini 3.8 Flash (Low | Medium | High)',
+      ids: ['gemini-3.8-flash-low', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-high'],
+      pool: 'Google Quota Pool',
+      burn: '1.0x (Lowest Burn)',
+      bestFor: 'Micro-tasks, CSS/copy tweaks, docs formatting, test runs, browser/research subagents & simple CRUD'
+    },
+    {
+      name: 'Gemini 4 Hydrogen (Low | Medium | High | XHigh)',
+      ids: ['gemini-4-hydrogen-low', 'gemini-4-hydrogen-medium', 'gemini-4-hydrogen-high', 'gemini-4-hydrogen-xhigh'],
+      pool: 'Google Quota Pool',
+      burn: '1.3x–2.0x (Agile)',
+      bestFor: 'Fast Gemini 4 coding; XHigh enables deep single-module reasoning bursts without full Argon credit cost'
+    },
+    {
+      name: 'Gemini 4 Neon (Low | Medium | High | XHigh)',
+      ids: ['gemini-4-neon-low', 'gemini-4-neon-medium', 'gemini-4-neon-high', 'gemini-4-neon-xhigh'],
+      pool: 'Google Quota Pool',
+      burn: '2.0x–3.0x (Best Daily Q/C ROI)',
+      bestFor: '80% of standard feature & bug tickets, executing approved /backlog-plan sub-tickets, and UI/API work'
+    },
+    {
+      name: 'Gemini 4 Carbon (Low | Medium | High)',
+      ids: ['gemini-4-carbon-low', 'gemini-4-carbon-medium', 'gemini-4-carbon-high'],
+      pool: 'Google Quota Pool',
+      burn: '3.5x–4.5x (Deep Systems)',
+      bestFor: 'Multi-file backend systems, DB/OAuth adapters, state machines, and complex cross-layer bug fixes'
+    },
+    {
+      name: 'Gemini 4 Argon (Low | Medium | High)',
+      ids: ['gemini-4-argon-low', 'gemini-4-argon-medium', 'gemini-4-argon-high'],
+      pool: 'Google Quota Pool',
+      burn: '5.0x–7.0x (Frontier Architect)',
+      bestFor: 'Stage-A /backlog-plan blueprints, cross-repo architecture, and P0 root-cause diagnosis (1-2 turns, then switch down!)'
+    }
+  ],
+  externalModels: [
+    {
+      name: 'GPT-OSS 120B (Medium)',
+      ids: ['gpt-oss-120b-medium'],
+      pool: 'External Quota Pool (Separate Reset Clock)',
+      burn: '1.5x (Open-Weight Offload)',
+      bestFor: 'Cost-effective external quota offload for scaffolding, boilerplate, or second-opinion code review when saving Google/Claude quota'
+    },
+    {
+      name: 'Claude Sonnet 5.5 (Low | Medium | High)',
+      ids: ['claude-sonnet-5-5-low', 'claude-sonnet-5-5-medium', 'claude-sonnet-5-5-high'],
+      pool: 'External Quota Pool (Separate Reset Clock)',
+      burn: '2.5x–4.0x (Surgical Code)',
+      bestFor: 'High-precision React/TypeScript UI surgery, strict refactoring, and external counterpart to Gemini 4 Neon/Carbon'
+    },
+    {
+      name: 'Claude Opus 5.5 (Low | Medium | High)',
+      ids: ['claude-opus-5-5-low', 'claude-opus-5-5-medium', 'claude-opus-5-5-high'],
+      pool: 'External Quota Pool (Separate Reset Clock)',
+      burn: '6.0x–9.0x (Heavyweight Frontier)',
+      bestFor: '1-turn /backlog-plan design reviews, security audits, or stubborn P0 root-cause analysis (NEVER leave active for routine test-fix loops!)'
+    }
+  ],
+  googleOrchestrators: [
+    {
+      name: 'Orchestrator (Neon)',
+      ids: ['gemini-pro-orchestrator-neon'],
+      pool: 'Google Quota Pool (Multi-Agent Coordinator)',
+      burn: '3.0x–4.5x (Fan-Out Multiplier)',
+      bestFor: 'Coordinating 2–3 parallel swarm workers on well-defined independent sub-tickets (/teamwork)'
+    },
+    {
+      name: 'Orchestrator (Carbon)',
+      ids: ['gemini-pro-orchestrator'],
+      pool: 'Google Quota Pool (Multi-Agent Coordinator)',
+      burn: '4.5x–6.5x (Multi-Module Pipeline)',
+      bestFor: 'Multi-subsystem feature pipelines & parallel cross-layer refactors where independent workers edit separate modules'
+    },
+    {
+      name: 'Orchestrator (Argon)',
+      ids: ['gemini-pro-orchestrator-argon'],
+      pool: 'Google Quota Pool (Frontier Coordinator)',
+      burn: '6.5x–10.0x (Heavyweight Swarm)',
+      bestFor: 'Large-scale multi-repo migrations or full-codebase audits (GUARDRAIL: NEVER use for 1–3 file tickets — wastes 4x+ credits!)'
+    }
+  ]
+};
+
+function analyzeTicketCreditStrategy(task, requestedTier = null) {
+  const text = task
+    ? `${task.id || ''} ${task.title || ''} ${task.description || ''} ${task.spec || ''} ${(task.components || []).join(' ')}`.toLowerCase()
+    : '';
+  const compCount = task && Array.isArray(task.components) ? task.components.length : 0;
+  const attachCount = task && Array.isArray(task.attachments) ? task.attachments.length : 0;
+  const prio = String(task?.priority || 'medium').toLowerCase();
+  const type = String(task?.type || 'feature').toLowerCase();
+
+  const isParallelSwarm = /\b(swarm|multi-repo|all repos|parallel|migration across|5 repositories|cross-repo)\b/.test(text) || compCount >= 6;
+  const isHighRisk = /\b(oauth|auth|security|schema|migration|concurrency|race|webgl|worker|stripe|billing|brick|architect|p0|production)\b/.test(text);
+  const isMicro = /\b(copy|typo|label|css|color|badge|sort|readme|comment|spacing|padding|icon)\b/.test(text) && compCount <= 1 && prio !== 'high';
+
+  let strategyKey = 'standard_direct';
+  if (requestedTier === 'low' || (!requestedTier && isMicro)) {
+    strategyKey = 'micro_direct';
+  } else if (requestedTier === 'xhigh' || (!requestedTier && isParallelSwarm)) {
+    strategyKey = isParallelSwarm ? 'parallel_orchestrator' : 'complex_split_plan';
+  } else if (requestedTier === 'high' || (!requestedTier && (compCount >= 3 || prio === 'high' || isHighRisk || type === 'refactor'))) {
+    strategyKey = 'complex_split_plan';
+  } else if (requestedTier === 'medium') {
+    strategyKey = 'standard_direct';
+  }
+
+  const tid = task?.id || '<TICKET_ID>';
+
+  const strategies = {
+    micro_direct: {
+      tier: 'low',
+      badge: '⚡ TIER 1 · MICRO / BOILERPLATE — Direct Execution (Skip Separate /plan)',
+      turnBudget: '≤ 4 Tool Turns (1 turn read, 1 turn edit, 1 turn verify)',
+      planningEconomics:
+        'SKIP separate /plan (saves ~45%–55% credits): A dedicated planning turn (~3k–5k tokens) costs as much as the 2-turn fix itself. Still create a 0-token backlog ticket first if you want release tracking, then jump straight into execution.',
+      stageAPlan: 'Skip separate /backlog-plan (unnecessary overhead for 1-file low-ambiguity edits)',
+      stageBGoogle: 'Gemini 3.8 Flash (Low or Medium) — or Gemini 4 Hydrogen (Low)',
+      stageBExternal: 'GPT-OSS 120B (Medium) — or Claude Sonnet 5.5 (Low)',
+      stageCVerify: 'Gemini 3.8 Flash (Low)',
+      orchestratorRule: '🚫 DO NOT use Google Orchestrators here (multi-agent fan-out wastes 4x–6x credits on a 1-file edit).',
+      estimatedSavings: '50%–75% fewer credits vs. leaving a frontier model active',
+      promptPlan: null,
+      promptExec: `/effort low /backlog-start ${tid}`
+    },
+    standard_direct: {
+      tier: 'medium',
+      badge: '⚙️ TIER 2 · STANDARD FEATURE / SINGLE-COMPONENT BUG — Ticket-First Direct Sprint',
+      turnBudget: '≤ 6 Tool Turns (1 turn read, 1–2 turns edit, 1–2 turns test)',
+      planningEconomics:
+        'CREATE BACKLOG TICKET FIRST (0 AI tokens via backlog.html or `npm run backlog add --components ...`), then run `/backlog-start` directly: Pre-defining components and attachments offline eliminates 2–4 exploratory chat turns (~15k–30k tokens saved) without paying for a separate formal /plan turn.',
+      stageAPlan: 'Optional — skip /plan if ticket spec & target components are already explicit; run `/backlog-plan` only if edge cases are unclear',
+      stageBGoogle: 'Gemini 4 Neon (Medium or High) — or Gemini 4 Hydrogen (High)',
+      stageBExternal: 'Claude Sonnet 5.5 (Medium)',
+      stageCVerify: 'Gemini 3.8 Flash (Medium) or stay on Gemini 4 Neon (Low)',
+      orchestratorRule: '🚫 Avoid Google Orchestrators unless splitting into 3+ independent parallel modules.',
+      estimatedSavings: '40%–60% fewer credits vs. ad-hoc chat exploration on Argon/Opus',
+      promptPlan: `/effort medium /backlog-plan ${tid}`,
+      promptExec: `/effort medium /backlog-start ${tid}`
+    },
+    complex_split_plan: {
+      tier: requestedTier === 'xhigh' ? 'xhigh' : 'high',
+      badge: '🧠 TIER 3 · MULTI-FILE / ARCHITECTURE / P0 BUG — Two-Stage Split Model Routing (Separate /plan First!)',
+      turnBudget: '≤ 8 Tool Turns per Atomic Sub-Ticket (Strict Batching + Dual-Test E2E)',
+      planningEconomics:
+        'SEPARATE PLANNING CREDITS FROM EXECUTION CREDITS (Saves 55%–80% credits): Jumping straight into coding a multi-file/high-risk ticket burns 10–15 frontier turns on mid-flight U-turns and broken tests. Spend 1–2 turns in `/backlog-plan` on a frontier model to lock `implementation_plan.md` & split into atomic sub-tickets (`npm run backlog split`), THEN switch down to a workhorse model for `/backlog-start`!',
+      stageAPlan: 'Google: Gemini 4 Argon (High) or Gemini 4 Carbon (High) · External: Claude Opus 5.5 (Medium/High) [1–2 turns only]',
+      stageBGoogle: 'Switch DOWN after approval -> Gemini 4 Neon (Medium/High) or Gemini 4 Carbon (Medium) [or Hydrogen XHigh for single-module deep math]',
+      stageBExternal: 'Switch DOWN after approval -> Claude Sonnet 5.5 (Medium/High)',
+      stageCVerify: 'Gemini 3.8 Flash (Medium) for test/lint/docs sync',
+      orchestratorRule: '⚠️ Use Orchestrator (Neon) or Orchestrator (Carbon) ONLY if `/backlog-plan` splits into 3+ independent non-overlapping sub-tickets you want executed in parallel.',
+      estimatedSavings: '55%–80% fewer credits vs. coding end-to-end on Argon/Opus without a plan',
+      promptPlan: `/effort high /backlog-plan ${tid}`,
+      promptExec: `/effort medium /backlog-start ${tid}`
+    },
+    parallel_orchestrator: {
+      tier: 'xhigh',
+      badge: '🎛️ TIER 4 · PARALLEL MULTI-SUBSYSTEM / CROSS-REPO SWARM — Orchestrator + Split Workers',
+      turnBudget: '1–2 Planning Turns + Parallel Atomic Workers (≤ 6 turns/worker)',
+      planningEconomics:
+        'MANDATORY BACKLOG DECOMPOSITION + ORCHESTRATOR ROUTING: Always register & split every deliverable into atomic tickets in `docs/backlog.json` first (`npm run backlog plan --from-plan --split`). Let the Orchestrator coordinate parallel workers while pinning individual workers to lower-cost models (`Gemini 3.8 Flash` / `Gemini 4 Neon`) so you get frontier coordination at workhorse execution cost.',
+      stageAPlan: 'Orchestrator (Argon) or Orchestrator (Carbon) — or Gemini 4 Argon (High) for initial blueprint & ticket split',
+      stageBGoogle: 'Coordinator: Orchestrator (Neon/Carbon) · Workers: Gemini 4 Neon (Medium) & Gemini 3.8 Flash (High)',
+      stageBExternal: 'External Review/Hard Module Worker: Claude Sonnet 5.5 (Medium) or GPT-OSS 120B (Medium)',
+      stageCVerify: 'Gemini 3.8 Flash (Low/Medium) verification worker',
+      orchestratorRule: '✅ Ideal Orchestrator fit! Remember to switch BACK to Gemini 4 Neon or 3.8 Flash immediately after the swarm finishes so you do not burn Orchestrator credits on follow-up tweaks.',
+      estimatedSavings: '50%–70% higher Quality/Credit ratio vs. serial single-thread frontier loops',
+      promptPlan: `/effort high /backlog-plan ${tid}`,
+      promptExec: `/effort high /backlog-start ${tid}`
+    }
+  };
+
+  const chosen = strategies[strategyKey];
+  return {
+    strategyKey,
+    ...chosen,
+    compCount,
+    attachCount,
+    hasActiveTicket: Boolean(task),
+    backlogFirstTip: task
+      ? `✅ Active ticket [${task.id}] is tracked (${compCount} component(s), ${attachCount} attachment(s)) — offline spec saves ~15k–30k discovery tokens.`
+      : '⚠️ NO ACTIVE BACKLOG TICKET! Before prompting the model to code, create a 0-token ticket in backlog.html (+ New Task) or via `npm run backlog add "<Title>" --type feature --priority medium --components "<files>"` to eliminate 2–4 exploratory chat turns (~15k–30k tokens saved).'
+  };
+}
+
+function getOrSetEffortProfile(requestedTier = null, explicitTaskId = null) {
   const backlogPath = path.resolve(process.cwd(), 'docs', 'backlog.json');
   let bj = { meta: {}, tasks: [] };
   if (fsSync.existsSync(backlogPath)) {
@@ -154,22 +343,22 @@ function getOrSetEffortProfile(requestedTier = null) {
     } catch {}
   }
 
-  const activeTask =
-    (bj.tasks || []).find((t) => t.status === 'in_progress') ||
-    (bj.tasks || []).find((t) => t.status === 'todo');
-
-  let tier = requestedTier ? requestedTier.toLowerCase() : (bj.meta?.effortLevel || 'auto');
-  if (!['low', 'medium', 'high'].includes(tier)) {
-    if (activeTask) {
-      const p = String(activeTask.priority || '').toUpperCase();
-      const compCount = Array.isArray(activeTask.components) ? activeTask.components.length : 0;
-      if (p === 'P0' || p === 'HIGH' || compCount >= 3) tier = 'high';
-      else if (p === 'P2' || p === 'LOW') tier = 'low';
-      else tier = 'medium';
-    } else {
-      tier = 'medium';
-    }
+  let activeTask = null;
+  if (explicitTaskId) {
+    activeTask = (bj.tasks || []).find((t) => String(t.id || '').toLowerCase() === explicitTaskId.toLowerCase()) || null;
   }
+  if (!activeTask) {
+    activeTask =
+      (bj.tasks || []).find((t) => t.status === 'in_progress') ||
+      (bj.tasks || []).find((t) => t.status === 'todo') ||
+      null;
+  }
+
+  const normalizedReq = requestedTier ? requestedTier.toLowerCase() : null;
+  const strategy = analyzeTicketCreditStrategy(activeTask, ['low', 'medium', 'high', 'xhigh'].includes(normalizedReq) ? normalizedReq : null);
+  let tier = ['low', 'medium', 'high', 'xhigh'].includes(normalizedReq)
+    ? normalizedReq
+    : (['low', 'medium', 'high', 'xhigh'].includes(bj.meta?.effortLevel) && !explicitTaskId ? bj.meta.effortLevel : strategy.tier);
 
   if (requestedTier && fsSync.existsSync(backlogPath)) {
     try {
@@ -181,26 +370,56 @@ function getOrSetEffortProfile(requestedTier = null) {
 
   const profiles = {
     low: {
-      label: '⚡ LOW EFFORT (Fast Execution · Boilerplate UI / Copy / Simple CRUD)',
+      label: '⚡ LOW EFFORT (Fast Execution · Boilerplate UI / Copy / Config / Simple CRUD)',
       turnBudget: '≤ 4 Tool Turns per Fix (1 turn read, 1 turn edit, 1 turn check)',
-      modelRec: 'Gemini Flash (`flash` / `flash_lite`)',
-      planGate: 'Optional (direct single-file execution allowed)'
+      modelRec: 'Google: Gemini 3.8 Flash (Low/Med) · Hydrogen (Low) | External: GPT-OSS 120B (Med) · Sonnet 5.5 (Low)',
+      planGate: 'Skip separate /plan (direct /backlog-start saves ~50% credits)'
     },
     medium: {
-      label: '⚙️ MEDIUM EFFORT (Balanced Engineering · Standard Features & Single-Component Bugs)',
-      turnBudget: '≤ 6 Tool Turns per Fix (1 turn read, 1-2 turns edit, 1-2 turns test)',
-      modelRec: 'Default Workspace Model (`inherit` / Gemini Pro)',
-      planGate: 'Recommended for multi-file changes (`/backlog-plan`)'
+      label: '⚙️ MEDIUM EFFORT (Optimal Daily Q/C ROI · Standard Features & Single-Component Bugs)',
+      turnBudget: '≤ 6 Tool Turns per Fix (1 turn read, 1–2 turns edit, 1–2 turns test)',
+      modelRec: 'Google: Gemini 4 Neon (Med/High) · Hydrogen (High) | External: Claude Sonnet 5.5 (Med)',
+      planGate: 'Create 0-token backlog ticket first -> Direct /backlog-start (or /backlog-plan if 3+ files)'
     },
     high: {
-      label: '🧠 HIGH EFFORT (Deep Architecture · Complex State, Concurrency & P0 Bugs)',
-      turnBudget: '≤ 8 Tool Turns per Fix (strict batching with full E2E verification)',
-      modelRec: 'Frontier Reasoning (`pro` / Gemini Pro / Claude Sonnet)',
-      planGate: 'MANDATORY pre-edit `/plan` or `/backlog-plan` approval before modifying files'
+      label: '🧠 HIGH EFFORT (Deep Architecture · Multi-File Features, OAuth/DB & P0 Bugs)',
+      turnBudget: '≤ 8 Tool Turns per Fix (Two-Stage Split Routing: Plan on Argon/Carbon/Opus -> Execute on Neon/Sonnet)',
+      modelRec: 'Stage A Plan: Gemini 4 Argon/Carbon (High) · Claude Opus 5.5 (Med/High) -> Stage B Exec: Gemini 4 Neon (Med) · Sonnet 5.5 (Med)',
+      planGate: 'MANDATORY separate `/backlog-plan` + atomic ticket split BEFORE modifying files (saves 55%–80% credits)'
+    },
+    xhigh: {
+      label: '🧠🔥 XHIGH EFFORT (Maximum Thinking Burst / Multi-Agent Swarm Orchestration)',
+      turnBudget: '1–2 Planning Turns + Atomic Parallel Workers (≤ 6 turns/worker)',
+      modelRec: 'Single-Module Deep Burst: Gemini 4 Neon/Hydrogen (XHigh) | Swarm: Orchestrator (Neon/Carbon/Argon) + Flash/Neon workers',
+      planGate: 'MANDATORY `/backlog-plan` + `npm run backlog split` before spawning Orchestrator/Swarm workers'
     }
   };
 
-  return { tier, profile: profiles[tier], activeTask };
+  return { tier, profile: profiles[tier], activeTask, strategy };
+}
+
+function printVerboseAgyModelAdvisor(strategy, activeTask) {
+  console.log('\n🎯 Verbose Quality-to-Credit ROI & AGY Model Prescription:');
+  console.log(`   • Classification:       ${strategy.badge}`);
+  console.log(`   • Backlog-First Status: ${strategy.backlogFirstTip}`);
+  console.log(`   • Planning Credit ROI:  ${strategy.planningEconomics}`);
+  console.log(`   • Estimated Savings:    💰 ${strategy.estimatedSavings}`);
+  console.log('\n   🔀 Two-Stage Split Model Routing (Best Quality / Used Credits):');
+  console.log(`     1) Stage A — Plan (/backlog-plan):   ${strategy.stageAPlan}`);
+  console.log(`     2) Stage B — Exec (Google Pool):     ${strategy.stageBGoogle}`);
+  console.log(`     3) Stage B — Exec (External Pool):   ${strategy.stageBExternal}`);
+  console.log(`     4) Stage C — Verify & Docs Sync:     ${strategy.stageCVerify}`);
+  console.log(`     5) Google Orchestrator Guardrail:    ${strategy.orchestratorRule}`);
+  console.log('\n   ⚖️  Dual Quota-Pool Balancing (Independent 4h Reset Clocks):');
+  console.log('     • Pool 1 (Google):   Gemini 3.8 Flash · Gemini 4 (Hydrogen / Neon / Carbon / Argon) · Orchestrator (Neon / Carbon / Argon)');
+  console.log('     • Pool 2 (External): Claude Sonnet 5.5 · Claude Opus 5.5 · GPT-OSS 120B (Medium)');
+  console.log('     • Pro Tip: If Pool 1 drops below 30%, shift routine execution to Claude Sonnet 5.5 (Med) or GPT-OSS 120B (Med) instead of hitting a wall!');
+  if (activeTask) {
+    console.log('\n   🚀 Copy-Paste Optimal Kickoff Commands:');
+    if (strategy.promptPlan) console.log(`     • Step 1 (Plan & Split):  ${strategy.promptPlan}`);
+    console.log(`     • Step ${strategy.promptPlan ? '2' : '1'} (Execute Ticket): ${strategy.promptExec}`);
+    console.log('     • Final Step (Reset):     /start   (auto-runs /clear & /compact pre-flight -> 0.0 KB delta)');
+  }
 }
 
 if (args.includes('--context')) {
@@ -292,7 +511,7 @@ if (args.includes('--credits') || args.includes('--usage')) {
     }
   }
 
-  const { tier, profile, activeTask } = getOrSetEffortProfile();
+  const { tier, profile, activeTask, strategy } = getOrSetEffortProfile();
   const brain = findLatestBrainStats();
 
   console.log('1. Per-Turn Token Economics:');
@@ -314,6 +533,8 @@ if (args.includes('--credits') || args.includes('--usage')) {
     console.log(`   • Active Backlog Ticket:  [${activeTask.id}] ${activeTask.title} (${activeTask.status})`);
   }
 
+  printVerboseAgyModelAdvisor(strategy, activeTask);
+
   console.log('\n3. Overage Hard-Stop & Guardrail Checklist:');
   console.log('   • [✓] Root AGENTS.md & GEMINI.md strictly <= 50 lines (0 inline @-expansion bloat)');
   console.log('   • [✓] Memory-First Lookup & <= 8 Tool Turns per Fix active');
@@ -321,10 +542,34 @@ if (args.includes('--credits') || args.includes('--usage')) {
   process.exit(0);
 }
 
+if (args.includes('--advise')) {
+  const idx = args.indexOf('--advise');
+  const targetId = args[idx + 1] && !args[idx + 1].startsWith('-') ? args[idx + 1] : null;
+  const { tier, profile, activeTask, strategy } = getOrSetEffortProfile(null, targetId);
+  console.log(`\n🧭 Antigravity Save Credits & AGY Model ROI Advisor${activeTask ? ` — [${activeTask.id}] ${activeTask.title}` : ''}\n`);
+  console.log(`   • Recommended Effort:  /effort ${tier} (${profile.turnBudget})`);
+  printVerboseAgyModelAdvisor(strategy, activeTask);
+  console.log('\n📚 Deployed AGY 3-Family Model Reference:');
+  console.log('   [1] Google Gemini Models (Google Quota Pool):');
+  for (const m of AGY_MODEL_FAMILIES.googleGemini) {
+    console.log(`       • ${m.name} [${m.burn}] -> ${m.bestFor}`);
+  }
+  console.log('   [2] External Partner Models (Separate External Quota Pool):');
+  for (const m of AGY_MODEL_FAMILIES.externalModels) {
+    console.log(`       • ${m.name} [${m.burn}] -> ${m.bestFor}`);
+  }
+  console.log('   [3] Google Orchestrators (Multi-Agent / Swarm Coordinators — Google Pool):');
+  for (const m of AGY_MODEL_FAMILIES.googleOrchestrators) {
+    console.log(`       • ${m.name} [${m.burn}] -> ${m.bestFor}`);
+  }
+  console.log('');
+  process.exit(0);
+}
+
 if (args.includes('--effort')) {
   const idx = args.indexOf('--effort');
   const requested = args[idx + 1] && !args[idx + 1].startsWith('-') ? args[idx + 1] : 'auto';
-  const { tier, profile, activeTask } = getOrSetEffortProfile(requested);
+  const { tier, profile, activeTask, strategy } = getOrSetEffortProfile(requested);
   console.log(`\n⚡ Antigravity Reasoning Effort Profile Set: ${tier.toUpperCase()} (/effort ${tier})\n`);
   console.log(`  • Mode:              ${profile.label}`);
   console.log(`  • Turn Budget:       ${profile.turnBudget}`);
@@ -333,6 +578,7 @@ if (args.includes('--effort')) {
   if (activeTask) {
     console.log(`  • Active Ticket:     [${activeTask.id}] ${activeTask.title} (${activeTask.priority || 'P1'})`);
   }
+  printVerboseAgyModelAdvisor(strategy, activeTask);
   console.log('');
   process.exit(0);
 }
@@ -550,6 +796,108 @@ if (fsSync.existsSync(docsIndexFull)) {
   }
   if (missingLiving === 0 && brokenLinks === 0) {
     console.log('✅ Canonical Living Docs Hierarchy verified: 10/10 docs present, 0 broken links in docs/INDEX.md');
+  }
+}
+
+// Backlog Schema & Hygiene Audit: runs when docs/backlog.json is present
+const backlogJsonFull = path.resolve(process.cwd(), 'docs/backlog.json');
+if (fsSync.existsSync(backlogJsonFull)) {
+  try {
+    const rawBacklog = await fs.readFile(backlogJsonFull, 'utf8');
+    const backlog = JSON.parse(rawBacklog);
+    if (!Array.isArray(backlog.tasks)) {
+      console.error('❌ docs/backlog.json: "tasks" must be an array');
+      violations++;
+    } else {
+      let backlogViolations = 0;
+      const seenIds = new Set();
+      const validPriorities = new Set(['high', 'medium', 'low']);
+      const validStatuses = new Set(['todo', 'in_progress', 'testing', 'done']);
+
+      for (const task of backlog.tasks) {
+        const tid = String(task?.id || '').trim();
+        if (!tid) {
+          console.error('❌ docs/backlog.json: Task found with missing id');
+          violations++;
+          backlogViolations++;
+          continue;
+        }
+        const normId = tid.toUpperCase();
+        if (seenIds.has(normId)) {
+          console.error(`❌ docs/backlog.json [${tid}]: Duplicate task id`);
+          violations++;
+          backlogViolations++;
+        }
+        seenIds.add(normId);
+
+        const title = String(task?.title || '').trim();
+        if (!title || title.startsWith('-')) {
+          console.error(`❌ docs/backlog.json [${tid}]: Invalid or flag-like title "${title}" (use --title "..." or positional title)`);
+          violations++;
+          backlogViolations++;
+        }
+
+        const prio = String(task?.priority || '').toLowerCase();
+        if (!validPriorities.has(prio)) {
+          console.error(`❌ docs/backlog.json [${tid}]: Non-normalized priority "${task?.priority}" (must be high, medium, or low)`);
+          violations++;
+          backlogViolations++;
+        }
+
+        const tType = String(task?.type || '').toLowerCase();
+        if (!tType || tType === 'feat' || tType === 'fix' || tType.startsWith('-')) {
+          console.error(`❌ docs/backlog.json [${tid}]: Non-normalized type "${task?.type}" (use "feature" or "bug")`);
+          violations++;
+          backlogViolations++;
+        }
+
+        const status = String(task?.status || '').toLowerCase();
+        if (!validStatuses.has(status)) {
+          console.error(`❌ docs/backlog.json [${tid}]: Invalid status "${task?.status}"`);
+          violations++;
+          backlogViolations++;
+        }
+
+        if (status === 'done') {
+          if (task.waitingOn) {
+            console.error(`❌ docs/backlog.json [${tid}]: Completed task still has stale waitingOn ("${task.waitingOn}")`);
+            violations++;
+            backlogViolations++;
+          }
+          if (Array.isArray(task.actionItems) && task.actionItems.some(a => !a.done)) {
+            console.error(`❌ docs/backlog.json [${tid}]: Completed task still has pending actionItems (run "npm run backlog done ${tid}")`);
+            violations++;
+            backlogViolations++;
+          }
+        }
+      }
+
+      if (backlogViolations === 0) {
+        console.log(`✅ Backlog Hygiene verified: ${backlog.tasks.length} tickets valid in docs/backlog.json`);
+      }
+
+      // Verify that every ticket ID (`FEAT-*`, `BUG-*`, `QA-*`, `UX-*`) declared in docs/planning/implementation_plan.md exists in docs/backlog.json
+      const planMdFull = path.resolve(process.cwd(), 'docs/planning/implementation_plan.md');
+      if (fsSync.existsSync(planMdFull)) {
+        const planMdRaw = await fs.readFile(planMdFull, 'utf8');
+        const planHeadingIdRe = /^#{2,4}\s+[^\n]*?\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\b/gm;
+        let pm;
+        const missingFromBacklog = [];
+        while ((pm = planHeadingIdRe.exec(planMdRaw)) !== null) {
+          const pid = pm[1].toUpperCase();
+          if (!seenIds.has(pid) && !missingFromBacklog.includes(pid)) {
+            missingFromBacklog.push(pid);
+          }
+        }
+        if (missingFromBacklog.length > 0) {
+          console.error(`❌ docs/planning/implementation_plan.md: Planned ticket(s) [${missingFromBacklog.join(', ')}] missing from docs/backlog.json (run "node scripts/backlog.mjs render" to self-heal)`);
+          violations += missingFromBacklog.length;
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`❌ docs/backlog.json: Invalid JSON (${err.message})`);
+    violations++;
   }
 }
 

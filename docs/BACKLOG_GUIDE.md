@@ -193,3 +193,23 @@ To keep per-turn input tokens minimal (~8k tokens/turn instead of ~150k tokens/t
    - Turn **OFF** the **"Toggle for overage"** in Google One / Antigravity settings so Antigravity hits a hard stop at your 20x baseline limit, and check **`/credits`** and **`/usage`** to see which models are draining your pool.
 
 
+
+---
+
+## 💰 Save Credits & AGY 3-Family Model Quality-to-Credit ROI Guide (`FEAT-125`..`FEAT-127`)
+
+Maximizing your **Quality-to-Used-Credits Ratio (`Q/C ROI`)** requires matching every backlog ticket to the right AGY model family, effort tier (`low | medium | high | xhigh`), and planning strategy:
+
+### 1. Backlog-First & Separate Planning Credit Economics
+- **Always Create a Backlog Ticket First (`0 AI Credits`)**: Capturing a ticket offline in `backlog.html` (`+ Quick Capture Task`) or via `npm run backlog add "<Title>" --components "<files>"` eliminates 2–4 exploratory chat turns (`~15k–30k` tokens saved immediately).
+- **When to Skip `/plan` (Direct `/backlog-start`)**: For `1–2` file micro-edits, CSS/copy tweaks, or clear single-component bugs, a separate planning turn costs as much as the fix itself. Jump straight to `/effort low /backlog-start <ID>` or `/effort medium /backlog-start <ID>`.
+- **When Separate Planning Credits Save `55%–80%` (Two-Stage Split Model Routing)**: For `>= 3` file features, schema/OAuth/infra changes, or P0 bugs, run `/effort high /backlog-plan <ID>` on a frontier architect model (`Gemini 4 Argon/Carbon (High)` or `Claude Opus 5.5 (Med/High)`) for 1–2 turns to lock `implementation_plan.md` and split atomic sub-tickets (`npm run backlog split`), **then switch your model picker down** to `Gemini 4 Neon (Medium)` or `Claude Sonnet 5.5 (Medium)` for `/backlog-start`.
+
+### 2. Deployed AGY 3-Family Model Matrix & Dual Quota-Pool Balancing
+| AGY Model Family | Quota Pool | Models & Effort Variants | Optimal Ticket Profile |
+| :--- | :--- | :--- | :--- |
+| **1. Google Gemini** | **Pool 1 (Google)** | `Gemini 3.8 Flash (Low/Med/High)` · `Gemini 4 Hydrogen (Low→XHigh)` · `Gemini 4 Neon (Low→XHigh)` · `Gemini 4 Carbon (Low/Med/High)` · `Gemini 4 Argon (Low/Med/High)` | `3.8 Flash` (`1x`) for micro-edits/tests; `4 Neon` (`2–3x`) for 80% of daily tickets; `4 Carbon/Argon` for `/backlog-plan` blueprints |
+| **2. External Partner** | **Pool 2 (External — Separate Reset Clock)** | `GPT-OSS 120B (Medium)` · `Claude Sonnet 5.5 (Low/Med/High)` · `Claude Opus 5.5 (Low/Med/High)` | `GPT-OSS 120B` for cheap offload; `Sonnet 5.5` for surgical TS/React code; `Opus 5.5` strictly for 1-turn `/backlog-plan` or P0 root-cause audits |
+| **3. Google Orchestrators** | **Pool 1 (Google · Swarm)** | `Orchestrator (Neon)` · `Orchestrator (Carbon)` · `Orchestrator (Argon)` | Multi-agent parallel swarms (`/teamwork`, `>= 5` independent modules) with workers pinned to `Flash`/`Neon`. **Never** leave active for 1–3 file tickets! |
+
+Run `npm run backlog advise [TICKET_ID]` or click **💰 Save Credits & Models** in `backlog.html` anytime for a verbose ticket-specific ROI breakdown.

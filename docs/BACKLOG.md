@@ -367,6 +367,36 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-125: Verbose AGY Model Roster, Quota-Pool & Ticket Quality-to-Credit ROI Engine
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/lint-memory.mjs`, `tests/cli-e2e.test.mjs`
+- **Description:** Evolve scripts/lint-memory.mjs (--effort, --credits, --usage, --context, --advise) with all 27 deployed AGY models (Google Gemini 3.8/4, Google Orchestrators, External Claude 5.5 / GPT-OSS 120B), xhigh effort tier, Two-Stage Split Model Routing, Dual Quota-Pool balancing, and Backlog-First planning economics.
+- **Technical Specification:**
+  Evolve scripts/lint-memory.mjs (--effort, --credits, --usage, --context, --advise) with all 27 deployed AGY models (Google Gemini 3.8/4, Google Orchestrators, External Claude 5.5 / GPT-OSS 120B), xhigh effort tier, Two-Stage Split Model Routing, Dual Quota-Pool balancing, and Backlog-First planning economics.
+
+---
+
+### FEAT-126: Interactive Kanban Credit-Saving & AGY Model Advisor UI and CLI
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`
+- **Description:** Add per-card AGY Model & Quality-to-Credit ROI pills, interactive Save Credits & AGY Model Advisor modal, Quick-Add live ROI banner, and npm run backlog advise CLI across scripts/backlog.mjs and templates/scripts/backlog.mjs.
+- **Technical Specification:**
+  Add per-card AGY Model & Quality-to-Credit ROI pills, interactive Save Credits & AGY Model Advisor modal, Quick-Add live ROI banner, and npm run backlog advise CLI across scripts/backlog.mjs and templates/scripts/backlog.mjs.
+
+---
+
+### FEAT-127: Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `skills/effort/SKILL.md`, `skills/credits/SKILL.md`, `skills/usage/SKILL.md`, `skills/start/SKILL.md`, `skills/backlog-plan/SKILL.md`, `skills/backlog-start/SKILL.md`, `AGENTS.md`, `templates/AGENTS.md.tpl`, `rules/AGENTS.md`, `docs/BACKLOG_GUIDE.md`, `docs/PLANNING_GUIDE.md`, `README.md`
+- **Description:** Upgrade all credit/planning skills, AGENTS directives (<50 lines), living guides, and README with verbose AGY model routing and ticket-first motivation, then deploy upgrade across all installed Memory Bank repos.
+- **Technical Specification:**
+  Upgrade all credit/planning skills, AGENTS directives (<50 lines), living guides, and README with verbose AGY model routing and ticket-first motivation, then deploy upgrade across all installed Memory Bank repos.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

@@ -583,6 +583,117 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(doctorOut, /Brick Doctor passed with 0 structural issues/);
   });
 
+  test('3d. backlog CLI & lint-memory.mjs hygiene: supports flag-first add, normalizes priority/type, completes actionItems on done, and fails lint on corrupted tickets', () => {
+    const backlogScriptPath = path.join(tmpRepo, 'scripts', 'backlog.mjs');
+    const lintScriptPath = path.join(tmpRepo, 'scripts', 'lint-memory.mjs');
+    const backlogJsonPath = path.join(tmpRepo, 'docs', 'backlog.json');
+
+    // 1. Flag-first syntax (--id --title --priority P0 --type feat --description)
+    execFileSync(
+      process.execPath,
+      [
+        backlogScriptPath,
+        'add',
+        '--id',
+        'FEAT-244',
+        '--title',
+        'Interactive 120 FPS Mask Brush',
+        '--priority',
+        'P0',
+        '--type',
+        'feat',
+        '--description',
+        'Client-side erase & restore brush'
+      ],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+
+    // 1b. Verbose AGY Model & Quality-to-Credit ROI Advisor (--advise, --effort xhigh, backlog advise)
+    const adviseOut = execFileSync(process.execPath, [lintScriptPath, '--advise', 'FEAT-244'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    assert.match(adviseOut, /Gemini 4 Neon/);
+    assert.match(adviseOut, /Claude Sonnet 5\.5/);
+    assert.match(adviseOut, /Orchestrator \(Carbon\)/);
+    assert.match(adviseOut, /Dual Quota-Pool Balancing/);
+
+    const xhighOut = execFileSync(process.execPath, [lintScriptPath, '--effort', 'xhigh'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    assert.match(xhighOut, /XHIGH/);
+
+    // 2. Start & Done lifecycle completes actionItems and clears waitingOn
+    execFileSync(process.execPath, [backlogScriptPath, 'start', 'FEAT-244'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    execFileSync(process.execPath, [backlogScriptPath, 'done', 'FEAT-244'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+
+    const parsed = JSON.parse(fs.readFileSync(backlogJsonPath, 'utf8'));
+    const t244 = parsed.tasks.find((t) => t.id === 'FEAT-244');
+    assert.ok(t244, 'Expected FEAT-244 in docs/backlog.json');
+    assert.equal(t244.title, 'Interactive 120 FPS Mask Brush');
+    assert.equal(t244.priority, 'high');
+    assert.equal(t244.type, 'feature');
+    assert.equal(t244.status, 'done');
+    assert.equal(t244.waitingOn, undefined);
+    assert.equal(t244.actionItems.every((a) => a.done === true), true);
+
+    // 3. Clean backlog passes lint-memory.mjs
+    const lintOut = execFileSync(process.execPath, [lintScriptPath], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    assert.match(lintOut, /Backlog Hygiene verified/);
+
+    // 4. Rejects missing/flag-like title on `backlog add`
+    assert.throws(
+      () =>
+        execFileSync(
+          process.execPath,
+          [backlogScriptPath, 'add', '--id', 'FEAT-999', '--priority', 'P1'],
+          { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+        ),
+      /Please specify a title/
+    );
+
+    // 5. Self-heals tickets from docs/planning/implementation_plan.md into docs/backlog.json on render
+    const planMdPath = path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md');
+    fs.mkdirSync(path.dirname(planMdPath), { recursive: true });
+    fs.writeFileSync(
+      planMdPath,
+      [
+        '# Implementation Plan — Multi-Phase Roadmap',
+        '## 3. Proposed Changes',
+        '### [FEAT-245] Phase 2: Smart AI Object & Residual Background Eraser',
+        '- **Specification**: LaMa FP16 inpainting in `server/app/services/inpainter.py`.',
+        '### [FEAT-246] Phase 3: Edge Color Decontamination & Halo Suppressor',
+        '- **Specification**: WebGL2 edge decontamination in `src/lib/webglCompositor.js`.'
+      ].join('\n'),
+      'utf8'
+    );
+
+    execFileSync(process.execPath, [backlogScriptPath, 'render'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+
+    const healed = JSON.parse(fs.readFileSync(backlogJsonPath, 'utf8'));
+    assert.ok(healed.tasks.some((t) => t.id === 'FEAT-245'), 'Expected FEAT-245 to be auto-healed from implementation_plan.md');
+    assert.ok(healed.tasks.some((t) => t.id === 'FEAT-246'), 'Expected FEAT-246 to be auto-healed from implementation_plan.md');
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

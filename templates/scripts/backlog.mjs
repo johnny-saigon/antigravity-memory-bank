@@ -1060,14 +1060,17 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       </p>
     </div>
     
-    <div class="flex items-center gap-2">
-      <button onclick="planTask('')" class="bg-purple-600/25 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5" title="Sync 3 Planning Mode Artifacts (task.md, implementation_plan.md, walkthrough.md)">
+    <div class="flex items-center gap-2 flex-wrap">
+      <button onclick="openCreditAdvisor('')" class="bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer" title="Open Verbose Save Credits &amp; AGY Model ROI Advisor (Google Gemini, External Claude/GPT-OSS, Google Orchestrators)">
+        <span>💰</span> Save Credits &amp; Models
+      </button>
+      <button onclick="planTask('')" class="bg-purple-600/25 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer" title="Sync 3 Planning Mode Artifacts (task.md, implementation_plan.md, walkthrough.md)">
         <span>📐</span> Planning Mode
       </button>
-      <button onclick="toggleQuickAdd()" class="bg-[var(--primary,#3b82f6)] hover:opacity-90 text-[var(--primary-foreground,#ffffff)] text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5">
+      <button onclick="toggleQuickAdd()" class="bg-[var(--primary,#3b82f6)] hover:opacity-90 text-[var(--primary-foreground,#ffffff)] text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer">
         <span>➕</span> Quick Capture Task
       </button>
-      <button onclick="refreshData()" class="bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] text-xs px-2.5 py-1.5 rounded-lg transition" title="Refresh Board">
+      <button onclick="refreshData()" class="bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] text-xs px-2.5 py-1.5 rounded-lg transition cursor-pointer" title="Refresh Board">
         🔄
       </button>
     </div>
@@ -1126,7 +1129,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       </div>
       <div>
         <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Type</label>
-        <select id="newType" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
+        <select id="newType" onchange="updateQuickAddRoiPreview()" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
           <option value="feature">Feature</option>
           <option value="ux">UX Improvement</option>
           <option value="bug">Bug Fix</option>
@@ -1136,7 +1139,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       </div>
       <div>
         <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Priority</label>
-        <select id="newPriority" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
+        <select id="newPriority" onchange="updateQuickAddRoiPreview()" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
           <option value="high">High</option>
           <option value="medium" selected>Medium</option>
           <option value="low">Low</option>
@@ -1145,11 +1148,14 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     </div>
     <div class="mb-3">
       <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Title</label>
-      <input id="newTitle" type="text" placeholder="Short, actionable feature or bug title" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
+      <input id="newTitle" oninput="updateQuickAddRoiPreview()" type="text" placeholder="Short, actionable feature or bug title" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500">
     </div>
     <div class="mb-3">
       <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Description &amp; Acceptance Criteria</label>
-      <textarea id="newDesc" rows="2" placeholder="Brief technical summary and key acceptance criteria..." class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500"></textarea>
+      <textarea id="newDesc" oninput="updateQuickAddRoiPreview()" rows="2" placeholder="Brief technical summary and key acceptance criteria..." class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-blue-500"></textarea>
+    </div>
+    <div id="quickAddRoiPreview" class="mb-3 bg-emerald-950/40 border border-emerald-500/30 rounded-lg p-2.5 text-xs text-emerald-200 leading-relaxed">
+      💡 <strong>Backlog-First Credit Saver (0 AI Credits):</strong> Capturing this ticket offline before prompting saves ~15k–30k exploratory discovery tokens. Fill in priority &amp; title to see your optimal AGY Model &amp; Planning Credit ROI!
     </div>
     <div class="mb-3">
       <label class="block text-xs font-medium text-[var(--muted-foreground,#94a3b8)] mb-1">Context Attachments (UX/UI <code>.zip</code> bundle, Stitch/Figma export, Mockups, Specs)</label>
@@ -1280,6 +1286,28 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             Close
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verbose Save Credits & AGY Model ROI Advisor Modal -->
+  <div id="creditAdvisorModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeCreditAdvisor()">
+    <div class="bg-[var(--card,#1e293b)] border border-emerald-500/40 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="p-4 border-b border-[var(--border,#334155)] flex items-start justify-between gap-3 bg-slate-900/70">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap mb-1">
+            <span class="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded px-2 py-0.5 text-xs font-bold">💰 SAVE CREDITS &amp; AGY MODEL ROI ADVISOR</span>
+            <span id="advisorTicketBadge" class="font-mono text-xs font-bold text-blue-400"></span>
+          </div>
+          <h2 id="advisorModalTitle" class="text-sm font-bold text-white leading-snug">Maximize Your Quality-to-Used-Credits Ratio Across All Deployed AGY Models</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Synchronized with Google Gemini Models, External Partner Models (separate quota pool), and Google Orchestrators.</p>
+        </div>
+        <button onclick="closeCreditAdvisor()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-800 cursor-pointer">✕</button>
+      </div>
+      <div id="creditAdvisorBody" class="p-4 overflow-y-auto flex-1 space-y-4 text-xs text-slate-200"></div>
+      <div class="p-3 border-t border-[var(--border,#334155)] bg-slate-900/80 flex items-center justify-between gap-2">
+        <span class="text-[11px] text-slate-400">💡 Always run <code class="text-emerald-300">/start</code> after finishing a ticket to reset active context delta to 0.0 KB (100% history preserved on disk).</span>
+        <button onclick="closeCreditAdvisor()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer">Close</button>
       </div>
     </div>
   </div>
@@ -1961,9 +1989,185 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       renderBoard();
     }
 
+    function computeTicketCreditAdvice(task) {
+      const text = task
+        ? ((task.id || '') + ' ' + (task.title || '') + ' ' + (task.description || '') + ' ' + (task.spec || '') + ' ' + (task.components || []).join(' ')).toLowerCase()
+        : '';
+      const compCount = task && Array.isArray(task.components) ? task.components.length : 0;
+      const prio = String((task && task.priority) || 'medium').toLowerCase();
+      const type = String((task && task.type) || 'feature').toLowerCase();
+
+      const isSwarm = /\\b(swarm|multi-repo|all repos|parallel|migration across|5 repositories|cross-repo)\\b/.test(text) || compCount >= 6;
+      const isHighRisk = /\\b(oauth|auth|security|schema|migration|concurrency|race|webgl|worker|stripe|billing|brick|architect|p0|production)\\b/.test(text);
+      const isMicro = /\\b(copy|typo|label|css|color|badge|sort|readme|comment|spacing|padding|icon)\\b/.test(text) && compCount <= 1 && prio !== 'high';
+
+      if (isSwarm) {
+        return {
+          tier: 'xhigh',
+          pillClass: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/35 hover:border-fuchsia-400',
+          shortBadge: '🎛️ Orchestrator (Carbon/Neon) · Plan & Split First',
+          planVerdict: 'MANDATORY Separate /backlog-plan + Atomic Split + Orchestrator',
+          savings: '50%–70% better Q/C ROI vs. serial frontier loops',
+          stageA: 'Orchestrator (Argon/Carbon) or Gemini 4 Argon (High) — 1–2 turns to lock plan & split sub-tickets',
+          stageBGoogle: 'Orchestrator (Neon/Carbon) coordinating Gemini 4 Neon (Med) & Gemini 3.8 Flash (High) workers',
+          stageBExternal: 'Claude Sonnet 5.5 (Med) or GPT-OSS 120B (Med) for isolated external-pool workers',
+          orchestratorNote: '✅ Ideal Orchestrator fit! Switch back to Gemini 4 Neon or 3.8 Flash immediately after the swarm finishes.',
+          whyPlan: 'Parallel multi-module or cross-repo work fails without explicit ticket boundaries. Registering & splitting tickets first lets Orchestrator fan out cheap workers in parallel.',
+          effortPrefix: '/effort high'
+        };
+      }
+      if (compCount >= 3 || prio === 'high' || isHighRisk || type === 'refactor') {
+        return {
+          tier: 'high',
+          pillClass: 'bg-purple-500/15 text-purple-300 border-purple-500/35 hover:border-purple-400',
+          shortBadge: '🧠 Plan: Argon/Opus → Exec: Neon/Sonnet (Saves ~65%)',
+          planVerdict: 'SEPARATE Planning Credits (/backlog-plan First) → Switch Model Down for /backlog-start',
+          savings: '55%–80% fewer credits vs. jumping straight into coding on a frontier model',
+          stageA: 'Google: Gemini 4 Argon (High) or Carbon (High) · External: Claude Opus 5.5 (Med/High) [1–2 turns only]',
+          stageBGoogle: 'Switch DOWN after approval → Gemini 4 Neon (Med/High) or Carbon (Med)',
+          stageBExternal: 'Switch DOWN after approval → Claude Sonnet 5.5 (Medium)',
+          orchestratorNote: '⚠️ Only use Orchestrator (Neon) if /backlog-plan splits into 3+ independent parallel sub-tickets.',
+          whyPlan: 'Multi-file, high-priority, or architecture tickets cause expensive mid-flight U-turns if coded ad-hoc. Locking a 1-turn blueprint first and switching down to a workhorse model maximizes Quality/Credits.',
+          effortPrefix: '/effort high'
+        };
+      }
+      if (isMicro || prio === 'low') {
+        return {
+          tier: 'low',
+          pillClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35 hover:border-emerald-400',
+          shortBadge: '⚡ Gemini 3.8 Flash (Low) · Direct Start (Skip /plan)',
+          planVerdict: 'SKIP Separate /plan → Direct /backlog-start (Saves ~50% Credits)',
+          savings: '50%–75% fewer credits vs. leaving a frontier model active',
+          stageA: 'Skip separate /backlog-plan — a dedicated planning turn costs as much as this entire 2-turn fix!',
+          stageBGoogle: 'Gemini 3.8 Flash (Low or Medium) — or Gemini 4 Hydrogen (Low)',
+          stageBExternal: 'GPT-OSS 120B (Medium) — or Claude Sonnet 5.5 (Low)',
+          orchestratorNote: '🚫 NEVER use Google Orchestrators for 1-file edits (wastes 4x–6x credits in fan-out overhead).',
+          whyPlan: 'Low-risk boilerplate/UI tweaks have minimal architectural ambiguity. Having this 0-token ticket already gives the model exact scope without burning a separate planning turn.',
+          effortPrefix: '/effort low'
+        };
+      }
+      return {
+        tier: 'medium',
+        pillClass: 'bg-sky-500/15 text-sky-300 border-sky-500/35 hover:border-sky-400',
+        shortBadge: '⚙️ Gemini 4 Neon (Med) / Sonnet 5.5 · Direct Start',
+        planVerdict: 'Ticket-First Direct /backlog-start (Optional /plan only if unclear)',
+        savings: '40%–60% fewer credits vs. ad-hoc chat discovery on Argon/Opus',
+        stageA: 'Optional — skip /plan when spec & components are clear; run /backlog-plan only if edge cases need design review',
+        stageBGoogle: 'Gemini 4 Neon (Medium or High) — or Gemini 4 Hydrogen (High)',
+        stageBExternal: 'Claude Sonnet 5.5 (Medium)',
+        orchestratorNote: '🚫 Avoid Google Orchestrators for 1–2 file tickets.',
+        whyPlan: 'Because this ticket already defines scope offline (0 AI credits), jumping straight to /backlog-start on Gemini 4 Neon or Claude Sonnet 5.5 gives the best daily Quality-to-Credit ratio.',
+        effortPrefix: '/effort medium'
+      };
+    }
+
+    function updateQuickAddRoiPreview() {
+      const box = document.getElementById('quickAddRoiPreview');
+      if (!box) return;
+      const draftTask = {
+        id: (document.getElementById('newId') && document.getElementById('newId').value) || 'NEW',
+        type: (document.getElementById('newType') && document.getElementById('newType').value) || 'feature',
+        priority: (document.getElementById('newPriority') && document.getElementById('newPriority').value) || 'medium',
+        title: (document.getElementById('newTitle') && document.getElementById('newTitle').value) || '',
+        description: (document.getElementById('newDesc') && document.getElementById('newDesc').value) || '',
+        components: []
+      };
+      const adv = computeTicketCreditAdvice(draftTask);
+      box.innerHTML = '💡 <strong>Live Credit-Saving &amp; AGY Model Preview (0 AI Tokens):</strong> ' +
+        '<span class="text-white font-semibold">' + escapeHtml(adv.planVerdict) + '</span><br>' +
+        '• <strong>Best Google Model:</strong> ' + escapeHtml(adv.stageBGoogle) + '<br>' +
+        '• <strong>External Pool Equivalent:</strong> ' + escapeHtml(adv.stageBExternal) + ' · <strong>Estimated Savings:</strong> ' + escapeHtml(adv.savings);
+    }
+
+    function openCreditAdvisor(taskId, ev) {
+      if (ev) ev.stopPropagation();
+      const modal = document.getElementById('creditAdvisorModal');
+      const body = document.getElementById('creditAdvisorBody');
+      const badge = document.getElementById('advisorTicketBadge');
+      const titleEl = document.getElementById('advisorModalTitle');
+      if (!modal || !body) return;
+
+      const task = taskId
+        ? rawData.tasks.find(t => t.id === taskId)
+        : (rawData.tasks.find(t => t.status === 'in_progress') || rawData.tasks.find(t => t.status === 'todo') || null);
+      const adv = computeTicketCreditAdvice(task);
+
+      badge.textContent = task ? ('[' + task.id + '] ' + (task.priority || 'medium').toUpperCase()) : 'WORKSPACE GUIDE';
+      titleEl.textContent = task
+        ? ('Quality-to-Credit ROI Prescription for [' + task.id + ']: ' + task.title)
+        : 'Save Credits & AGY Model Optimization Guide (All 3 Deployed Model Families)';
+
+      const safeId = task ? escapeAttr(task.id) : '';
+      const planBtn = task
+        ? \`<button onclick="closeCreditAdvisor(); planTask('\${safeId}')" class="bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/50 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer">📐 Copy Stage 1 Plan Prompt (/effort high /backlog-plan \${escapeHtml(task.id)})</button>\`
+        : '';
+      const execBtn = task
+        ? \`<button onclick="closeCreditAdvisor(); kickoffTask('\${safeId}')" class="bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 border border-blue-500/50 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer">🤖 Copy Stage 2 Execute Prompt (\${escapeHtml(adv.effortPrefix)} /backlog-start \${escapeHtml(task.id)})</button>\`
+        : '';
+
+      body.innerHTML = \`
+        <div class="bg-slate-900/90 border border-emerald-500/35 rounded-xl p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="text-xs font-bold text-emerald-300">🎯 \${escapeHtml(adv.planVerdict)}</span>
+            <span class="badge bg-emerald-500/20 text-emerald-200 border border-emerald-500/40 rounded px-2 py-0.5 text-[11px]">💰 \${escapeHtml(adv.savings)}</span>
+          </div>
+          <p class="text-slate-300 leading-relaxed"><strong>Why this strategy wins on Quality / Credits:</strong> \${escapeHtml(adv.whyPlan)}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+            <div class="bg-slate-950/70 border border-purple-500/30 rounded-lg p-2.5">
+              <div class="text-[11px] font-bold text-purple-300 mb-1">1️⃣ Stage A — Separate Planning (/backlog-plan)</div>
+              <div class="text-slate-200">\${escapeHtml(adv.stageA)}</div>
+            </div>
+            <div class="bg-slate-950/70 border border-blue-500/30 rounded-lg p-2.5">
+              <div class="text-[11px] font-bold text-blue-300 mb-1">2️⃣ Stage B — Execution (/backlog-start)</div>
+              <div class="text-slate-200"><strong>Google Pool:</strong> \${escapeHtml(adv.stageBGoogle)}<br><strong>External Pool:</strong> \${escapeHtml(adv.stageBExternal)}</div>
+            </div>
+          </div>
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 text-amber-200">
+            <strong>🎛️ Google Orchestrator Guardrail:</strong> \${escapeHtml(adv.orchestratorNote)}
+          </div>
+          \${task ? \`<div class="flex flex-wrap gap-2 pt-1">\${planBtn}\${execBtn}</div>\` : ''}
+        </div>
+
+        <div class="bg-slate-900/75 border border-slate-700/80 rounded-xl p-3.5 space-y-2">
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider">⚖️ Complete Deployed AGY Model Matrix &amp; Dual Quota-Pool Balancing</h3>
+          <p class="text-slate-400">Google Gemini &amp; Google Orchestrators share <strong>Quota Pool 1</strong>, while Claude 5.5 &amp; GPT-OSS 120B share <strong>Quota Pool 2</strong> (independent 4h reset clocks). Switch across pools before hitting a limit!</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+            <div class="bg-slate-950/80 border border-sky-500/30 rounded-lg p-2.5 space-y-1.5">
+              <div class="font-bold text-sky-300">🔵 1. Google Gemini Models (Pool 1)</div>
+              <div><strong>Gemini 3.8 Flash (Low/Med/High)</strong> <span class="text-emerald-400">[1.0x]</span> — Micro-edits, CSS/copy, docs, test runs &amp; browser subagents.</div>
+              <div><strong>Gemini 4 Hydrogen (Low→XHigh)</strong> <span class="text-emerald-300">[1.3–2.0x]</span> — Agile Gemini 4 coding; <em>XHigh</em> for single-module deep math.</div>
+              <div><strong>Gemini 4 Neon (Low→XHigh)</strong> <span class="text-sky-300">[2.0–3.0x]</span> — <strong>Best daily Q/C ROI</strong> for 80% of tickets &amp; approved plans.</div>
+              <div><strong>Gemini 4 Carbon (Low/Med/High)</strong> <span class="text-amber-300">[3.5–4.5x]</span> — Deep multi-file systems, DB/OAuth adapters &amp; complex state.</div>
+              <div><strong>Gemini 4 Argon (Low/Med/High)</strong> <span class="text-rose-300">[5.0–7.0x]</span> — Frontier architect; reserve for 1–2 turn <code>/backlog-plan</code>, then switch down!</div>
+            </div>
+            <div class="bg-slate-950/80 border border-amber-500/30 rounded-lg p-2.5 space-y-1.5">
+              <div class="font-bold text-amber-300">🟠 2. External Partner Models (Pool 2)</div>
+              <div><strong>GPT-OSS 120B (Medium)</strong> <span class="text-emerald-300">[1.5x]</span> — Cost-effective open-weight offload for boilerplate, scaffolding &amp; second-opinion reviews.</div>
+              <div><strong>Claude Sonnet 5.5 (Low/Med/High)</strong> <span class="text-sky-300">[2.5–4.0x]</span> — Surgical React/TS/UI code &amp; refactoring (External twin of Gemini 4 Neon/Carbon).</div>
+              <div><strong>Claude Opus 5.5 (Low/Med/High)</strong> <span class="text-rose-300">[6.0–9.0x]</span> — Heavyweight frontier; use strictly for 1-turn <code>/backlog-plan</code> or stubborn P0 root-cause audits.</div>
+            </div>
+            <div class="bg-slate-950/80 border border-fuchsia-500/30 rounded-lg p-2.5 space-y-1.5">
+              <div class="font-bold text-fuchsia-300">🟣 3. Google Orchestrators (Pool 1 · Swarms)</div>
+              <div><strong>Orchestrator (Neon)</strong> <span class="text-amber-300">[3.0–4.5x]</span> — Coordinates 2–3 parallel swarm workers on atomic sub-tickets.</div>
+              <div><strong>Orchestrator (Carbon)</strong> <span class="text-amber-400">[4.5–6.5x]</span> — Multi-module feature pipelines &amp; cross-layer parallel refactors.</div>
+              <div><strong>Orchestrator (Argon)</strong> <span class="text-rose-400">[6.5–10x]</span> — Large multi-repo migrations. <strong>NEVER</strong> leave active for single-file tickets!</div>
+            </div>
+          </div>
+        </div>
+      \`;
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeCreditAdvisor() {
+      const modal = document.getElementById('creditAdvisorModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
     async function kickoffTask(id) {
-      const prompt = '/backlog-start ' + id;
       const task = rawData.tasks.find(t => t.id === id);
+      const adv = computeTicketCreditAdvice(task);
+      const prompt = adv.effortPrefix + ' /backlog-start ' + id;
       if (task && task.status === 'todo') {
         task.status = 'in_progress';
         renderBoard();
@@ -1977,7 +2181,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl && task) {
-        titleEl.textContent = '🚀 Ready to Kick Off [' + task.id + ']: ' + task.title + attachSuffix;
+        titleEl.textContent = '🚀 Ready to Kick Off [' + task.id + '] · Optimal Model: ' + adv.stageBGoogle + attachSuffix;
       }
 
       // Also invoke local native bridge (runs OS pbcopy + persists in_progress + unpacks .zip attachments)
@@ -1988,22 +2192,23 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       });
 
       if (bridgeRes && bridgeRes.ok) {
-        showToast('🚀 Copied "' + prompt + '" & marked ' + id + ' IN_PROGRESS' + attachSuffix + '! Paste (⌘V) in chat.');
+        showToast('🚀 Copied "' + prompt + '" (Best Model: ' + adv.stageBGoogle + ')! Paste (⌘V) in chat.');
       } else {
-        showToast('📋 Ready: "' + prompt + '" copied & selected in top bar — press ⌘V in Antigravity chat!');
+        showToast('📋 Ready: "' + prompt + '" copied — Best Model: ' + adv.stageBGoogle);
       }
     }
 
     async function planTask(id) {
-      const prompt = id ? ('/backlog-plan ' + id) : '/backlog-plan';
       const task = id ? rawData.tasks.find(t => t.id === id) : null;
+      const adv = computeTicketCreditAdvice(task);
+      const prompt = id ? ('/effort high /backlog-plan ' + id) : '/effort high /backlog-plan';
 
       copyTextToClipboard(prompt, true, id || '');
 
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl) {
         titleEl.textContent = task
-          ? ('📐 Planning Mode Ready for [' + task.id + ']: ' + task.title + ' (task.md & implementation_plan.md synced)')
+          ? ('📐 Separate Planning Mode for [' + task.id + '] · Plan on: ' + adv.stageA)
           : '📐 Planning Mode Ready (task.md, implementation_plan.md & walkthrough.md synced)';
       }
 
@@ -2014,9 +2219,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       });
 
       if (bridgeRes && bridgeRes.ok) {
-        showToast('📐 Synced implementation_plan.md & task.md' + (id ? ' for [' + id + ']' : '') + ' & copied "' + prompt + '"! Paste (⌘V) in chat.');
+        showToast('📐 Synced plan & copied "' + prompt + '"! Plan on Argon/Carbon/Opus, then switch down to Neon/Sonnet.');
       } else {
-        showToast('📐 Copied "' + prompt + '" — press ⌘V in Antigravity chat (or run in Planning Mode)!');
+        showToast('📐 Copied "' + prompt + '" — press ⌘V in Antigravity chat!');
       }
     }
 
@@ -2483,6 +2688,16 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           \` : ''}
 
           \${actionItemsPreviewHtml}
+
+          \${!isDone ? (() => {
+            const adv = computeTicketCreditAdvice(task);
+            return \`
+              <div onclick="openCreditAdvisor('\${safeIdAttr}', event)" class="mb-2 px-2 py-1 rounded-lg border text-[11px] font-medium flex items-center justify-between gap-1.5 cursor-pointer transition \${adv.pillClass}" title="Click for verbose Save Credits &amp; AGY Model ROI guide (Google, External, Orchestrators)">
+                <span class="truncate">\${escapeHtml(adv.shortBadge)}</span>
+                <span class="shrink-0 opacity-80">ROI ↗</span>
+              </div>
+            \`;
+          })() : ''}
 
           \${task.components && task.components.length > 0 ? \`
             <div class="flex flex-wrap gap-1 mb-2">
@@ -4575,6 +4790,18 @@ function main() {
     return;
   }
 
+  if (command === 'advise') {
+    const targetId = args[1] || '';
+    const lintScript = path.join(REPO_ROOT, 'scripts', 'lint-memory.mjs');
+    if (fs.existsSync(lintScript)) {
+      const lintArgs = targetId ? [lintScript, '--advise', targetId] : [lintScript, '--advise'];
+      spawnSync(process.execPath, lintArgs, { cwd: REPO_ROOT, stdio: 'inherit' });
+      return;
+    }
+    console.log('ℹ️  Run "node scripts/lint-memory.mjs --advise [TICKET_ID]" for verbose AGY Model & Quality-to-Credit ROI guidance.');
+    return;
+  }
+
   if (command === 'prompt') {
     const rawIds = args.slice(1).join(' ').split(/[\s,]+/).filter(Boolean);
     if (rawIds.length === 0) {
@@ -4583,10 +4810,23 @@ function main() {
     }
 
     const idList = rawIds.join(', ');
-    const kickoffCmd = `/backlog-start ${idList}`;
+    const firstTask = data.tasks.find(t => t.id.toLowerCase() === rawIds[0].toLowerCase()) || null;
+    const compCount = firstTask && Array.isArray(firstTask.components) ? firstTask.components.length : 0;
+    const prio = String(firstTask?.priority || 'medium').toLowerCase();
+    const recEffort = (compCount >= 3 || prio === 'high') ? 'high' : (prio === 'low' ? 'low' : 'medium');
+    const recModel = recEffort === 'high'
+      ? 'Plan on Gemini 4 Argon/Carbon (High) or Claude Opus 5.5 -> Execute on Gemini 4 Neon (Med) or Claude Sonnet 5.5 (Med)'
+      : recEffort === 'low'
+        ? 'Gemini 3.8 Flash (Low/Med) · GPT-OSS 120B (Med) [Skip separate /plan]'
+        : 'Gemini 4 Neon (Medium) or Claude Sonnet 5.5 (Medium)';
+    const kickoffCmd = recEffort === 'high'
+      ? `/effort high /backlog-plan ${idList}`
+      : `/effort ${recEffort} /backlog-start ${idList}`;
     const copied = copyToNativeOsClipboard(kickoffCmd);
-    console.log(`\n💡 Ultra-Frugal Kickoff Command for [${idList}]${copied ? ' (Copied to clipboard!)' : ''}:`);
-    console.log(`   ${kickoffCmd}\n`);
+    console.log(`\n💡 Optimal Quality-to-Credit Kickoff Command for [${idList}]${copied ? ' (Copied to clipboard!)' : ''}:`);
+    console.log(`   ${kickoffCmd}`);
+    console.log(`   🎯 Best AGY Model: ${recModel}`);
+    console.log(`   💰 Run "npm run backlog advise ${rawIds[0]}" for the full verbose 3-family model & quota-pool breakdown.\n`);
     return;
   }
 

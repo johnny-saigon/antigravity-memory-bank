@@ -700,7 +700,7 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
       const fStr = String(f);
       const base = path.basename(fStr);
       // Auto-mirror brain planning artifacts (implementation_plan.md, task.md, walkthrough.md) into docs/planning/
-      // so the agent can end its turn immediately after write_file on <brainDir>/implementation_plan.md (preserving the Proceed button!)
+      // AND auto-ingest any planned ticket IDs (`FEAT-*`, `BUG-*`, `UX-*`, `QA-*`) directly into docs/backlog.json
       if (
         fStr.includes('/.gemini/antigravity/brain/') &&
         ['implementation_plan.md', 'task.md', 'walkthrough.md'].includes(base) &&
@@ -710,6 +710,12 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
           const planDir = path.join(rootDir, 'docs', 'planning');
           fsSync.mkdirSync(planDir, { recursive: true });
           fsSync.copyFileSync(fStr, path.join(planDir, base));
+          if (base === 'implementation_plan.md') {
+            const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
+            if (fsSync.existsSync(backlogScriptPath)) {
+              execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
+            }
+          }
         } catch {}
       }
       if (fStr.startsWith(rootDir + '/')) {
