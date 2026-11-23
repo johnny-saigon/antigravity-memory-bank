@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `d34c754` — "feat(credits): evolve Save Credits paradigm for full AGY 3-family model roster & ticket Q/C ROI (FEAT-125..127) [skip ci]" (2026-11-23)
+- **Last Synchronized Commit**: `5170bca` — "feat(docs): add UX-polished Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) & wire into Memory Bank upgrade (FEAT-128) [skip ci]" (2026-11-23)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 

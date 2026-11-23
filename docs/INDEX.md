@@ -39,5 +39,4 @@ This index tracks the real-time status of all living specifications across **Arc
 | Archived File | Consolidated Into Canonical Spec |
 | :--- | :--- |
 | [`archive/BUG_FIX_RECORDS.md`](archive/BUG_FIX_RECORDS.md) | [`quality/BUG_FIX_RECORDS.md`](quality/BUG_FIX_RECORDS.md) |
-| [`archive/CREDITS_CHEATSHEET.md`](archive/CREDITS_CHEATSHEET.md) | [`architecture/LOGICAL_ARCHITECTURE.md`](architecture/LOGICAL_ARCHITECTURE.md) |
 <!-- ag-section:archived-legacy-docs:end -->

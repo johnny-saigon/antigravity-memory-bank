@@ -205,6 +205,7 @@ export const PRESERVED_DOCS_REL_PATHS = new Set([
   ...CANONICAL_LIVING_DOCS.map((d) => d.relPath.toLowerCase()),
   'docs/backlog.md',
   'docs/backlog_guide.md',
+  'docs/credits_cheatsheet.md',
   'docs/planning_guide.md',
   'docs/brick_architecture_guide.md',
   'docs/standard_docs_hierarchy_spec.md',
@@ -440,6 +441,7 @@ This index tracks the real-time status of all living specifications across **Arc
 ## 🛠️ 2. Operational & Workflow Guides
 
 - **Local Backlog Store & Board**: [\`backlog.json\`](backlog.json) · [\`BACKLOG.md\`](BACKLOG.md) · [\`BACKLOG_GUIDE.md\`](BACKLOG_GUIDE.md)
+- **Credits CheatSheet (AGY 3-Family Model & Q/C ROI Guide)**: [\`CREDITS_CHEATSHEET.md\`](CREDITS_CHEATSHEET.md)
 - **3-Artifact Planning Mode**: [\`planning/task.md\`](planning/task.md) · [\`planning/implementation_plan.md\`](planning/implementation_plan.md) · [\`planning/walkthrough.md\`](planning/walkthrough.md) · [\`PLANNING_GUIDE.md\`](PLANNING_GUIDE.md)
 - **Pluggable UX/UI & Hexagonal Bricks**: [\`BRICK_ARCHITECTURE_GUIDE.md\`](BRICK_ARCHITECTURE_GUIDE.md)
 
