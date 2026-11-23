@@ -317,6 +317,7 @@ async function exportMemory(targetDir, exportDir) {
     'docs/INDEX.md',
     'docs/backlog.json',
     'docs/BACKLOG_GUIDE.md',
+    'docs/CREDITS_CHEATSHEET.md',
     'docs/PLANNING_GUIDE.md',
     'docs/BRICK_ARCHITECTURE_GUIDE.md',
   ];
@@ -687,6 +688,11 @@ async function installSyncAndHooks(targetDir, detected) {
   await fs.mkdir(path.dirname(guideDest), { recursive: true });
   await fs.copyFile(guideSrc, guideDest);
   console.log('  ✓ Installed docs/BACKLOG_GUIDE.md (decoupled backlog guide)');
+
+  const creditsCheatSrc = path.join(pkgRoot, 'templates/docs/CREDITS_CHEATSHEET.md');
+  const creditsCheatDest = path.join(targetDir, 'docs/CREDITS_CHEATSHEET.md');
+  await fs.copyFile(creditsCheatSrc, creditsCheatDest);
+  console.log('  ✓ Installed docs/CREDITS_CHEATSHEET.md (Credits CheatSheet — AGY 3-family model & Q/C ROI guide)');
 
   const planGuideSrc = path.join(pkgRoot, 'templates/docs/PLANNING_GUIDE.md');
   const planGuideDest = path.join(targetDir, 'docs/PLANNING_GUIDE.md');

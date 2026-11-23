@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-23T09:03:40.400Z",
+  "lastUpdated": "2026-11-23T13:58:06.842Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1110,6 +1110,41 @@
         }
       ],
       "completedAt": "2026-11-23T08:39:06.393Z"
+    },
+    {
+      "id": "FEAT-128",
+      "type": "feature",
+      "title": "Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "docs/CREDITS_CHEATSHEET.md",
+        "templates/docs/CREDITS_CHEATSHEET.md",
+        "bin/cli.mjs",
+        "scripts/lint-memory.mjs",
+        "AGENTS.md",
+        "templates/AGENTS.md.tpl",
+        "rules/AGENTS.md"
+      ],
+      "attachments": [],
+      "description": "Create a well-designed, UX-polished Credits CheatSheet covering AGY's 3 deployed model families (Google Gemini, External Partner, Google Orchestrators), Dual Quota-Pool balancing, Two-Stage Split Routing, and Backlog-First economics; wire into init/upgrade and deploy to all installed Memory Bank projects.",
+      "spec": "Create a well-designed, UX-polished Credits CheatSheet covering AGY's 3 deployed model families (Google Gemini, External Partner, Google Orchestrators), Dual Quota-Pool balancing, Two-Stage Split Routing, and Backlog-First economics; wire into init/upgrade and deploy to all installed Memory Bank projects.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-128-ACT-1",
+          "text": "Create a well-designed, UX-polished Credits CheatSheet covering AGY's 3 deployed model families (Google Gemini, External Partner, Google Orchestrators), Dual Quota-Pool balancing, Two-Stage Split Routing, and Backlog-First economics; wire into init/upgrade and deploy to all installed Memory Bank projects.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-128-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-128 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-23T13:58:06.649Z"
     }
   ],
   "milestones": [

@@ -397,6 +397,16 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-128: Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `bin/cli.mjs`, `scripts/lint-memory.mjs`, `AGENTS.md`, `templates/AGENTS.md.tpl`, `rules/AGENTS.md`
+- **Description:** Create a well-designed, UX-polished Credits CheatSheet covering AGY's 3 deployed model families (Google Gemini, External Partner, Google Orchestrators), Dual Quota-Pool balancing, Two-Stage Split Routing, and Backlog-First economics; wire into init/upgrade and deploy to all installed Memory Bank projects.
+- **Technical Specification:**
+  Create a well-designed, UX-polished Credits CheatSheet covering AGY's 3 deployed model families (Google Gemini, External Partner, Google Orchestrators), Dual Quota-Pool balancing, Two-Stage Split Routing, and Backlog-First economics; wire into init/upgrade and deploy to all installed Memory Bank projects.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

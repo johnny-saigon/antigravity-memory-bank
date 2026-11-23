@@ -733,6 +733,7 @@ const parityPairs = [
   ['skills/usage/SKILL.md', '.agents/skills/usage/SKILL.md'],
   ['docs/PLANNING_GUIDE.md', 'templates/docs/PLANNING_GUIDE.md'],
   ['docs/BACKLOG_GUIDE.md', 'templates/docs/BACKLOG_GUIDE.md'],
+  ['docs/CREDITS_CHEATSHEET.md', 'templates/docs/CREDITS_CHEATSHEET.md'],
   ['docs/BRICK_ARCHITECTURE_GUIDE.md', 'templates/docs/BRICK_ARCHITECTURE_GUIDE.md']
 ];
 
