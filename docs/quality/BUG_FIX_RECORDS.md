@@ -23,7 +23,7 @@
 | **`BUG-113`** | Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) — Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) | DONE | `core` |
 | **`BUG-114`** | Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning — Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning | DONE | `docs/PLANNING_GUIDE.md` |
 | **`BUG-115`** | Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan — Recorded in backlog.json | DONE | `scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json` |
-| **`COMMIT-85403fb`** | fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115) — Git fix commit `85403fb` | DONE | `git history` |
+| **`COMMIT-8216efd`** | fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115) — Git fix commit `8216efd` | DONE | `git history` |
 | **`COMMIT-c296aaf`** | fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112) — Git fix commit `c296aaf` | DONE | `git history` |
 | **`COMMIT-cfd803c`** | fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111) — Git fix commit `cfd803c` | DONE | `git history` |
 | **`COMMIT-1881828`** | fix(worktree): prevent cross-worktree brain implementation_plan.md bleed and harden sandboxed worktree branch detection — Git fix commit `1881828` | DONE | `git history` |
