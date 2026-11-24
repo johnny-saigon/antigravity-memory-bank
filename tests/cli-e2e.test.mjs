@@ -898,8 +898,8 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     }
   });
 
-  test('3g. FEAT-140 / BUG-109: zero-skip 4-state live Kanban transitions TO DO (planning) -> READY (awaiting_approval) -> IN PROGRESS (coding) -> DONE', () => {
-    // Stage 1: stage-plan places ticket in TO DO with liveActivity: 'planning' and renders pulsing badge
+  test('3g. FEAT-140 / BUG-109 / BUG-114: locked READY (planning) -> READY (awaiting_approval) -> IN PROGRESS (coding) -> DONE', () => {
+    // Stage 1: stage-plan places ticket directly in READY (greyed-out & locked while planning, never TO DO or IN PROGRESS)
     execFileSync(
       process.execPath,
       [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'stage-plan', 'Zero Skip Live Feature', '--id', 'FEAT-810'],
@@ -907,12 +907,14 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     );
     const s1Json = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
     const s1Task = s1Json.tasks.find((t) => t.id === 'FEAT-810');
-    assert.equal(s1Task.status, 'todo', 'stage-plan must place ticket in TO DO first');
+    assert.equal(s1Task.status, 'ready', 'stage-plan must place ticket directly in READY (BUG-114)');
     assert.equal(s1Task.liveActivity, 'planning', 'stage-plan must set liveActivity to planning');
+    assert.equal(s1Task.planningLocked, true, 'stage-plan must lock ticket while planning (BUG-114)');
     const s1Html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
-    assert.match(s1Html, /🧠 Planning\.\.\./, 'backlog.html must render pulsing Planning badge in TO DO');
+    assert.match(s1Html, /🔒 🧠 Planning\.\.\. \(Locked\)/, 'backlog.html must render locked greyed-out Planning badge in READY');
+    assert.match(s1Html, /data-task-id="FEAT-810"[^>]*draggable="false"/, 'Locked planning card must disable dragging');
 
-    // Stage 2: writing implementation_plan.md promotes TO DO -> READY with awaiting_approval
+    // Stage 2: writing implementation_plan.md unlocks READY ticket with awaiting_approval
     fs.writeFileSync(
       path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md'),
       '# Implementation Plan\n\n### [FEAT-810] Zero Skip Live Feature\nImplement live state transitions.\n',
@@ -925,14 +927,18 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     );
     const s2Json = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
     const s2Task = s2Json.tasks.find((t) => t.id === 'FEAT-810');
-    assert.equal(s2Task.status, 'ready', 'Finalizing implementation_plan.md must promote TO DO -> READY');
+    assert.equal(s2Task.status, 'ready', 'Finalizing implementation_plan.md must keep ticket in READY');
     assert.equal(s2Task.liveActivity, 'awaiting_approval', 'READY ticket must show awaiting_approval');
+    assert.equal(s2Task.planningLocked, undefined, 'Finalizing implementation_plan.md must unlock READY ticket');
     const s2Html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
     assert.match(s2Html, /⏳ READY · Awaiting Proceed/, 'backlog.html must render Awaiting Proceed badge in READY');
 
-    // Stage 3: modifying a code file + sync-memory-context.mjs auto-proceeds READY -> IN PROGRESS (coding)
+    // Stage 3: modifying a code file AFTER Proceed/plan baseline + sync-memory-context.mjs auto-proceeds READY -> IN PROGRESS (coding)
     fs.mkdirSync(path.join(tmpRepo, 'src'), { recursive: true });
-    fs.writeFileSync(path.join(tmpRepo, 'src', 'live-state.js'), 'export const live = true;\n', 'utf8');
+    const liveFile = path.join(tmpRepo, 'src', 'live-state.js');
+    fs.writeFileSync(liveFile, 'export const live = true;\n', 'utf8');
+    const postPlanTs = new Date(Date.now() + 3000);
+    fs.utimesSync(liveFile, postPlanTs, postPlanTs);
     execFileSync(
       process.execPath,
       [path.join(tmpRepo, 'scripts', 'sync-memory-context.mjs'), '--quiet'],
@@ -940,7 +946,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     );
     const s3Json = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
     const s3Task = s3Json.tasks.find((t) => t.id === 'FEAT-810');
-    assert.equal(s3Task.status, 'in_progress', 'Dirty code file must auto-proceed READY -> IN PROGRESS');
+    assert.equal(s3Task.status, 'in_progress', 'Post-plan edited code file must auto-proceed READY -> IN PROGRESS');
     assert.equal(s3Task.liveActivity, 'coding', 'IN PROGRESS ticket must show liveActivity: coding');
     const s3Html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
     assert.match(s3Html, /⚡ Coding Live\.\.\./, 'backlog.html must render pulsing Coding Live badge in IN PROGRESS');
@@ -955,11 +961,12 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     const s4Task = s4Json.tasks.find((t) => t.id === 'FEAT-810');
     assert.equal(s4Task.status, 'done');
     assert.equal(s4Task.liveActivity, undefined);
-    const historyStatuses = (s4Task.stateHistory || []).map((h) => h.status);
+    assert.equal(s4Task.planningLocked, undefined);
+    const historyTrail = (s4Task.stateHistory || []).map((h) => `${h.status}:${h.activity || 'done'}`);
     assert.deepEqual(
-      historyStatuses,
-      ['todo', 'ready', 'in_progress', 'done'],
-      'stateHistory must record exact 4-stage progression without skipping any column'
+      historyTrail,
+      ['ready:planning', 'ready:awaiting_approval', 'in_progress:coding', 'done:done'],
+      'stateHistory must record exact locked READY planning -> Awaiting Proceed -> Coding -> Done progression'
     );
   });
 
@@ -1052,7 +1059,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.doesNotMatch(html, /webkitSpeechRecognition/, '#todoIdeaModal must not rely on Chromium cloud webkitSpeechRecognition which fails in Electron');
     const bridgeSrc = fs.readFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'utf8');
     assert.match(bridgeSrc, /import os from 'node:os'/, 'backlog.mjs must import node:os for ASR config & host-mic temp helpers');
-    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.9\.0'/, 'Bridge version must be bumped to 1.9.0 so stale daemons restart automatically');
+    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.9\.1'/, 'Bridge version must be bumped to 1.9.1 so stale daemons restart automatically');
     assert.match(bridgeSrc, /transcribeViaGemini/, 'Bridge server must include Gemini multimodal audio transcription');
     assert.match(bridgeSrc, /transcribeViaWhisperEndpoint/, 'Bridge server must include Whisper ASR transcription failover');
     assert.doesNotMatch(html, /id="todoIdeaType"/, '#todoIdeaModal must not clutter UI with manual Type/Priority dropdowns');
@@ -1224,6 +1231,216 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     const html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
     assert.match(html, /2 Children \(1 Open\)/);
     assert.match(html, /↳ Child of FEAT-500/);
+  });
+
+  test('3l. FEAT-147 / BUG-113 / BUG-114: FEAT-xxx-ACT-N child lifecycle, Proceed non-premature trigger, and locked greyed-out READY planning UI', () => {
+    const backlogScriptPath = path.join(tmpRepo, 'scripts', 'backlog.mjs');
+
+    // 1. FEAT-147 Unit + E2E: planned multi-step parent ticket (FEAT-011) spawns FEAT-011-ACT-1 / FEAT-011-ACT-2 and rolls up
+    execFileSync(
+      process.execPath,
+      [backlogScriptPath, 'add', '--id', 'FEAT-011', '--title', 'Auth Token Refresh Flow', '--priority', 'high'],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    const planPath = path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md');
+    fs.writeFileSync(
+      planPath,
+      [
+        '# Implementation Plan — [FEAT-011] Auth Token Refresh Flow',
+        '',
+        '## 1. Goal Description',
+        'Multi-step auth token rotation.',
+        '',
+        '## 3. Proposed Changes',
+        '',
+        '### Phase 1: Add JWT Refresh Endpoint',
+        'Update auth handler.',
+        '',
+        '### Phase 2: Persist Session Rotation',
+        'Update token store.'
+      ].join('\n'),
+      'utf8'
+    );
+    execFileSync(process.execPath, [backlogScriptPath, 'plan', '--from-plan'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    // Re-running plan --from-plan must be idempotent (no duplicate FEAT-011-ACT-3)
+    execFileSync(process.execPath, [backlogScriptPath, 'plan', '--from-plan'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+
+    const actJson1 = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const feat011 = actJson1.tasks.find((t) => t.id === 'FEAT-011');
+    const act1 = actJson1.tasks.find((t) => t.id === 'FEAT-011-ACT-1');
+    const act2 = actJson1.tasks.find((t) => t.id === 'FEAT-011-ACT-2');
+    const act3 = actJson1.tasks.find((t) => t.id === 'FEAT-011-ACT-3');
+    assert.ok(feat011 && act1 && act2, 'plan --from-plan must spawn FEAT-011-ACT-1 and FEAT-011-ACT-2');
+    assert.equal(act3, undefined, 'Repeated plan --from-plan must not duplicate -ACT-N child tickets');
+    assert.equal(act1.parentId, 'FEAT-011');
+    assert.equal(act1.isActionChild, true);
+    assert.equal(act2.parentId, 'FEAT-011');
+    assert.equal(act2.isActionChild, true);
+    assert.equal(
+      feat011.actionItems.some((a) => a.childTicketId === 'FEAT-011-ACT-1'),
+      true,
+      'Parent FEAT-011 actionItems must bidirectionally link FEAT-011-ACT-1'
+    );
+
+    // Complete first action child -> parent remains open; complete second -> parent auto-completes (done)
+    execFileSync(process.execPath, [backlogScriptPath, 'done', 'FEAT-011-ACT-1', '--force'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    const midRollup = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const midParent = midRollup.tasks.find((t) => t.id === 'FEAT-011');
+    assert.notEqual(midParent.status, 'done', 'Parent must stay open while FEAT-011-ACT-2 is pending');
+    assert.equal(
+      midParent.actionItems.find((a) => a.childTicketId === 'FEAT-011-ACT-1')?.done,
+      true,
+      'Completing FEAT-011-ACT-1 must mark linked parent actionItem done'
+    );
+
+    execFileSync(process.execPath, [backlogScriptPath, 'done', 'FEAT-011-ACT-2', '--force'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    const doneRollup = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    assert.equal(
+      doneRollup.tasks.find((t) => t.id === 'FEAT-011')?.status,
+      'done',
+      'Completing all FEAT-011-ACT-N children must auto-complete FEAT-011'
+    );
+
+    // Explicitly verify `backlog split` also names children `<PARENT_ID>-ACT-1`, `-ACT-2`
+    execFileSync(process.execPath, [backlogScriptPath, 'add', '--id', 'FEAT-710', '--title', 'Split Naming Check'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    execFileSync(process.execPath, [backlogScriptPath, 'split', 'FEAT-710', 'First Action', 'Second Action'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    const splitJson = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    assert.ok(splitJson.tasks.find((t) => t.id === 'FEAT-710-ACT-1'), 'split must name child FEAT-710-ACT-1');
+    assert.ok(splitJson.tasks.find((t) => t.id === 'FEAT-710-ACT-2'), 'split must name child FEAT-710-ACT-2');
+
+    // 2. BUG-113 & BUG-114 Isolated Non-Regression + E2E Suite
+    const bugRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-bug113-114-'));
+    try {
+      execFileSync(process.execPath, [CLI_PATH, 'install', bugRepo], { cwd: bugRepo, env: testEnv, stdio: 'pipe' });
+      execSync('git init && git config user.email "test@example.com" && git config user.name "Test" && git add -A && git commit -m "init"', {
+        cwd: bugRepo,
+        stdio: 'pipe'
+      });
+
+      const bugBacklogScript = path.join(bugRepo, 'scripts', 'backlog.mjs');
+      const bugSyncScript = path.join(bugRepo, 'scripts', 'sync-memory-context.mjs');
+      const bugBacklogJson = path.join(bugRepo, 'docs', 'backlog.json');
+      const bugBacklogHtml = path.join(bugRepo, 'docs', 'backlog.html');
+      const bugPlanFile = path.join(bugRepo, 'docs', 'planning', 'implementation_plan.md');
+
+      // Pre-existing dirty code file created BEFORE planning begins
+      fs.mkdirSync(path.join(bugRepo, 'src'), { recursive: true });
+      const dirtySrcFile = path.join(bugRepo, 'src', 'existing.js');
+      fs.writeFileSync(dirtySrcFile, 'export const existing = 1;\n', 'utf8');
+      const oldTs = new Date(Date.now() - 10000);
+      fs.utimesSync(dirtySrcFile, oldTs, oldTs);
+
+      // BUG-114 Stage 1: stage-plan puts FEAT-830 into locked, greyed-out READY (never IN PROGRESS or TO DO)
+      execFileSync(
+        process.execPath,
+        [bugBacklogScript, 'stage-plan', 'Locked Ready Planning Ticket', '--id', 'FEAT-830'],
+        { cwd: bugRepo, env: testEnv, stdio: 'pipe' }
+      );
+      let bj = JSON.parse(fs.readFileSync(bugBacklogJson, 'utf8'));
+      let t830 = bj.tasks.find((t) => t.id === 'FEAT-830');
+      assert.equal(t830.status, 'ready', 'BUG-114: stage-plan must place ticket in READY column');
+      assert.equal(t830.liveActivity, 'planning', 'BUG-114: stage-plan must set liveActivity=planning');
+      assert.equal(t830.planningLocked, true, 'BUG-114: stage-plan must set planningLocked=true');
+
+      const htmlLocked = fs.readFileSync(bugBacklogHtml, 'utf8');
+      const readyColSlice = htmlLocked.split('id="col-ready"')[1]?.split('id="col-in_progress"')[0] || '';
+      const inProgColSlice = htmlLocked.split('id="col-in_progress"')[1]?.split('id="col-done"')[0] || '';
+      assert.equal(readyColSlice.includes('data-task-id="FEAT-830"'), true, 'BUG-114: Locked planning card must render inside col-ready');
+      assert.equal(inProgColSlice.includes('data-task-id="FEAT-830"'), false, 'BUG-114: Locked planning card must NOT enter col-in_progress');
+      const card830 = readyColSlice.slice(Math.max(0, readyColSlice.indexOf('data-task-id="FEAT-830"')));
+      assert.match(card830, /opacity-55/, 'BUG-114: Locked planning card must be visually greyed out');
+      assert.match(card830, /cursor-not-allowed/, 'BUG-114: Locked planning card must show not-allowed cursor');
+      assert.match(card830, /draggable="false"/, 'BUG-114: Locked planning card must be non-draggable');
+      assert.match(card830, /🔒<\/span>\s*Planning Locked/, 'BUG-114: Locked planning card must disable action buttons');
+      assert.doesNotMatch(card830, /openModelSelectorModal\('FEAT-830'/, 'BUG-114: Locked planning card must not expose active Code/Plan model buttons');
+
+      // BUG-114 Non-regression: even write_file PostToolUse or quiet proceed must NOT unlock/move planningLocked ticket to IN PROGRESS
+      execFileSync(process.execPath, [bugBacklogScript, 'proceed', '--quiet'], { cwd: bugRepo, env: testEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [bugSyncScript, '--hook', 'PostToolUse'], {
+        cwd: bugRepo,
+        env: testEnv,
+        input: JSON.stringify({ tool_name: 'write_file', tool_input: { Path: dirtySrcFile } }),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      bj = JSON.parse(fs.readFileSync(bugBacklogJson, 'utf8'));
+      t830 = bj.tasks.find((t) => t.id === 'FEAT-830');
+      assert.equal(t830.status, 'ready', 'BUG-114: Locked planning ticket must stay in READY even during hook/proceed runs');
+      assert.equal(t830.planningLocked, true, 'BUG-114: planningLocked must remain true until plan is finalized');
+
+      // BUG-114 Stage 2: finalizing implementation_plan.md unlocks FEAT-830 cleanly in READY (Proceed displayed, NOT clicked)
+      fs.writeFileSync(
+        bugPlanFile,
+        `# Implementation Plan — [FEAT-830] Locked Ready Planning Ticket\n\nWorkspace: ${bugRepo}\n\n### [FEAT-830] Locked Ready Planning Ticket\nSafe locked planning flow.\n`,
+        'utf8'
+      );
+      execFileSync(process.execPath, [bugBacklogScript, 'render'], { cwd: bugRepo, env: testEnv, stdio: 'pipe' });
+      bj = JSON.parse(fs.readFileSync(bugBacklogJson, 'utf8'));
+      t830 = bj.tasks.find((t) => t.id === 'FEAT-830');
+      assert.equal(t830.status, 'ready', 'BUG-114: Finalizing plan must unlock inside READY (awaiting Proceed)');
+      assert.equal(t830.liveActivity, 'awaiting_approval');
+      assert.equal(t830.planningLocked, undefined, 'BUG-114: Finalizing plan must clear planningLocked');
+
+      // BUG-113 Non-regression 1: Pre-existing dirty code file + empty stdin sync must NOT move READY -> IN PROGRESS when Proceed is displayed
+      execFileSync(process.execPath, [bugSyncScript, '--quiet'], { cwd: bugRepo, env: testEnv, stdio: 'pipe' });
+      bj = JSON.parse(fs.readFileSync(bugBacklogJson, 'utf8'));
+      assert.equal(
+        bj.tasks.find((t) => t.id === 'FEAT-830')?.status,
+        'ready',
+        'BUG-113: Pre-existing dirty code files must NEVER prematurely move READY -> IN PROGRESS while Proceed is unclicked'
+      );
+
+      // BUG-113 Non-regression 2: PostToolUse `read_file` on a workspace code file must NOT move READY -> IN PROGRESS
+      execFileSync(process.execPath, [bugSyncScript, '--hook', 'PostToolUse'], {
+        cwd: bugRepo,
+        env: testEnv,
+        input: JSON.stringify({ tool_name: 'read_file', tool_input: { Path: dirtySrcFile } }),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      bj = JSON.parse(fs.readFileSync(bugBacklogJson, 'utf8'));
+      assert.equal(
+        bj.tasks.find((t) => t.id === 'FEAT-830')?.status,
+        'ready',
+        'BUG-113: read_file PostToolUse hook must NEVER prematurely move READY -> IN PROGRESS'
+      );
+
+      // BUG-113 Positive E2E: Actual PostToolUse mutating code edit (`edit_file`) after Proceed IS clicked promotes READY -> IN PROGRESS
+      execFileSync(process.execPath, [bugSyncScript, '--hook', 'PostToolUse'], {
+        cwd: bugRepo,
+        env: testEnv,
+        input: JSON.stringify({ tool_name: 'edit_file', tool_input: { Path: dirtySrcFile } }),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      bj = JSON.parse(fs.readFileSync(bugBacklogJson, 'utf8'));
+      t830 = bj.tasks.find((t) => t.id === 'FEAT-830');
+      assert.equal(t830.status, 'in_progress', 'BUG-113: Actual code-mutating edit_file after plan must transition READY -> IN PROGRESS');
+      assert.equal(t830.liveActivity, 'coding');
+    } finally {
+      try { fs.rmSync(bugRepo, { recursive: true, force: true }); } catch {}
+    }
   });
 
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {

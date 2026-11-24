@@ -717,7 +717,15 @@ function syncIntegrationsAndCustomizations(rootDir) {
  */
 function distillRecentWorkspaceActivity(rootDir, hookPayload) {
   const touchedFiles = new Set();
+  let justSyncedBrainPlan = false;
   if (hookPayload) {
+    const rawToolName = String(
+      (hookPayload && (hookPayload.tool_name || hookPayload.toolName || hookPayload.name)) ||
+      (hookPayload && hookPayload.toolCall && (hookPayload.toolCall.name || hookPayload.toolCall.toolName)) ||
+      ''
+    ).trim();
+    const isMutatingCodeTool = /^(write_file|edit_file|replace_file_content|multi_replace_file_content|write_to_file)$/i.test(rawToolName);
+
     const tcArgs =
       (hookPayload.toolCall && hookPayload.toolCall.args) ||
       hookPayload.tool_input ||
@@ -746,6 +754,7 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
               fsSync.mkdirSync(planDir, { recursive: true });
               fsSync.copyFileSync(fStr, path.join(planDir, base));
               if (base === 'implementation_plan.md') {
+                justSyncedBrainPlan = true;
                 const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
                 if (fsSync.existsSync(backlogScriptPath)) {
                   execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
@@ -754,13 +763,33 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
             }
           } catch {}
         }
-        if (fStr.startsWith(rootDir + '/')) {
-          const rel = fStr.slice(rootDir.length + 1);
+        let realRootDir = path.resolve(rootDir);
+        try { realRootDir = fsSync.realpathSync(realRootDir); } catch {}
+        const absFile = path.isAbsolute(fStr) ? path.resolve(fStr) : path.resolve(realRootDir, fStr);
+        let realFile = absFile;
+        try {
+          realFile = fsSync.existsSync(absFile)
+            ? fsSync.realpathSync(absFile)
+            : path.join(fsSync.realpathSync(path.dirname(absFile)), path.basename(absFile));
+        } catch {}
+        let rel = null;
+        if (realFile.startsWith(realRootDir + path.sep) || realFile.startsWith(realRootDir + '/')) {
+          rel = realFile.slice(realRootDir.length + 1).replace(/\\/g, '/');
+        } else {
+          const logicalRoot = path.resolve(rootDir);
+          if (absFile.startsWith(logicalRoot + path.sep) || absFile.startsWith(logicalRoot + '/')) {
+            rel = absFile.slice(logicalRoot.length + 1).replace(/\\/g, '/');
+          }
+        }
+        if (rel) {
           if (!rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html')) {
             touchedFiles.add(rel);
           }
-          // Auto-transition active READY plan tickets -> IN PROGRESS on the first non-artifact workspace code edit after Proceed
+          // Auto-transition active READY plan tickets -> IN PROGRESS ONLY on actual workspace code-write tools
+          // after planning completes (never on read_file, run_command, or while Proceed is merely displayed, BUG-113)
           const isWorkspaceCodeEdit =
+            isMutatingCodeTool &&
+            !justSyncedBrainPlan &&
             !rel.startsWith('memory-bank/') &&
             !rel.startsWith('docs/backlog') &&
             !rel.startsWith('docs/planning/') &&
@@ -772,11 +801,13 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
               if (fsSync.existsSync(backlogPath) && fsSync.existsSync(backlogScriptPath)) {
                 const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
                 const activeIds = Array.isArray(bj.activePlanTaskIds) ? bj.activePlanTaskIds : [];
-                const hasReadyActivePlan = activeIds.some(id =>
-                  (bj.tasks || []).some(t => String(t.id).toUpperCase() === String(id).toUpperCase() && t.status === 'ready')
-                );
+                const activeTasks = activeIds
+                  .map(id => (bj.tasks || []).find(t => String(t.id).toUpperCase() === String(id).toUpperCase()))
+                  .filter(Boolean);
+                const isStillPlanning = activeTasks.some(t => t.liveActivity === 'planning' || t.planningLocked === true);
+                const hasReadyActivePlan = !isStillPlanning && activeTasks.some(t => t.status === 'ready');
                 if (hasReadyActivePlan) {
-                  execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+                  execSync(`"${process.execPath}" scripts/backlog.mjs proceed --quiet`, { cwd: rootDir, stdio: 'ignore' });
                 }
               }
             } catch {}
@@ -788,10 +819,12 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
 
   // Fallback: even if hookPayload stdin is empty or uses a different schema, detect when any brain
   // implementation_plan.md for this workspace is newer than docs/planning/implementation_plan.md and auto-sync to READY!
+  let newestBrainPlanMs = 0;
   try {
     const brainBase = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
     const wsPlanPath = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
     const wsPlanMtime = fsSync.existsSync(wsPlanPath) ? fsSync.statSync(wsPlanPath).mtimeMs : 0;
+    newestBrainPlanMs = wsPlanMtime;
     if (fsSync.existsSync(brainBase)) {
       let newestBrainPlan = null;
       let newestMtime = wsPlanMtime;
@@ -810,6 +843,8 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
         }
       }
       if (newestBrainPlan) {
+        newestBrainPlanMs = newestMtime;
+        justSyncedBrainPlan = true;
         fsSync.mkdirSync(path.dirname(wsPlanPath), { recursive: true });
         fsSync.copyFileSync(newestBrainPlan, wsPlanPath);
         const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
@@ -822,7 +857,7 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
   try {
     const statusOut = execSync('git status --porcelain', { cwd: rootDir, stdio: 'pipe' }).toString().trim();
     if (statusOut) {
-      let hasDirtyCodeFile = false;
+      const dirtyCodeFiles = [];
       for (const line of statusOut.split('\n')) {
         const rel = line.slice(3).trim().replace(/^"|"$/g, '');
         if (rel && !rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html') && !rel.startsWith('??')) {
@@ -832,22 +867,42 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
           rel &&
           /^(src|scripts|lib|bin|skills|tests|templates|apps|server|bricks|packages)\//.test(rel)
         ) {
-          hasDirtyCodeFile = true;
+          dirtyCodeFiles.push(rel);
         }
       }
-      // Zero-Skip Proceed Safety Net (BUG-109): If any workspace code file is dirty while activePlanTaskIds has READY tickets,
-      // auto-transition READY -> IN PROGRESS (⚡ Coding Live...) so coding NEVER happens while a ticket sits in READY!
-      if (hasDirtyCodeFile) {
+      // Guarded Proceed Safety Net (BUG-109 / BUG-113): Never fire during the planning sync itself or on pre-existing
+      // dirty files while Proceed is merely displayed! Only auto-proceed if a code file was modified strictly AFTER
+      // implementation_plan.md was finalized (+2s window) and no ticket is currently planningLocked.
+      if (!justSyncedBrainPlan && dirtyCodeFiles.length > 0) {
         const backlogPath = path.join(rootDir, 'docs', 'backlog.json');
         const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
         if (fsSync.existsSync(backlogPath) && fsSync.existsSync(backlogScriptPath)) {
           const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
           const activeIds = Array.isArray(bj.activePlanTaskIds) ? bj.activePlanTaskIds : [];
-          const hasReadyActivePlan = activeIds.some(id =>
-            (bj.tasks || []).some(t => String(t.id).toUpperCase() === String(id).toUpperCase() && t.status === 'ready')
-          );
-          if (hasReadyActivePlan) {
-            execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+          const activeTasks = activeIds
+            .map(id => (bj.tasks || []).find(t => String(t.id).toUpperCase() === String(id).toUpperCase()))
+            .filter(Boolean);
+          const isStillPlanning = activeTasks.some(t => t.liveActivity === 'planning' || t.planningLocked === true);
+          const readyActiveTasks = activeTasks.filter(t => t.status === 'ready');
+          if (!isStillPlanning && readyActiveTasks.length > 0) {
+            const wsPlanPath = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
+            const wsPlanMs = fsSync.existsSync(wsPlanPath) ? fsSync.statSync(wsPlanPath).mtimeMs : 0;
+            const maxPlannedMs = readyActiveTasks.reduce((m, t) => {
+              const pMs = Date.parse(t.plannedAt || t.planningStartedAt || '') || 0;
+              return Math.max(m, pMs);
+            }, 0);
+            const planBaselineMs = Math.max(wsPlanMs, newestBrainPlanMs, maxPlannedMs);
+            const hasPostPlanEditedCodeFile = dirtyCodeFiles.some(rel => {
+              try {
+                const absP = path.join(rootDir, rel);
+                return fsSync.existsSync(absP) && fsSync.statSync(absP).mtimeMs > planBaselineMs + 2000;
+              } catch {
+                return false;
+              }
+            });
+            if (hasPostPlanEditedCodeFile) {
+              execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+            }
           }
         }
       }

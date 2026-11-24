@@ -654,6 +654,43 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-147: Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Description:** Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets
+- **Technical Specification:**
+  Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets
+- **Acceptance Criteria:**
+  - [x] Implement and verify Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
+### BUG-113: Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Description:** Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)
+- **Technical Specification:**
+  Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)
+- **Acceptance Criteria:**
+  - [x] Implement and verify Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)
+  - [x] Add both a non-regression unit/component test and an E2E test verifying the fix
+
+---
+
+### BUG-114: Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `docs/PLANNING_GUIDE.md`
+- **Description:** Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning
+- **Technical Specification:**
+  Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning
+- **Acceptance Criteria:**
+  - [x] Implement and verify Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning across docs/PLANNING_GUIDE.md
+  - [x] Add both a non-regression unit/component test and an E2E test verifying the fix
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

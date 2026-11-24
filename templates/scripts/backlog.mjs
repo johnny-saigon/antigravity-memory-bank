@@ -150,10 +150,14 @@ function recordTaskStateTransition(task, newStatus, liveActivity = null) {
   } else {
     delete task.liveActivity;
   }
-  if (newStatus === 'todo' && liveActivity === 'planning' && !task.planningStartedAt) {
+  if (liveActivity === 'planning') {
+    task.planningLocked = true;
     task.planningStartedAt = nowIso;
+    delete task.plannedAt;
+  } else {
+    delete task.planningLocked;
   }
-  if (newStatus === 'ready' && !task.plannedAt) {
+  if (newStatus === 'ready' && liveActivity !== 'planning' && !task.plannedAt) {
     task.plannedAt = nowIso;
   }
   if (newStatus === 'in_progress' && !task.startedAt) {
@@ -292,16 +296,155 @@ function spawnResidualChildTickets(parentTask, residualTexts, data, rootDir = RE
 }
 
 /**
- * When a residual child ticket is marked DONE, auto-complete parent if all its residual children are now DONE (FEAT-139)
+ * Consistently spawn and link `<PARENT_ID>-ACT-<N>` child tickets for multi-step planned parent tickets (FEAT-147).
+ */
+function spawnActionChildTickets(parentTask, stepSpecs, data, rootDir = REPO_ROOT, options = {}) {
+  if (!parentTask || !Array.isArray(stepSpecs) || !data || !Array.isArray(data.tasks)) return [];
+  const parentId = String(parentTask.id || '').toUpperCase().replace(/-ACT-\d+$/i, '');
+  if (!parentId) return [];
+  ensureTaskActionItems(parentTask);
+  const branchCtx = detectGitWorktreeContext(rootDir);
+  const nowIso = new Date().toISOString();
+  const createdOrLinked = [];
+
+  const existingChildren = data.tasks.filter(
+    t => String(t.parentId || '').toUpperCase() === parentId && (t.isActionChild || /-ACT-\d+$/i.test(String(t.id || '')))
+  );
+  let maxActIdx = existingChildren.reduce((max, t) => {
+    const m = String(t.id || '').match(/-ACT-(\d+)$/i);
+    const idx = m ? parseInt(m[1], 10) : (Number(t.actionIndex) || 0);
+    return Math.max(max, idx);
+  }, 0);
+
+  const defaultChildStatus = options.defaultStatus
+    || ((parentTask.status === 'in_progress' || parentTask.status === 'testing') ? 'in_progress' : 'ready');
+
+  for (const rawSpec of stepSpecs) {
+    const spec = typeof rawSpec === 'string' ? { title: rawSpec } : (rawSpec || {});
+    const cleanTitle = String(spec.title || spec.text || '').trim();
+    if (!cleanTitle) continue;
+    if (spec.id && String(spec.id).toUpperCase() === parentId) continue;
+
+    const explicitActId = spec.id && new RegExp(`^${parentId}-ACT-(\\d+)$`, 'i').test(String(spec.id))
+      ? String(spec.id).toUpperCase()
+      : null;
+    let existing = existingChildren.find(t =>
+      (explicitActId && String(t.id).toUpperCase() === explicitActId) ||
+      String(t.title || '').trim().toLowerCase() === cleanTitle.toLowerCase()
+    );
+    if (!existing && explicitActId) {
+      existing = data.tasks.find(t => String(t.id).toUpperCase() === explicitActId) || null;
+    }
+
+    let childTask = existing;
+    if (!childTask) {
+      let childIdx = explicitActId ? parseInt(explicitActId.match(/-ACT-(\d+)$/i)[1], 10) : (maxActIdx + 1);
+      while (data.tasks.some(t => String(t.id).toUpperCase() === `${parentId}-ACT-${childIdx}`)) {
+        childIdx++;
+      }
+      if (childIdx > maxActIdx) maxActIdx = childIdx;
+      const childId = `${parentId}-ACT-${childIdx}`;
+      const childComps = Array.isArray(spec.components) && spec.components.length > 0
+        ? spec.components
+        : (Array.isArray(parentTask.components) ? [...parentTask.components] : []);
+      const childDesc = spec.description
+        ? String(spec.description)
+        : `Action step ${childIdx} for [${parentId}] (${parentTask.title || parentId}): ${cleanTitle}`;
+
+      childTask = {
+        id: childId,
+        parentId,
+        isActionChild: true,
+        actionIndex: childIdx,
+        type: spec.type || options.type || parentTask.type || 'feature',
+        title: cleanTitle,
+        status: defaultChildStatus,
+        ...(defaultChildStatus === 'ready' ? { plannedAt: nowIso } : {}),
+        ...(defaultChildStatus === 'in_progress' ? { startedAt: nowIso } : {}),
+        priority: spec.priority || options.priority || parentTask.priority || 'medium',
+        components: childComps,
+        attachments: Array.isArray(parentTask.attachments) ? [...parentTask.attachments] : [],
+        description: childDesc,
+        spec: childDesc,
+        acceptanceCriteria: [
+          `Complete implementation for ${cleanTitle}`,
+          `Verify deterministic tests and lint checks for [${childId}]`
+        ]
+      };
+      stampTaskBranch(childTask, rootDir, branchCtx);
+      ensureTaskActionItems(childTask);
+      autoAnnotateTicket(childTask, rootDir);
+      data.tasks.push(childTask);
+      existingChildren.push(childTask);
+    } else {
+      childTask.parentId = parentId;
+      childTask.isActionChild = true;
+      const mIdx = String(childTask.id).match(/-ACT-(\d+)$/i);
+      if (mIdx) childTask.actionIndex = parseInt(mIdx[1], 10);
+      stampTaskBranch(childTask, rootDir, branchCtx);
+    }
+
+    createdOrLinked.push(childTask);
+
+    const existingActionItem = parentTask.actionItems.find(a =>
+      String(a.childTicketId || '').toUpperCase() === childTask.id ||
+      String(a.text || '').toUpperCase().includes(`[${childTask.id}]`) ||
+      String(a.text || '').trim().toLowerCase() === cleanTitle.toLowerCase()
+    );
+    const linkText = `[${childTask.id}] ${cleanTitle}`;
+    if (existingActionItem) {
+      existingActionItem.childTicketId = childTask.id;
+      existingActionItem.id = existingActionItem.id || childTask.id;
+      existingActionItem.text = linkText;
+      if (childTask.status === 'done') existingActionItem.done = true;
+    } else {
+      parentTask.actionItems.push({
+        id: childTask.id,
+        childTicketId: childTask.id,
+        text: linkText,
+        owner: spec.owner || inferActionItemOwner(cleanTitle, parentTask),
+        done: childTask.status === 'done'
+      });
+    }
+  }
+
+  parentTask.childTicketIds = existingChildren.map(c => c.id);
+  return createdOrLinked;
+}
+
+/**
+ * When a child ticket (-ACT-N or residual) is marked DONE, sync parent actionItems and auto-complete parent if all children finish (FEAT-139 / FEAT-147)
  */
 function rollupParentIfAllChildrenDone(childTask, data) {
   if (!childTask || !childTask.parentId || !data || !Array.isArray(data.tasks)) return null;
   const parent = data.tasks.find(t => String(t.id).toUpperCase() === String(childTask.parentId).toUpperCase());
-  if (!parent || !parent.coreCompleted || parent.status === 'done') return null;
+  if (!parent || parent.status === 'done') return null;
+
+  if (Array.isArray(parent.actionItems)) {
+    const childIdUpper = String(childTask.id || '').toUpperCase();
+    for (const item of parent.actionItems) {
+      if (
+        String(item.childTicketId || '').toUpperCase() === childIdUpper ||
+        String(item.id || '').toUpperCase() === childIdUpper ||
+        String(item.text || '').toUpperCase().includes(`[${childIdUpper}]`)
+      ) {
+        item.done = true;
+      }
+    }
+  }
+
   const siblings = data.tasks.filter(t => String(t.parentId || '').toUpperCase() === String(parent.id).toUpperCase());
-  if (siblings.length > 0 && siblings.every(s => s.status === 'done')) {
-    parent.status = 'done';
-    parent.completedAt = new Date().toISOString();
+  const isActionParent = siblings.some(s => s.isActionChild || /-ACT-\d+$/i.test(String(s.id || '')));
+  if (!parent.coreCompleted && !isActionParent) return null;
+
+  const allSiblingsDone = siblings.length > 0 && siblings.every(s => s.status === 'done');
+  const hasPendingUserResidual = Array.isArray(parent.actionItems)
+    && parent.actionItems.some(a => !a.done && a.owner === 'user' && !a.childTicketId);
+  if (allSiblingsDone && (parent.coreCompleted || !hasPendingUserResidual)) {
+    if (Array.isArray(parent.actionItems)) {
+      parent.actionItems.forEach(a => { a.done = true; });
+    }
+    recordTaskStateTransition(parent, 'done', null);
     delete parent.waitingOn;
     return parent;
   }
@@ -615,6 +758,7 @@ function ensureTaskActionItems(task) {
       }
       return {
         id: item.id || `${task.id}-ACT-${idx + 1}`,
+        ...(item.childTicketId ? { childTicketId: String(item.childTicketId) } : {}),
         text: String(item.text || item.title || '').trim(),
         owner: item.owner === 'user' || item.assignee === 'user' ? 'user' : 'antigravity',
         done: Boolean(item.done || item.completed || task.status === 'done')
@@ -719,14 +863,14 @@ function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT, existingTa
   while ((hm = headingRe.exec(planRaw)) !== null) {
     const rawHeading = hm[1].replace(/`/g, '').trim();
     const body = hm[2] || '';
-    const idMatch = rawHeading.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+)\b/i);
+    const idMatch = rawHeading.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+(?:-ACT-\d+)?)\b/i);
     if (!idMatch) continue;
     const id = idMatch[1].toUpperCase();
     if (seenIds.has(id)) continue;
     seenIds.add(id);
 
     let title = rawHeading
-      .replace(/^\[?(?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+\]?\s*[:·—-]?\s*/i, '')
+      .replace(/^\[?(?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+(?:-ACT-\d+)?\]?\s*[:·—-]?\s*/i, '')
       .replace(/\*\(Completed & Verified Baseline\)\*/i, '')
       .trim();
     if (!title || title.startsWith('-')) {
@@ -764,7 +908,7 @@ function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT, existingTa
   let tm;
   while ((tm = tableRowRe.exec(planRaw)) !== null) {
     const row = tm[1];
-    const idMatch = row.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\b/i);
+    const idMatch = row.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+(?:-ACT-\d+)?)\b/i);
     if (!idMatch) continue;
     const id = idMatch[1].toUpperCase();
     if (seenIds.has(id)) continue;
@@ -785,7 +929,7 @@ function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT, existingTa
   }
 
   // 3. Scan bullet points under Goal Description / Planning Scope (`- **[FEAT-245] Title** ...: Desc`)
-  const bulletRe = /^[\s*-]+\*\*\[?((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\]?\s+([^*]+)\*\*([^\n]*)/gm;
+  const bulletRe = /^[\s*-]+\*\*\[?((?:FEAT|BUG|QA|REFACTOR|UX)-\d+(?:-ACT-\d+)?)\]?\s+([^*]+)\*\*([^\n]*)/gm;
   let bm;
   while ((bm = bulletRe.exec(planRaw)) !== null) {
     const id = bm[1].toUpperCase();
@@ -812,11 +956,11 @@ function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT, existingTa
     const h1Match = planRaw.match(/^#\s+([^\n]+)/m);
     if (h1Match) {
       const rawH1 = h1Match[1].replace(/`/g, '').trim();
-      const explicitH1Id = rawH1.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\b/i);
+      const explicitH1Id = rawH1.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+(?:-ACT-\d+)?)\b/i);
       const cleanTitle = rawH1
         .replace(/^Implementation Plan\s*[—:-]\s*/i, '')
-        .replace(/\(\s*(?:FEAT|BUG|QA|REFACTOR|UX)-\d+\s*\)\s*$/i, '')
-        .replace(/^\[?(?:FEAT|BUG|QA|REFACTOR|UX)-\d+\]?\s*[:·—-]?\s*/i, '')
+        .replace(/\(\s*(?:FEAT|BUG|QA|REFACTOR|UX)-\d+(?:-ACT-\d+)?\s*\)\s*$/i, '')
+        .replace(/^\[?(?:FEAT|BUG|QA|REFACTOR|UX)-\d+(?:-ACT-\d+)?\]?\s*[:·—-]?\s*/i, '')
         .trim();
 
       if (cleanTitle && cleanTitle.length >= 4 && !/^(implementation plan|planned implementation|plan)$/i.test(cleanTitle)) {
@@ -905,6 +1049,11 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
     const isPrimaryActivePlan = idx === 0;
     try {
       const raw = fs.readFileSync(planFile, 'utf8');
+      if (raw.slice(0, 600).includes('<!-- antigravity-planning-sync -->')) {
+        continue;
+      }
+      let planMtimeMs = 0;
+      try { planMtimeMs = fs.statSync(planFile).mtimeMs; } catch {}
       const resolvedRoot = path.resolve(rootDir);
       const hasFileLinks = /file:\/\/\/(?:Users|home)\/[^\s)"'`]+/.test(raw);
       if (hasFileLinks && !raw.includes(resolvedRoot)) {
@@ -914,8 +1063,10 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
       for (const item of extracted) {
         const existing = data.tasks.find(t => String(t.id).toUpperCase() === item.id);
         if (!existing) {
+          const actMatch = item.id.match(/^((?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+)-ACT-(\d+)$/i);
           const newTask = {
             id: item.id,
+            ...(actMatch ? { parentId: actMatch[1].toUpperCase(), isActionChild: true, actionIndex: parseInt(actMatch[2], 10) } : {}),
             type: item.type || 'feature',
             title: item.title,
             status: 'ready',
@@ -936,6 +1087,22 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
           autoAnnotateTicket(newTask, rootDir);
           stampTaskBranch(newTask, rootDir);
           data.tasks.push(newTask);
+          if (actMatch) {
+            const parentTask = data.tasks.find(t => String(t.id).toUpperCase() === actMatch[1].toUpperCase());
+            if (parentTask) {
+              ensureTaskActionItems(parentTask);
+              if (!parentTask.actionItems.some(a => String(a.childTicketId || '').toUpperCase() === newTask.id || String(a.text || '').toUpperCase().includes(`[${newTask.id}]`))) {
+                parentTask.actionItems.push({
+                  id: newTask.id,
+                  childTicketId: newTask.id,
+                  text: `[${newTask.id}] ${newTask.title}`,
+                  owner: inferActionItemOwner(newTask.title, parentTask),
+                  done: false
+                });
+              }
+              parentTask.childTicketIds = Array.from(new Set([...(parentTask.childTicketIds || []), newTask.id]));
+            }
+          }
           addedOrHealed++;
           if (isPrimaryActivePlan && !activePlanIds.includes(newTask.id)) {
             activePlanIds.push(newTask.id);
@@ -947,7 +1114,10 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             if (!existing.description) existing.description = item.description;
             changed = true;
           }
-          if (isPrimaryActivePlan && existing.status === 'todo') {
+          const planUpdatedSinceLock = !existing.planningStartedAt
+            || (planMtimeMs > 0 && Math.ceil(planMtimeMs) >= Date.parse(existing.planningStartedAt));
+          const isPlanningLocked = Boolean(existing.planningLocked || existing.liveActivity === 'planning');
+          if (isPrimaryActivePlan && ((existing.status === 'todo' && !isPlanningLocked) || (isPlanningLocked && planUpdatedSinceLock))) {
             recordTaskStateTransition(existing, 'ready', 'awaiting_approval');
             changed = true;
           }
@@ -959,6 +1129,25 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
           }
           if (isPrimaryActivePlan && existing.status !== 'done' && !activePlanIds.includes(existing.id)) {
             activePlanIds.push(existing.id);
+          }
+        }
+      }
+
+      if (isPrimaryActivePlan && planMtimeMs > 0 && Array.isArray(data.activePlanTaskIds)) {
+        for (const aid of data.activePlanTaskIds) {
+          const activeTask = data.tasks.find(t => String(t.id).toUpperCase() === String(aid).toUpperCase());
+          if (!activeTask || activeTask.status === 'done') continue;
+          const isPlanningLocked = Boolean(activeTask.planningLocked || activeTask.liveActivity === 'planning');
+          const planUpdatedSinceLock = !activeTask.planningStartedAt || Math.ceil(planMtimeMs) >= Date.parse(activeTask.planningStartedAt);
+          if (isPlanningLocked && planUpdatedSinceLock) {
+            recordTaskStateTransition(activeTask, 'ready', 'awaiting_approval');
+            ensureTaskActionItems(activeTask);
+            autoAnnotateTicket(activeTask, rootDir);
+            stampTaskBranch(activeTask, rootDir);
+            addedOrHealed++;
+          }
+          if (!activePlanIds.includes(activeTask.id)) {
+            activePlanIds.push(activeTask.id);
           }
         }
       }
@@ -1519,11 +1708,14 @@ function renderCardServer(task, allTasks = []) {
     : task.type === 'qa' ? 'QA'
     : 'TASK';
 
-  const cardBorder = isInProgress
-    ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
-    : isReady
-      ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
-      : 'border-[var(--border,#334155)] hover:border-slate-500';
+  const isPlanningLocked = Boolean(!isDone && !isInProgress && (task.planningLocked || (isReady && task.liveActivity === 'planning')));
+  const cardBorder = isPlanningLocked
+    ? 'border-slate-600/50 border-dashed bg-slate-900/60 opacity-55 grayscale-[45%] cursor-not-allowed select-none'
+    : isInProgress
+      ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
+      : isReady
+        ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
+        : 'border-[var(--border,#334155)] hover:border-slate-500';
 
   const actionItemsPreviewHtml = isInProgress
     ? `<div class="mb-2.5 bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 rounded-lg p-2 transition cursor-pointer" onclick="openTaskInspector('${safeIdAttr}', event)" title="Click to inspect &amp; assign Action Items being waited on">
@@ -1554,44 +1746,46 @@ function renderCardServer(task, allTasks = []) {
     : [];
   const openChildCount = childTasks.filter(c => c.status !== 'done').length;
   const hasChildren = childTasks.length > 0;
-  const canMultiSelect = colKey === 'todo' || colKey === 'ready';
+  const canMultiSelect = (colKey === 'todo' || colKey === 'ready') && !isPlanningLocked;
   const selectCheckboxHtml = canMultiSelect
     ? `<input type="checkbox" data-select-id="${safeIdAttr}" onclick="toggleTicketMultiSelect('${safeIdAttr}', event)" class="w-3.5 h-3.5 rounded border-[var(--border,#475569)] accent-[var(--primary,#3b82f6)] cursor-pointer shrink-0" title="Select [${safeIdAttr}] for batch Plan or Orchestrator Code execution">`
     : '';
-  const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress)
+  const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress) && !isPlanningLocked
     ? `<button onclick="toggleCardCollapse('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">${isCollapsed ? '▸' : '▾'}</button>`
     : '';
 
   return `
-        <div data-task-id="${safeIdAttr}" data-col="${colKey}" draggable="true" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl ${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing ${task.isResidualChild || task.parentId ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
+        <div data-task-id="${safeIdAttr}" data-col="${colKey}" data-planning-locked="${isPlanningLocked ? 'true' : 'false'}" draggable="${isPlanningLocked ? 'false' : 'true'}" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl ${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group ${isPlanningLocked ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'} ${!isPlanningLocked && (task.isResidualChild || task.parentId) ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
           <div class="flex items-start justify-between gap-2 ${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
               ${selectCheckboxHtml}
               ${collapseBtnHtml}
-              <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
+              <span class="text-slate-500 ${isPlanningLocked ? 'cursor-not-allowed opacity-40' : 'hover:text-slate-300 cursor-grab'} select-none text-xs px-0.5" title="${isPlanningLocked ? 'Locked while planning in READY' : 'Drag to reorder or move between columns'}">⠿</span>
               <span class="font-mono text-xs font-bold ${task.isResidualChild || task.parentId ? 'text-cyan-300' : 'text-blue-400'}">${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 ${prioColor}">${escapeHtmlServer(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">${typeBadge}</span>
               ${hasChildren ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Child tickets under this non-completed parent">${task.coreCompleted ? `🧩 Main Done · ${openChildCount} Residual` : `🧩 ${childTasks.length} Child${childTasks.length === 1 ? '' : 'ren'} (${openChildCount} Open)`}</span>` : ''}
-              ${task.isResidualChild ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task ${escapeHtmlServer(task.residualLetter || '')}</span>` : (task.parentId ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Child of ${escapeHtmlServer(task.parentId)}</span>` : '')}
-              ${!isReady && !isInProgress && !isDone && task.liveActivity === 'planning' ? `<span class="badge bg-amber-500/25 text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket (FEAT-140)">🧠 Planning...</span>` : ''}
-              ${!isReady && !isInProgress && !isDone && task.annotations ? `<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>` : ''}
-              ${isReady ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>` : ''}
+              ${task.isResidualChild ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task ${escapeHtmlServer(task.residualLetter || '')}</span>` : (task.parentId ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Child of ${escapeHtmlServer(task.parentId)}${task.isActionChild && task.actionIndex ? ` · ACT-${task.actionIndex}` : ''}</span>` : '')}
+              ${isPlanningLocked ? `<span class="badge bg-slate-700/60 text-slate-300 border border-slate-500/50 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket in READY — greyed out &amp; locked until implementation_plan.md is finalized (BUG-114)">🔒 🧠 Planning... (Locked)</span>` : ''}
+              ${!isPlanningLocked && !isReady && !isInProgress && !isDone && task.annotations ? `<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>` : ''}
+              ${isReady && !isPlanningLocked ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>` : ''}
               ${isInProgress && task.liveActivity === 'coding' ? `<span class="badge bg-blue-500/25 text-blue-200 border border-blue-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively coding this ticket right now (FEAT-140)">⚡ Coding Live...</span>` : ''}
               ${isInProgress && !isCollapsed ? `<span onclick="openTaskInspector('${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ ${pendingActions.length} Action${pendingActions.length === 1 ? '' : 's'}</span>` : ''}
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
-              <button onclick="moveTaskManual('${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
-              <button onclick="moveTaskManual('${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
-              <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
-              ${!isDone
-                ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
-                   ${!isReady && !isInProgress ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>` : ''}
-                   <button onclick="updateTaskStatus('${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>`
-                : `<button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>`}
-              ${!isInProgress && !isDone
-                ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'in_progress')" class="text-xs hover:text-blue-400 p-0.5" title="Mark In Progress">⚡</button>`
-                : ''}
+              ${isPlanningLocked
+                ? `<span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>`
+                : `<button onclick="moveTaskManual('${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
+                   <button onclick="moveTaskManual('${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
+                   <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
+                   ${!isDone
+                     ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
+                        ${!isReady && !isInProgress ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>` : ''}
+                        <button onclick="updateTaskStatus('${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>`
+                     : `<button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>`}
+                   ${!isInProgress && !isDone
+                     ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'in_progress')" class="text-xs hover:text-blue-400 p-0.5" title="Mark In Progress">⚡</button>`
+                     : ''}`}
             </div>
           </div>
           <h3 class="text-xs font-semibold text-[var(--foreground,#f8fafc)] leading-snug ${isCollapsed ? 'truncate' : 'mb-1.5'} ${isDone ? 'line-through opacity-70' : ''}">
@@ -1600,7 +1794,7 @@ function renderCardServer(task, allTasks = []) {
           ${isCollapsed ? '' : `
           ${safeDescHtml ? `<p class="text-xs text-[var(--muted-foreground,#94a3b8)] line-clamp-2 mb-2 leading-relaxed">${safeDescHtml}</p>` : ''}
           ${actionItemsPreviewHtml}
-          ${!isDone
+          ${!isDone && !isPlanningLocked
             ? (() => {
                 const adv = computeTicketCreditAdviceServer(task);
                 return `<div onclick="openCreditAdvisor('${safeIdAttr}', event)" class="mb-2 px-2 py-1 rounded-lg border text-[11px] font-medium flex items-center justify-between gap-1.5 cursor-pointer transition ${adv.pillClass}" title="Click for verbose Save Credits &amp; AGY Model ROI guide (Google, External, Orchestrators)"><span class="truncate">${escapeHtmlServer(adv.shortBadge)}</span><span class="shrink-0 opacity-80">ROI ↗</span></div>`;
@@ -1614,7 +1808,11 @@ function renderCardServer(task, allTasks = []) {
             : ''}
           <div class="pt-2 border-t border-[var(--border,#334155)]/50 flex items-center justify-between gap-2">
             ${!isDone
-              ? `<div class="flex items-center gap-1.5 flex-wrap">
+              ? isPlanningLocked
+                ? `<div class="flex items-center gap-1.5 flex-wrap">
+                     <button type="button" disabled class="bg-slate-800/70 text-slate-400 border border-slate-700/60 text-xs font-semibold px-2.5 py-1 rounded-md opacity-75 cursor-not-allowed flex items-center gap-1" title="Locked &amp; greyed out in READY while Implementation Plan is drafted (BUG-114)"><span>🔒</span> Planning Locked</button>
+                   </div>`
+                : `<div class="flex items-center gap-1.5 flex-wrap">
                    ${isInProgress
                      ? `<button onclick="openTaskInspector('${safeIdAttr}', event)" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="View Action Items being waited on &amp; do or assign to Antigravity"><span>⏳</span> Action Items (${pendingActions.length})</button>
                         <button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Choose AGY Coding Model &amp; continue [${safeIdAttr}]"><span>💻</span> Code</button>`
@@ -1626,7 +1824,7 @@ function renderCardServer(task, allTasks = []) {
                    <button onclick="triggerAttachFile('${safeIdAttr}')" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/50 text-xs px-2 py-1 rounded-md transition cursor-pointer" title="Attach UX/UI .zip or spec file">📎</button>
                  </div>`
               : `<span class="text-xs text-emerald-400 font-medium">✓ Completed</span>`}
-            <button onclick="copyCliCommand('npm run backlog status ${safeIdAttr} in_progress')" class="text-xs text-[var(--muted-foreground,#94a3b8)] hover:text-white font-mono cursor-pointer">CLI copy</button>
+            ${isPlanningLocked ? `<span class="text-xs text-slate-500 font-mono cursor-not-allowed">Locked</span>` : `<button onclick="copyCliCommand('npm run backlog status ${safeIdAttr} in_progress')" class="text-xs text-[var(--muted-foreground,#94a3b8)] hover:text-white font-mono cursor-pointer">CLI copy</button>`}
           </div>
           `}
         </div>`;
@@ -2220,6 +2418,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
       const task = rawData.tasks.find(t => t.id === taskId);
       if (!task) return;
+      if (isClientTaskPlanningLocked(task)) {
+        showToast('🔒 [' + taskId + '] is currently being planned in READY — locked until Implementation Plan is finalized.');
+        return;
+      }
       openTaskInspector(taskId, event);
     }
 
@@ -2229,6 +2431,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
       const task = rawData.tasks.find(t => t.id === taskId);
       if (!task) return;
+      if (isClientTaskPlanningLocked(task)) {
+        showToast('🔒 [' + taskId + '] is currently being planned in READY — locked until Implementation Plan is finalized.');
+        return;
+      }
       activeInspectTaskId = taskId;
       inspectorOwnerFilter = 'all';
       getClientTaskActionItems(task);
@@ -3624,9 +3830,18 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
     let pendingDropContext = null;
 
+    function isClientTaskPlanningLocked(t) {
+      return Boolean(t && (t.planningLocked || (t.status === 'ready' && t.liveActivity === 'planning')));
+    }
+
     function toggleTicketMultiSelect(taskId, event) {
       if (event) event.stopPropagation();
       if (!taskId) return;
+      const t = (rawData.tasks || []).find(item => item.id === taskId);
+      if (isClientTaskPlanningLocked(t)) {
+        showToast('🔒 [' + taskId + '] is currently being planned — locked until Implementation Plan is finalized.');
+        return;
+      }
       if (selectedTicketIds.has(taskId)) selectedTicketIds.delete(taskId);
       else selectedTicketIds.add(taskId);
       renderBoard();
@@ -3637,6 +3852,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const q = (document.getElementById('searchInput') ? document.getElementById('searchInput').value : '').toLowerCase();
       const colTasks = (rawData.tasks || []).filter(t => {
         if (t.status !== colKey) return false;
+        if (isClientTaskPlanningLocked(t)) return false;
         if (!isClientTaskInActiveBranch(t)) return false;
         return !q || t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q));
       });
@@ -3659,7 +3875,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const validIds = [];
       for (const id of Array.from(selectedTicketIds)) {
         const t = (rawData.tasks || []).find(item => item.id === id);
-        if (t && (t.status === 'todo' || t.status === 'ready')) {
+        if (t && (t.status === 'todo' || t.status === 'ready') && !isClientTaskPlanningLocked(t)) {
           validIds.push(id);
         } else {
           selectedTicketIds.delete(id);
@@ -3679,7 +3895,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       ['todo', 'ready'].forEach(colKey => {
         const btn = document.getElementById('select-all-' + colKey);
         if (!btn) return;
-        const colTasks = (rawData.tasks || []).filter(t => t.status === colKey && isClientTaskInActiveBranch(t));
+        const colTasks = (rawData.tasks || []).filter(t => t.status === colKey && !isClientTaskPlanningLocked(t) && isClientTaskInActiveBranch(t));
         const allSel = colTasks.length > 0 && colTasks.every(t => selectedTicketIds.has(t.id));
         btn.textContent = allSel ? '☑ None' : '☑ All';
         btn.className = allSel
@@ -3866,6 +4082,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         : String(taskIdOrIds || '').split(/[\\s,]+/).filter(Boolean);
       const tasks = rawIds.map(id => (rawData.tasks || []).find(t => t.id === id)).filter(Boolean);
       if (tasks.length === 0) return;
+      const lockedTask = tasks.find(t => isClientTaskPlanningLocked(t));
+      if (lockedTask) {
+        if (dropCtx) renderBoard();
+        pendingDropContext = null;
+        showToast('🔒 [' + lockedTask.id + '] is currently being planned in READY — locked until Implementation Plan is finalized.');
+        return;
+      }
       const isBatch = tasks.length > 1;
       const idsJoined = tasks.map(t => t.id).join(', ');
       const idsCsv = tasks.map(t => t.id).join(',');
@@ -3985,10 +4208,18 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const targetColKey = isPlan ? 'ready' : 'in_progress';
       materializeColumnVisualOrder(targetColKey);
 
+      const nowIso = new Date().toISOString();
       for (const task of tasks) {
         task.status = isPlan ? 'ready' : 'in_progress';
-        if (isPlan && !task.plannedAt) {
-          task.plannedAt = new Date().toISOString();
+        if (isPlan) {
+          task.liveActivity = 'planning';
+          task.planningLocked = true;
+          task.planningStartedAt = nowIso;
+          delete task.plannedAt;
+        } else {
+          task.liveActivity = 'coding';
+          delete task.planningLocked;
+          if (!task.startedAt) task.startedAt = nowIso;
         }
       }
 
@@ -4051,11 +4282,17 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
     async function kickoffTask(id) {
       const task = rawData.tasks.find(t => t.id === id);
+      if (isClientTaskPlanningLocked(task)) {
+        showToast('🔒 [' + id + '] is currently being planned in READY — wait until Implementation Plan is finalized.');
+        return;
+      }
       const wasReady = task && task.status === 'ready';
       const adv = computeTicketCreditAdvice(task);
       const prompt = adv.effortPrefix + ' /backlog-start ' + id;
       if (task && (task.status === 'todo' || task.status === 'ready')) {
         task.status = 'in_progress';
+        task.liveActivity = 'coding';
+        delete task.planningLocked;
         renderBoard();
       }
 
@@ -4091,9 +4328,12 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const adv = computeTicketCreditAdvice(task);
       const prompt = id ? ('/effort high /backlog-plan ' + id) : '/effort high /backlog-plan';
 
-      if (task && task.status === 'todo') {
+      if (task && (task.status === 'todo' || task.status === 'ready')) {
         task.status = 'ready';
-        task.plannedAt = new Date().toISOString();
+        task.liveActivity = 'planning';
+        task.planningLocked = true;
+        task.planningStartedAt = new Date().toISOString();
+        delete task.plannedAt;
         renderBoard();
       }
 
@@ -4102,7 +4342,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl) {
         titleEl.textContent = task
-          ? ('📐 Planned [' + task.id + '] → Moved to READY · Plan on: ' + adv.stageA)
+          ? ('📐 Planned [' + task.id + '] → Locked in READY · Plan on: ' + adv.stageA)
           : '📐 Planning Mode Ready (task.md, implementation_plan.md & walkthrough.md synced)';
       }
 
@@ -4113,7 +4353,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       });
 
       if (bridgeRes && bridgeRes.ok) {
-        showToast('📐 Moved [' + (id || 'plan') + '] to READY & copied "' + prompt + '"! Plan on Argon/Opus, then switch down to Neon/Sonnet.');
+        showToast('📐 Locked [' + (id || 'plan') + '] in READY & copied "' + prompt + '"! Plan on Argon/Opus, then switch down to Neon/Sonnet.');
       } else {
         showToast('📐 Copied "' + prompt + '" — press ⌘V in Antigravity chat!');
       }
@@ -4128,6 +4368,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     async function updateTaskStatus(id, newStatus) {
       const task = rawData.tasks.find(t => t.id === id);
       if (task) {
+        if (isClientTaskPlanningLocked(task)) {
+          showToast('🔒 [' + id + '] is locked in READY while Implementation Plan is drafted.');
+          return;
+        }
         task.status = newStatus;
         renderBoard();
         const bridgeRes = await callLocalBridge('/api/status', {
@@ -4370,6 +4614,12 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     }
 
     function handleDragStart(event, taskId) {
+      const dragTask = (rawData.tasks || []).find(t => t.id === taskId);
+      if (isClientTaskPlanningLocked(dragTask)) {
+        if (event && typeof event.preventDefault === 'function') event.preventDefault();
+        showToast('🔒 [' + taskId + '] is locked in READY while planning — cannot drag until finalized.');
+        return;
+      }
       draggedTaskId = taskId;
       if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'move';
@@ -4421,6 +4671,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const sourceTask = rawData.tasks.find(t => t.id === sourceId);
       const targetTask = rawData.tasks.find(t => t.id === targetTaskId);
       if (!sourceTask || !targetTask) return;
+      if (isClientTaskPlanningLocked(sourceTask)) {
+        showToast('🔒 [' + sourceTask.id + '] is locked in READY while planning.');
+        return;
+      }
 
       const targetColKey = getColumnKeyForTask(targetTask);
       materializeColumnVisualOrder(targetColKey);
@@ -4541,15 +4795,18 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         : task.type === 'qa' ? 'QA'
         : 'TASK';
 
-      const canMultiSelect = colKey === 'todo' || colKey === 'ready';
+      const isPlanningLocked = Boolean(!isDone && !isInProgress && (task.planningLocked || (isReady && task.liveActivity === 'planning')));
+      const canMultiSelect = (colKey === 'todo' || colKey === 'ready') && !isPlanningLocked;
       const isSelected = canMultiSelect && selectedTicketIds.has(task.id);
-      const cardBorder = isSelected
-        ? 'border-[var(--primary,#3b82f6)] ring-2 ring-[var(--primary,#3b82f6)]/60'
-        : isInProgress
-          ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
-          : isReady
-            ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
-            : 'border-[var(--border,#334155)] hover:border-slate-500';
+      const cardBorder = isPlanningLocked
+        ? 'border-slate-600/50 border-dashed bg-slate-900/60 opacity-55 grayscale-[45%] cursor-not-allowed select-none'
+        : isSelected
+          ? 'border-[var(--primary,#3b82f6)] ring-2 ring-[var(--primary,#3b82f6)]/60'
+          : isInProgress
+            ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
+            : isReady
+              ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
+              : 'border-[var(--border,#334155)] hover:border-slate-500';
 
       const actionItemsPreviewHtml = isInProgress ? \`
         <div class="mb-2.5 bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 rounded-lg p-2 transition cursor-pointer" onclick="openTaskInspector('\${safeIdAttr}', event)" title="Click to inspect &amp; assign Action Items being waited on">
@@ -4583,44 +4840,48 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const selectCheckboxHtml = canMultiSelect
         ? \`<input type="checkbox" data-select-id="\${safeIdAttr}" \${isSelected ? 'checked' : ''} onclick="toggleTicketMultiSelect('\${safeIdAttr}', event)" class="w-3.5 h-3.5 rounded border-[var(--border,#475569)] accent-[var(--primary,#3b82f6)] cursor-pointer shrink-0" title="Select [\${safeIdAttr}] for batch Plan or Orchestrator Code execution">\`
         : '';
-      const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress)
+      const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress) && !isPlanningLocked
         ? \`<button onclick="toggleCardCollapse('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="\${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">\${isCollapsed ? '▸' : '▾'}</button>\`
         : '';
 
       return \`
-        <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" draggable="true" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl \${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing \${task.isResidualChild || task.parentId ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
+        <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" data-planning-locked="\${isPlanningLocked ? 'true' : 'false'}" draggable="\${isPlanningLocked ? 'false' : 'true'}" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl \${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group \${isPlanningLocked ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'} \${!isPlanningLocked && (task.isResidualChild || task.parentId) ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
           <div class="flex items-start justify-between gap-2 \${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
               \${selectCheckboxHtml}
               \${collapseBtnHtml}
-              <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
+              <span class="text-slate-500 \${isPlanningLocked ? 'cursor-not-allowed opacity-40' : 'hover:text-slate-300 cursor-grab'} select-none text-xs px-0.5" title="\${isPlanningLocked ? 'Locked while planning in READY' : 'Drag to reorder or move between columns'}">⠿</span>
               <span class="font-mono text-xs font-bold \${task.isResidualChild || task.parentId ? 'text-cyan-300' : 'text-blue-400'}">\${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 \${prioColor}">\${escapeHtml(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">\${typeBadge}</span>
               \${hasChildren ? \`<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Child tickets under this non-completed parent">\${task.coreCompleted ? '🧩 Main Done · ' + openChildCount + ' Residual' : '🧩 ' + childTasks.length + ' Child' + (childTasks.length === 1 ? '' : 'ren') + ' (' + openChildCount + ' Open)'}</span>\` : ''}
-              \${task.isResidualChild ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task \${escapeHtml(task.residualLetter || '')}</span>\` : (task.parentId ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Child of \${escapeHtml(task.parentId)}</span>\` : '')}
-              \${!isReady && !isInProgress && !isDone && task.liveActivity === 'planning' ? \`<span class="badge bg-amber-500/25 text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket (FEAT-140)">🧠 Planning...</span>\` : ''}
-              \${!isReady && !isInProgress && !isDone && task.annotations ? \`<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>\` : ''}
-              \${isReady ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">\${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>\` : ''}
+              \${task.isResidualChild ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task \${escapeHtml(task.residualLetter || '')}</span>\` : (task.parentId ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Child of \${escapeHtml(task.parentId)}\${task.isActionChild && task.actionIndex ? ' · ACT-' + task.actionIndex : ''}</span>\` : '')}
+              \${isPlanningLocked ? \`<span class="badge bg-slate-700/60 text-slate-300 border border-slate-500/50 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket in READY — greyed out &amp; locked until implementation_plan.md is finalized (BUG-114)">🔒 🧠 Planning... (Locked)</span>\` : ''}
+              \${!isPlanningLocked && !isReady && !isInProgress && !isDone && task.annotations ? \`<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>\` : ''}
+              \${isReady && !isPlanningLocked ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">\${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>\` : ''}
               \${isInProgress && task.liveActivity === 'coding' ? \`<span class="badge bg-blue-500/25 text-blue-200 border border-blue-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively coding this ticket right now (FEAT-140)">⚡ Coding Live...</span>\` : ''}
               \${isInProgress && !isCollapsed ? \`<span onclick="openTaskInspector('\${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ \${pendingActions.length} Action\${pendingActions.length === 1 ? '' : 's'}</span>\` : ''}
             </div>
             
             <!-- Quick Reorder & Status Toggles -->
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
-              <button onclick="moveTaskManual('\${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
-              <button onclick="moveTaskManual('\${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
-              <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
-              \${!isDone ? \`
-                <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
-                \${!isReady && !isInProgress ? \`<button onclick="updateTaskStatus('\${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>\` : ''}
-                <button onclick="updateTaskStatus('\${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>
+              \${isPlanningLocked ? \`
+                <span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>
               \` : \`
-                <button onclick="updateTaskStatus('\${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>
+                <button onclick="moveTaskManual('\${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
+                <button onclick="moveTaskManual('\${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
+                <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
+                \${!isDone ? \`
+                  <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
+                  \${!isReady && !isInProgress ? \`<button onclick="updateTaskStatus('\${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>\` : ''}
+                  <button onclick="updateTaskStatus('\${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>
+                \` : \`
+                  <button onclick="updateTaskStatus('\${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>
+                \`}
+                \${!isInProgress && !isDone ? \`
+                  <button onclick="updateTaskStatus('\${safeIdAttr}', 'in_progress')" class="text-xs hover:text-blue-400 p-0.5" title="Mark In Progress">⚡</button>
+                \` : ''}
               \`}
-              \${!isInProgress && !isDone ? \`
-                <button onclick="updateTaskStatus('\${safeIdAttr}', 'in_progress')" class="text-xs hover:text-blue-400 p-0.5" title="Mark In Progress">⚡</button>
-              \` : ''}
             </div>
           </div>
 
@@ -4637,7 +4898,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
           \${actionItemsPreviewHtml}
 
-          \${!isDone ? (() => {
+          \${!isDone && !isPlanningLocked ? (() => {
             const adv = computeTicketCreditAdvice(task);
             return \`
               <div onclick="openCreditAdvisor('\${safeIdAttr}', event)" class="mb-2 px-2 py-1 rounded-lg border text-[11px] font-medium flex items-center justify-between gap-1.5 cursor-pointer transition \${adv.pillClass}" title="Click for verbose Save Credits &amp; AGY Model ROI guide (Google, External, Orchestrators)">
@@ -4661,7 +4922,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
           <!-- Action Footer -->
           <div class="pt-2 border-t border-[var(--border,#334155)]/50 flex items-center justify-between gap-2">
-            \${!isDone ? \`
+            \${!isDone ? (isPlanningLocked ? \`
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" disabled class="bg-slate-800/70 text-slate-400 border border-slate-700/60 text-xs font-semibold px-2.5 py-1 rounded-md opacity-75 cursor-not-allowed flex items-center gap-1" title="Locked &amp; greyed out in READY while Implementation Plan is drafted (BUG-114)">
+                  <span>🔒</span> Planning Locked
+                </button>
+              </div>
+            \` : \`
               <div class="flex items-center gap-1.5 flex-wrap">
                 \${isInProgress ? \`
                   <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="View Action Items being waited on &amp; do or assign to Antigravity">
@@ -4689,12 +4956,16 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                   📎
                 </button>
               </div>
-            \` : \`
+            \`) : \`
               <span class="text-xs text-emerald-400 font-medium">✓ Completed</span>
             \`}
-            <button onclick="copyCliCommand('npm run backlog status \${safeIdAttr} in_progress')" class="text-xs text-[var(--muted-foreground,#94a3b8)] hover:text-white font-mono cursor-pointer">
-              CLI copy
-            </button>
+            \${isPlanningLocked ? \`
+              <span class="text-xs text-slate-500 font-mono cursor-not-allowed">Locked</span>
+            \` : \`
+              <button onclick="copyCliCommand('npm run backlog status \${safeIdAttr} in_progress')" class="text-xs text-[var(--muted-foreground,#94a3b8)] hover:text-white font-mono cursor-pointer">
+                CLI copy
+              </button>
+            \`}
           </div>
           \`}
         </div>
@@ -5382,7 +5653,14 @@ function writePlanningArtifacts(data, rootDir = REPO_ROOT, brainDirs = [], force
   }
 
   fs.writeFileSync(path.join(planningDir, 'task.md'), customTaskMd || taskMd, 'utf8');
-  fs.writeFileSync(path.join(planningDir, 'implementation_plan.md'), customPlanMd || planMd, 'utf8');
+  const wsPlanPathOut = path.join(planningDir, 'implementation_plan.md');
+  const wsPlanIsCustom = fs.existsSync(wsPlanPathOut)
+    && !fs.readFileSync(wsPlanPathOut, 'utf8').slice(0, 500).includes('<!-- antigravity-planning-sync -->');
+  if (customPlanMd) {
+    fs.writeFileSync(wsPlanPathOut, customPlanMd, 'utf8');
+  } else if (!wsPlanIsCustom) {
+    fs.writeFileSync(wsPlanPathOut, planMd, 'utf8');
+  }
   fs.writeFileSync(path.join(planningDir, 'walkthrough.md'), customWalkMd || walkthroughMd, 'utf8');
 }
 
@@ -5485,7 +5763,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 }
 
-const BRIDGE_VERSION = '1.9.0';
+const BRIDGE_VERSION = '1.9.1';
 
 function spawnBridgeDaemon() {
   try {
@@ -6168,8 +6446,8 @@ function startBridgeServer(port = DEFAULT_PORT) {
           for (const oneId of ids) {
             const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
             if (task) {
-              if (task.status === 'todo') {
-                recordTaskStateTransition(task, 'ready', 'awaiting_approval');
+              if (task.status === 'todo' || task.status === 'ready') {
+                recordTaskStateTransition(task, 'ready', 'planning');
               }
               matchedCanonicalIds.push(task.id);
               unpackTaskAttachments(task, targetRoot);
@@ -6203,6 +6481,9 @@ function startBridgeServer(port = DEFAULT_PORT) {
         if (!task) {
           return { status: 404, payload: { ok: false, error: 'Task not found' } };
         }
+        if (task.planningLocked || (task.status === 'ready' && task.liveActivity === 'planning')) {
+          return { status: 409, payload: { ok: false, error: `Ticket ${task.id} is locked in READY while planning (BUG-114)` } };
+        }
         task.status = newStatus;
         if (newStatus === 'ready' && !task.plannedAt) {
           task.plannedAt = new Date().toISOString();
@@ -6227,6 +6508,9 @@ function startBridgeServer(port = DEFAULT_PORT) {
         if (movedId && newStatus) {
           const movedTask = data.tasks.find(t => t.id.toLowerCase() === movedId.toLowerCase());
           if (movedTask) {
+            if (movedTask.planningLocked || (movedTask.status === 'ready' && movedTask.liveActivity === 'planning')) {
+              return { status: 409, payload: { ok: false, error: `Ticket ${movedTask.id} is locked in READY while planning (BUG-114)` } };
+            }
             movedTask.status = newStatus;
             if (newStatus === 'done' && !movedTask.completedAt) {
               movedTask.completedAt = new Date().toISOString();
@@ -6271,6 +6555,7 @@ function startBridgeServer(port = DEFAULT_PORT) {
         if (Array.isArray(body.actionItems)) {
           task.actionItems = body.actionItems.map((item, idx) => ({
             id: String(item.id || `${task.id}-ACT-${idx + 1}`),
+            ...(item.childTicketId ? { childTicketId: String(item.childTicketId) } : {}),
             text: String(item.text || '').trim(),
             owner: item.owner === 'user' ? 'user' : 'antigravity',
             done: Boolean(item.done)
@@ -7055,8 +7340,8 @@ function main() {
       stampTaskBranch(task, REPO_ROOT);
 
       // Check for explicit --residual items OR pending unchecked actionItems on non-child tickets (unless --force)
-      const pendingActionTexts = (!forceComplete && !task.isResidualChild && Array.isArray(task.actionItems))
-        ? task.actionItems.filter(item => !item.done && item.owner === 'user').map(item => item.text)
+      const pendingActionTexts = (!forceComplete && !task.isResidualChild && !task.isActionChild && Array.isArray(task.actionItems))
+        ? task.actionItems.filter(item => !item.done && item.owner === 'user' && !item.childTicketId).map(item => item.text)
         : [];
       const residualsToSpawn = explicitResiduals.length > 0 ? explicitResiduals : pendingActionTexts;
 
@@ -7236,59 +7521,12 @@ function main() {
     };
 
     const splitParentIntoSubtasks = (parentTask, subSpecs) => {
-      const createdChildren = [];
-      const prefix = String(parentTask.id).startsWith('BUG-') ? 'BUG' : 'FEAT';
-      ensureTaskActionItems(parentTask);
-      for (const specItem of subSpecs) {
-        const subTitle = typeof specItem === 'string' ? specItem.trim() : String(specItem.title || '').trim();
-        if (!subTitle) continue;
-        const existingChild = data.tasks.find(
-          t => t.parentId === parentTask.id && t.title.toLowerCase() === subTitle.toLowerCase()
-        );
-        if (existingChild) {
-          createdChildren.push(existingChild);
-          continue;
-        }
-        const childId = (typeof specItem === 'object' && specItem.id && !data.tasks.some(t => t.id.toLowerCase() === specItem.id.toLowerCase()))
-          ? specItem.id.toUpperCase()
-          : nextSeqId(prefix);
-        const childComps = (typeof specItem === 'object' && Array.isArray(specItem.components) && specItem.components.length > 0)
-          ? specItem.components
-          : parentTask.components || [];
-        const childDesc = (typeof specItem === 'object' && specItem.description)
-          ? specItem.description
-          : `Sub-ticket split from [${parentTask.id}] ${parentTask.title}: ${subTitle}`;
-        const childTask = {
-          id: childId,
-          parentId: parentTask.id,
-          type: parentTask.type || newType,
-          title: subTitle,
-          status: 'todo',
-          priority: parentTask.priority || newPriority,
-          components: childComps,
-          attachments: [],
-          description: childDesc,
-          spec: childDesc,
-          acceptanceCriteria: [
-            `Complete implementation for ${subTitle}`,
-            `Verify deterministic tests and lint checks for [${childId}]`
-          ]
-        };
-        ensureTaskActionItems(childTask);
-        data.tasks.push(childTask);
-        createdChildren.push(childTask);
-
-        const linkText = `[${childId}] ${subTitle}`;
-        if (!parentTask.actionItems.some(a => a.text.includes(childId))) {
-          parentTask.actionItems.push({
-            id: `${parentTask.id}-ACT-${parentTask.actionItems.length + 1}`,
-            text: linkText,
-            owner: 'antigravity',
-            done: false
-          });
-        }
-      }
-      return createdChildren;
+      const normalizedParentType = parentTask.type === 'feat' ? 'feature' : (parentTask.type === 'fix' ? 'bug' : (parentTask.type || newType));
+      return spawnActionChildTickets(parentTask, subSpecs, data, REPO_ROOT, {
+        defaultStatus: (parentTask.status === 'in_progress' || parentTask.status === 'testing') ? 'in_progress' : 'ready',
+        type: normalizedParentType,
+        priority: parentTask.priority || newPriority
+      });
     };
 
     const matchedTasks = [];
@@ -7300,15 +7538,18 @@ function main() {
         const brainDirs = findTargetBrainDirs(data, REPO_ROOT);
         const brainCandidate = brainDirs.length > 0 ? path.join(brainDirs[0], 'implementation_plan.md') : '';
         const wsCandidate = path.join(REPO_ROOT, 'docs', 'planning', 'implementation_plan.md');
-        if (brainCandidate && fs.existsSync(brainCandidate)) planFile = brainCandidate;
-        else if (fs.existsSync(wsCandidate)) planFile = wsCandidate;
+        const candidates = [brainCandidate, wsCandidate].filter(p => p && fs.existsSync(p));
+        candidates.sort((a, b) => {
+          try { return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs; } catch { return 0; }
+        });
+        if (candidates.length > 0) planFile = candidates[0];
       }
 
       if (planFile && fs.existsSync(planFile)) {
         const planRaw = fs.readFileSync(planFile, 'utf8');
         const h1Match = planRaw.match(/^#\s+([^\n]+)/m);
         let rawPlanTitle = h1Match ? h1Match[1].replace(/^Implementation Plan\s*[—:-]\s*/i, '').replace(/`/g, '').trim() : 'Planned Implementation';
-        const goalSecMatch = planRaw.match(/^##\s+(?:1\.\s+)?Goal Description\s*\r?\n([\s\S]*?)(?=\r?\n##\s+|\r?\n---\s*$|$)/im);
+        const goalSecMatch = planRaw.match(/^##\s+(?:1\.\s+)?Goal Description\s*\r?\n([\s\S]*?)(?=\r?\n##\s+|\r?\n---\s*(?:\r?\n|(?![\s\S]))|(?![\s\S]))/im);
         const goalText = goalSecMatch
           ? goalSecMatch[1].split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('>') && !l.startsWith('<!--')).join(' ').slice(0, 320)
           : rawPlanTitle;
@@ -7326,10 +7567,10 @@ function main() {
         const parsedComponents = Array.from(fileMatches).slice(0, 15);
 
         // Extract ### subsections under ## Proposed Changes
-        const propSecMatch = planRaw.match(/^##\s+(?:3\.\s+)?Proposed Changes\s*\r?\n([\s\S]*?)(?=\r?\n##\s+(?:4\.\s+)?Verification Plan|\r?\n##\s+|\s*$)/im);
+        const propSecMatch = planRaw.match(/^##\s+(?:3\.\s+)?Proposed Changes\s*\r?\n([\s\S]*?)(?=\r?\n##\s+(?:4\.\s+)?Verification Plan|\r?\n##\s+|\r?\n---\s*(?:\r?\n|(?![\s\S]))|(?![\s\S]))/im);
         const propBody = propSecMatch ? propSecMatch[1] : '';
         const subSections = [];
-        const h3Re = /^###\s+(?:\d+\.\s*)?([^\n]+)\r?\n([\s\S]*?)(?=^###\s+|$)/gm;
+        const h3Re = /^###\s+(?:\d+\.\s*)?([^\n]+)\r?\n([\s\S]*?)(?=^###\s+|(?![\s\S]))/gm;
         let sm;
         while ((sm = h3Re.exec(propBody)) !== null) {
           const secHeading = sm[1].replace(/`/g, '').trim();
@@ -7343,17 +7584,17 @@ function main() {
               if (!secFiles.includes(relP)) secFiles.push(relP);
             }
           }
-          const explicitIdMatch = secHeading.match(/\b((?:FEAT|BUG|QA|REFACTOR)-\d+)\b/i);
+          const explicitIdMatch = secHeading.match(/\b((?:FEAT|BUG|QA|REFACTOR)-\d+(?:-ACT-\d+)?)\b/i);
           subSections.push({
             id: explicitIdMatch ? explicitIdMatch[1].toUpperCase() : null,
-            title: secHeading.replace(/^\[?(?:FEAT|BUG|QA|REFACTOR)-\d+\]?\s*[:—-]?\s*/i, '').trim() || secHeading,
+            title: secHeading.replace(/^\[?(?:FEAT|BUG|QA|REFACTOR)-\d+(?:-ACT-\d+)?\]?\s*[:—-]?\s*/i, '').trim() || secHeading,
             components: secFiles,
             description: secBody.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('####') && !l.startsWith('---')).join(' ').slice(0, 220)
           });
         }
 
         // Determine if an open ticket already matches
-        const idInTitle = rawPlanTitle.match(/\b((?:FEAT|BUG|QA|REFACTOR)-\d+)\b/i);
+        const idInTitle = rawPlanTitle.match(/\b((?:FEAT|BUG|QA|REFACTOR)-\d+(?:-ACT-\d+)?)\b/i);
         let primaryTask = null;
         if (idInTitle) {
           const candidate = data.tasks.find(t => t.id.toLowerCase() === idInTitle[1].toLowerCase());
@@ -7362,7 +7603,7 @@ function main() {
           }
         }
         if (!primaryTask) {
-          const cleanTitle = rawPlanTitle.replace(/^\[?(?:FEAT|BUG|QA|REFACTOR)-\d+\]?\s*(?:Enhancement)?\s*[:—-]?\s*/i, '').trim() || rawPlanTitle;
+          const cleanTitle = rawPlanTitle.replace(/^\[?(?:FEAT|BUG|QA|REFACTOR)-\d+(?:-ACT-\d+)?\]?\s*(?:Enhancement)?\s*[:—-]?\s*/i, '').trim() || rawPlanTitle;
           primaryTask = data.tasks.find(t => t.status !== 'done' && t.title.toLowerCase() === cleanTitle.toLowerCase());
           if (!primaryTask) {
             const newId = (idInTitle && !data.tasks.some(t => t.id.toLowerCase() === idInTitle[1].toLowerCase()))
@@ -7387,12 +7628,16 @@ function main() {
         }
         matchedTasks.push(primaryTask);
 
-        if ((hasSplitFlag || subSections.filter(s => s.id && s.id !== primaryTask.id).length > 1) && subSections.length > 1) {
+        const primaryIdUpper = String(primaryTask.id || '').toUpperCase();
+        const hasActSubsections = subSections.some(s => s.id && s.id.startsWith(`${primaryIdUpper}-ACT-`));
+        const hasOnlyParentStepSections = subSections.length > 1
+          && subSections.every(s => !s.id || s.id === primaryIdUpper || s.id.startsWith(`${primaryIdUpper}-ACT-`));
+        if ((hasSplitFlag || hasActSubsections || hasOnlyParentStepSections) && subSections.length > 1) {
           const children = splitParentIntoSubtasks(primaryTask, subSections);
           for (const ch of children) {
             if (!matchedTasks.includes(ch)) matchedTasks.push(ch);
           }
-          console.log(`  ✓ Split [${primaryTask.id}] into ${children.length} atomic backlog sub-ticket(s): ${children.map(c => c.id).join(', ')}`);
+          console.log(`  ✓ Split [${primaryTask.id}] into ${children.length} atomic backlog sub-ticket(s) (${primaryIdUpper}-ACT-N): ${children.map(c => c.id).join(', ')}`);
         }
       }
     }
@@ -7400,7 +7645,7 @@ function main() {
     // Mode B: Positional IDs or New Ticket Title passed to `npm run backlog plan`
     if (positional.length > 0) {
       const joined = positional.join(' ').trim();
-      const looksLikeIdList = /^((?:FEAT|BUG|QA|REFACTOR|TASK)-\d+[\s,]*)+$/i.test(joined);
+      const looksLikeIdList = /^((?:FEAT|BUG|QA|REFACTOR|TASK)-\d+(?:-ACT-\d+)?[\s,]*)+$/i.test(joined);
       if (looksLikeIdList) {
         const rawIds = joined.split(/[\s,]+/).filter(Boolean);
         for (const rawId of rawIds) {
@@ -7437,7 +7682,7 @@ function main() {
       }
     }
 
-    // Mode C: If `--split "Sub 1|Sub 2"` was passed along with a matched ticket
+    // Mode C: If `--split "Sub 1|Sub 2"` (or `--split` on an existing multi-step ticket) was passed
     if (splitSpec && matchedTasks.length > 0) {
       const parentTask = matchedTasks[0];
       const parts = splitSpec.split('|').map(s => s.trim()).filter(Boolean);
@@ -7448,14 +7693,25 @@ function main() {
         }
         console.log(`  ✓ Split [${parentTask.id}] into ${children.length} atomic sub-ticket(s): ${children.map(c => c.id).join(', ')}`);
       }
+    } else if (hasSplitFlag && !hasFromPlan && matchedTasks.length === 1 && !matchedTasks[0].isActionChild) {
+      const parentTask = matchedTasks[0];
+      const stepSource = Array.isArray(parentTask.actionItems) && parentTask.actionItems.length > 1
+        ? parentTask.actionItems.map(a => a.text)
+        : (Array.isArray(parentTask.acceptanceCriteria) && parentTask.acceptanceCriteria.length > 1 ? parentTask.acceptanceCriteria : []);
+      if (stepSource.length > 1) {
+        const children = splitParentIntoSubtasks(parentTask, stepSource);
+        for (const ch of children) {
+          if (!matchedTasks.includes(ch)) matchedTasks.push(ch);
+        }
+        console.log(`  ✓ Split [${parentTask.id}] into ${children.length} atomic sub-ticket(s): ${children.map(c => c.id).join(', ')}`);
+      }
     }
 
     if (matchedTasks.length > 0) {
       data.activePlanTaskIds = matchedTasks.map(t => t.id);
       for (const task of matchedTasks) {
-        if (task.status === 'todo') {
-          task.status = 'ready';
-          task.plannedAt = new Date().toISOString();
+        if (task.status === 'todo' || task.planningLocked || task.liveActivity === 'planning') {
+          recordTaskStateTransition(task, 'ready', 'awaiting_approval');
         }
         const manifest = unpackTaskAttachments(task, REPO_ROOT);
         printUnpackedManifest(manifest, REPO_ROOT);
@@ -7515,50 +7771,17 @@ function main() {
       process.exit(1);
     }
 
-    const prefix = splitType === 'bug' || String(parentTask.id).startsWith('BUG-') ? 'BUG' : 'FEAT';
-    const nextSeqId = () => {
-      const re = new RegExp(`^${prefix}-(\\d+)$`, 'i');
-      const maxNum = data.tasks.reduce((max, t) => {
-        const m = String(t.id).match(re);
-        return m ? Math.max(max, parseInt(m[1], 10)) : max;
-      }, 100);
-      return `${prefix}-${maxNum + 1}`;
-    };
-
-    ensureTaskActionItems(parentTask);
-    const createdIds = [];
-    for (const subTitle of subTitles) {
-      const childId = nextSeqId();
-      const childDesc = `Atomic sub-ticket split from [${parentTask.id}] (${parentTask.title}): ${subTitle}`;
-      const childTask = {
-        id: childId,
-        parentId: parentTask.id,
-        type: splitType,
-        title: subTitle,
-        status: 'ready',
-        plannedAt: new Date().toISOString(),
-        priority: splitPrio,
-        components: Array.isArray(parentTask.components) ? [...parentTask.components] : [],
-        attachments: [],
-        description: childDesc,
-        spec: childDesc,
-        acceptanceCriteria: [
-          `Complete implementation for ${subTitle}`,
-          `Verify deterministic tests and lint checks for [${childId}]`
-        ]
-      };
-      ensureTaskActionItems(childTask);
-      data.tasks.push(childTask);
-      createdIds.push(childId);
-
-      parentTask.actionItems.push({
-        id: `${parentTask.id}-ACT-${parentTask.actionItems.length + 1}`,
-        text: `[${childId}] ${subTitle}`,
-        owner: 'antigravity',
-        done: false
-      });
+    const normSplitType = splitType === 'feat' ? 'feature' : (splitType === 'fix' ? 'bug' : splitType);
+    const defaultSplitStatus = (parentTask.status === 'in_progress' || parentTask.status === 'testing') ? 'in_progress' : 'ready';
+    if (parentTask.status === 'todo') {
+      recordTaskStateTransition(parentTask, 'ready', 'awaiting_approval');
     }
-
+    const createdChildren = spawnActionChildTickets(parentTask, subTitles, data, REPO_ROOT, {
+      defaultStatus: defaultSplitStatus,
+      priority: splitPrio,
+      type: normSplitType
+    });
+    const createdIds = createdChildren.map(c => c.id);
     data.activePlanTaskIds = [parentTask.id, ...createdIds];
     saveBacklog(data);
     renderMigrationBoard(data);
@@ -7667,7 +7890,7 @@ function main() {
         };
         data.tasks.push(task);
       }
-      recordTaskStateTransition(task, 'todo', 'planning');
+      recordTaskStateTransition(task, 'ready', 'planning');
       autoAnnotateTicket(task, REPO_ROOT);
       stampTaskBranch(task, REPO_ROOT);
       stagedTasks.push(task);
@@ -7678,7 +7901,7 @@ function main() {
     renderMigrationBoard(data);
     writeReviewPaneArtifacts(data, REPO_ROOT, false);
     ensureDaemonRunning();
-    console.log(`\n🧠 STAGED FOR PLANNING: ${stagedTasks.map(t => `[${t.id}]`).join(', ')} in TO DO (🧠 Planning...)!`);
+    console.log(`\n🧠 STAGED FOR PLANNING: ${stagedTasks.map(t => `[${t.id}]`).join(', ')} in READY (🔒 Greyed-out & Locked while planning...)!`);
     return;
   }
 
@@ -7692,17 +7915,19 @@ function main() {
         .map(id => String(id).toUpperCase())
         .filter(id => {
           const t = data.tasks.find(task => String(task.id).toUpperCase() === id);
-          return t && (t.status === 'ready' || t.status === 'todo');
+          return t && (t.status === 'ready' || t.status === 'todo') && !t.planningLocked && t.liveActivity !== 'planning';
         });
     }
 
     if (targetIds.length === 0 && !quietMode) {
-      targetIds = data.tasks.filter(t => t.status === 'ready').map(t => String(t.id).toUpperCase());
+      targetIds = data.tasks
+        .filter(t => t.status === 'ready' && !t.planningLocked && t.liveActivity !== 'planning')
+        .map(t => String(t.id).toUpperCase());
     }
 
     if (targetIds.length === 0) {
       if (!quietMode) {
-        console.log('ℹ️  No READY plan tickets found to transition to IN PROGRESS.');
+        console.log('ℹ️  No unlocked READY plan tickets found to transition to IN PROGRESS.');
       }
       return;
     }
@@ -7711,6 +7936,7 @@ function main() {
     for (const tid of targetIds) {
       const task = data.tasks.find(t => String(t.id).toUpperCase() === tid);
       if (!task || task.status === 'done' || task.status === 'in_progress') continue;
+      if ((quietMode || rawPositional.length === 0) && (task.planningLocked || task.liveActivity === 'planning')) continue;
       recordTaskStateTransition(task, 'in_progress', 'coding');
       stampTaskBranch(task, REPO_ROOT);
       ensureTaskActionItems(task);

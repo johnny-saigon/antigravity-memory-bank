@@ -901,7 +901,7 @@ if (fsSync.existsSync(backlogJsonFull)) {
       const planMdFull = path.resolve(process.cwd(), 'docs/planning/implementation_plan.md');
       if (fsSync.existsSync(planMdFull)) {
         const planMdRaw = await fs.readFile(planMdFull, 'utf8');
-        const planHeadingIdRe = /^#{2,4}\s+[^\n]*?\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\b/gm;
+        const planHeadingIdRe = /^#{2,4}\s+[^\n]*?\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+(?:-ACT-\d+)?)\b/gm;
         let pm;
         const missingFromBacklog = [];
         while ((pm = planHeadingIdRe.exec(planMdRaw)) !== null) {

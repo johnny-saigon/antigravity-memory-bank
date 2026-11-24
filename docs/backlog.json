@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T10:57:12.681Z",
+  "lastUpdated": "2026-11-24T11:19:23.238Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -2215,6 +2215,199 @@
       "plannedAt": "2026-11-24T10:43:10.516Z",
       "startedAt": "2026-11-24T10:46:04.066Z",
       "completedAt": "2026-11-24T10:56:00.389Z"
+    },
+    {
+      "id": "FEAT-147",
+      "type": "feature",
+      "title": "Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets",
+      "status": "done",
+      "priority": "high",
+      "components": [],
+      "attachments": [],
+      "description": "Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets",
+      "spec": "Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets",
+      "acceptanceCriteria": [
+        "Implement and verify Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T10:58:59.497Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T10:58:59.497Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T10:59:01.849Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T11:02:45.574Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T11:19:22.596Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T10:59:01.851Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-147-ACT-1",
+          "text": "Implement and verify Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-147-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T10:59:01.849Z",
+      "startedAt": "2026-11-24T11:02:45.574Z",
+      "completedAt": "2026-11-24T11:19:22.596Z"
+    },
+    {
+      "id": "BUG-113",
+      "type": "bug",
+      "title": "Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)",
+      "status": "done",
+      "priority": "high",
+      "components": [],
+      "attachments": [],
+      "description": "Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)",
+      "spec": "Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)",
+      "acceptanceCriteria": [
+        "Implement and verify Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)",
+        "Add both a non-regression unit/component test and an E2E test verifying the fix"
+      ],
+      "planningStartedAt": "2026-11-24T10:59:01.896Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T10:59:01.896Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T11:02:45.620Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T11:19:22.634Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T10:59:01.897Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "BUG-113-ACT-1",
+          "text": "Implement and verify Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-113-ACT-2",
+          "text": "Add both a non-regression unit/component test and an E2E test verifying the fix",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T11:00:02.163Z",
+      "startedAt": "2026-11-24T11:02:45.620Z",
+      "completedAt": "2026-11-24T11:19:22.634Z"
+    },
+    {
+      "id": "BUG-114",
+      "type": "bug",
+      "title": "Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "docs/PLANNING_GUIDE.md"
+      ],
+      "attachments": [],
+      "description": "Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning",
+      "spec": "Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning",
+      "acceptanceCriteria": [
+        "Implement and verify Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning across docs/PLANNING_GUIDE.md",
+        "Add both a non-regression unit/component test and an E2E test verifying the fix"
+      ],
+      "planningStartedAt": "2026-11-24T10:59:04.263Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T10:59:04.263Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T11:02:45.660Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T11:19:22.672Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T10:59:04.265Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "BUG-114-ACT-1",
+          "text": "Implement and verify Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning across docs/PLANNING_GUIDE.md",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-114-ACT-2",
+          "text": "Add both a non-regression unit/component test and an E2E test verifying the fix",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T11:00:02.164Z",
+      "startedAt": "2026-11-24T11:02:45.660Z",
+      "completedAt": "2026-11-24T11:19:22.672Z"
     }
   ],
   "milestones": [

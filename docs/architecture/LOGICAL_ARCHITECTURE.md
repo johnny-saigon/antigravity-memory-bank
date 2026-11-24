@@ -34,7 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-127`** | Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout | 🟢 DONE | `skills/effort/SKILL.md`, `skills/credits/SKILL.md`, `skills/usage/SKILL.md` |
 | **`FEAT-128`** | Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects | 🟢 DONE | `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `bin/cli.mjs` |
 | **`FEAT-129`** | Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization | 🟢 DONE | `lib/backlog-adapter.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-130`** | Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
@@ -54,6 +53,7 @@ flowchart LR
 | **`FEAT-144`** | AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI | 🟢 DONE | `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/archive/BUG_FIX_RECORDS.md` |
 | **`FEAT-145`** | Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync | 🟢 DONE | `scripts/sync-living-docs.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx` |
 | **`FEAT-146`** | Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution | 🟢 DONE | `bricks/user-profile/core/oauth/google.verifier.ts` |
+| **`FEAT-147`** | Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets | 🟢 DONE | — |
 <!-- ag-section:logical-features:end -->
 
 ---
