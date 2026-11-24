@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(mcp-app): preserve unbound hostBound state for Switch Project button and auto-bind Side Pane in /start** (`1ccd2dc`)
 - [x] **fix(mcp-app): prevent fleet upgrade backlog.html mtime clobber and bind Side Pane to active workspace (FEAT-152)** (`74511da`)
 - [x] **feat(kanban): enforce strict single-branch & single-workspace isolation in Memory Bank board (FEAT-151)** (`c99287b`)
 - [x] **fix(mcp-app): gracefully fall back to git HEAD when docs/backlog.json has conflict markers** (`6884f9d`)
