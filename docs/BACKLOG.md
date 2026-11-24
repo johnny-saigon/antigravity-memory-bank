@@ -477,6 +477,19 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-136: Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `scripts/sync-memory-context.mjs`, `templates/scripts/sync-memory-context.mjs`, `skills/backlog-plan/SKILL.md`, `.agents/skills/backlog-plan/SKILL.md`, `AGENTS.md`, `templates/AGENTS.md.tpl`, `rules/AGENTS.md`, `tests/cli-e2e.test.mjs`
+- **Description:** Enable seamless Kanban tracking for **ad-hoc `/plan` questions or changes** without breaking Antigravity's native blue **Proceed** button:
+- **Technical Specification:**
+  Enable seamless Kanban tracking for **ad-hoc `/plan` questions or changes** without breaking Antigravity's native blue **Proceed** button:
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)
+  - [x] Verify deterministic tests and lint checks for [FEAT-136]
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

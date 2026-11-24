@@ -4,7 +4,7 @@
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
 > - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-> - **Backlog Progress**: `42/42` tickets completed (`0` in progress, `0` queued).
+> - **Backlog Progress**: `43/43` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline
 - [x] Ingest Three-Tier Memory Hierarchy (`~/.gemini/GEMINI.md`, `.agents/rules/infra.md`, `memory-bank/*.md`)
@@ -61,3 +61,4 @@
 - [x] **[FEAT-133]** Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant
 - [x] **[FEAT-134]** Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers
 - [x] **[FEAT-135]** Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects
+- [x] **[FEAT-136]** Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)

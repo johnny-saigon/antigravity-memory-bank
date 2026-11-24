@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[FEAT-136] Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)** (`MEDIUM` · Status: `done`): Enable seamless Kanban tracking for **ad-hoc `/plan` questions or changes** without breaking Antigravity's native blue **Proceed** button:
   - **[FEAT-135] Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects** (`HIGH` · Status: `done`): Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.
   - **[FEAT-134] Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers** (`HIGH` · Status: `done`): Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.
   - **[FEAT-133] Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant** (`HIGH` · Status: `done`): Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.
-  - **[FEAT-132] Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects** (`HIGH` · Status: `done`): Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -21,6 +21,23 @@
 > - **Package Whitelist (`"files"`)**: `package.json` strictly restricts published package contents to `bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, and `install.sh`, excluding dogfood files (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`).
 
 ## 3. Proposed Changes
+### [FEAT-136] Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed) *(Completed & Verified Baseline)*
+- **Specification**: Enable seamless Kanban tracking for **ad-hoc `/plan` questions or changes** without breaking Antigravity's native blue **Proceed** button:
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
+  - `[VERIFIED]` [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs) (`scripts/sync-memory-context.mjs`)
+  - `[VERIFIED]` [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/sync-memory-context.mjs) (`templates/scripts/sync-memory-context.mjs`)
+  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md) (`skills/backlog-plan/SKILL.md`)
+  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/skills/backlog-plan/SKILL.md) (`.agents/skills/backlog-plan/SKILL.md`)
+  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md) (`AGENTS.md`)
+  - `[VERIFIED]` [AGENTS.md.tpl](file:///Users/jbb/Documents/antigravity-memory-bank/templates/AGENTS.md.tpl) (`templates/AGENTS.md.tpl`)
+  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/rules/AGENTS.md) (`rules/AGENTS.md`)
+  - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
+- **Acceptance Criteria**:
+  - Complete implementation and verification for Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)
+  - Verify deterministic tests and lint checks for [FEAT-136]
+
 ### [FEAT-135] Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects *(Completed & Verified Baseline)*
 - **Specification**: Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.
 - **Component Modifications (Dependencies First)**:
@@ -44,17 +61,6 @@
   - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
   - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
   - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md) (`AGENTS.md`)
-
-### [FEAT-132] Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects *(Completed & Verified Baseline)*
-- **Specification**: Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [CREDITS_CHEATSHEET.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/CREDITS_CHEATSHEET.md) (`docs/CREDITS_CHEATSHEET.md`)
-  - `[VERIFIED]` [CREDITS_CHEATSHEET.md](file:///Users/jbb/Documents/antigravity-memory-bank/templates/docs/CREDITS_CHEATSHEET.md) (`templates/docs/CREDITS_CHEATSHEET.md`)
-  - `[VERIFIED]` [BACKLOG_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG_GUIDE.md) (`docs/BACKLOG_GUIDE.md`)
-  - `[VERIFIED]` [PLANNING_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/PLANNING_GUIDE.md) (`docs/PLANNING_GUIDE.md`)
-  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md) (`skills/backlog-plan/SKILL.md`)
-  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-start/SKILL.md) (`skills/backlog-start/SKILL.md`)
-  - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

@@ -759,6 +759,54 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.ok(healed.tasks.some((t) => t.id === 'FEAT-246'), 'Expected FEAT-246 to be auto-healed from implementation_plan.md');
   });
 
+  test('3e. ad-hoc /plan auto-registers into READY on design review display and moves READY -> IN PROGRESS on proceed (FEAT-136)', () => {
+    const planDir = path.join(tmpRepo, 'docs', 'planning');
+    fs.mkdirSync(planDir, { recursive: true });
+    const adHocPlan = [
+      '# Implementation Plan — Add Live Dark Mode Switcher',
+      '',
+      '## 1. Goal Description',
+      'Allow users to toggle dark and light theme modes seamlessly across all views.',
+      '',
+      '## 3. Proposed Changes',
+      '- `src/theme/toggle.ts`',
+      '',
+      '## 4. Verification Plan',
+      '- Run `npm test`',
+    ].join('\n');
+    fs.writeFileSync(path.join(planDir, 'implementation_plan.md'), adHocPlan, 'utf8');
+
+    execFileSync(process.execPath, [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'render'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      stdio: 'pipe',
+    });
+
+    const afterPlan = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const adHocTicket = afterPlan.tasks.find((t) => t.title === 'Add Live Dark Mode Switcher');
+    assert.ok(adHocTicket, 'Ad-hoc /plan ticket must be auto-minted into docs/backlog.json');
+    assert.equal(adHocTicket.status, 'ready', 'Ad-hoc /plan ticket must land in READY (Planned) column');
+    assert.ok(adHocTicket.plannedAt, 'Ad-hoc /plan ticket must record plannedAt timestamp');
+    assert.ok(adHocTicket.components.includes('src/theme/toggle.ts'), 'Ad-hoc /plan ticket must extract component paths');
+    assert.ok(Array.isArray(adHocTicket.acceptanceCriteria) && adHocTicket.acceptanceCriteria.length >= 2, 'Ad-hoc /plan ticket must have verifiable acceptance criteria');
+    assert.ok(
+      Array.isArray(afterPlan.activePlanTaskIds) && afterPlan.activePlanTaskIds.includes(adHocTicket.id),
+      'activePlanTaskIds must track the newly minted ad-hoc /plan ticket'
+    );
+
+    const proceedOut = execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'proceed'],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    assert.match(proceedOut, /PROCEED:.*READY → IN PROGRESS/);
+
+    const afterProceed = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const movedTicket = afterProceed.tasks.find((t) => t.id === adHocTicket.id);
+    assert.equal(movedTicket.status, 'in_progress', 'Clicking Proceed must move the READY ticket into IN PROGRESS');
+    assert.ok(movedTicket.startedAt, 'Proceeded ticket must record startedAt timestamp');
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

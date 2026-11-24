@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T07:17:37.535Z",
+  "lastUpdated": "2026-11-24T07:54:04.924Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1357,6 +1357,56 @@
         }
       ],
       "completedAt": "2026-11-24T07:17:37.380Z"
+    },
+    {
+      "id": "FEAT-136",
+      "type": "ux",
+      "title": "Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)",
+      "status": "done",
+      "plannedAt": "2026-11-24T07:54:04.653Z",
+      "priority": "medium",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "scripts/sync-memory-context.mjs",
+        "templates/scripts/sync-memory-context.mjs",
+        "skills/backlog-plan/SKILL.md",
+        ".agents/skills/backlog-plan/SKILL.md",
+        "AGENTS.md",
+        "templates/AGENTS.md.tpl",
+        "rules/AGENTS.md",
+        "tests/cli-e2e.test.mjs"
+      ],
+      "attachments": [],
+      "description": "Enable seamless Kanban tracking for **ad-hoc `/plan` questions or changes** without breaking Antigravity's native blue **Proceed** button:",
+      "spec": "Enable seamless Kanban tracking for **ad-hoc `/plan` questions or changes** without breaking Antigravity's native blue **Proceed** button:",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)",
+        "Verify deterministic tests and lint checks for [FEAT-136]"
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-136-ACT-1",
+          "text": "Complete implementation and verification for Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-136-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-136]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T07:54:04.654Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "startedAt": "2026-11-24T07:54:04.697Z",
+      "completedAt": "2026-11-24T07:54:04.740Z"
     }
   ],
   "milestones": [

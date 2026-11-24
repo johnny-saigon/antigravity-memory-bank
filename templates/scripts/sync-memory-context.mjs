@@ -723,6 +723,28 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
         if (!rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html')) {
           touchedFiles.add(rel);
         }
+        // Auto-transition active READY plan tickets -> IN PROGRESS on the first non-artifact workspace code edit after Proceed
+        const isWorkspaceCodeEdit =
+          !rel.startsWith('memory-bank/') &&
+          !rel.startsWith('docs/backlog') &&
+          !rel.startsWith('docs/planning/') &&
+          rel !== 'docs/INDEX.md';
+        if (isWorkspaceCodeEdit) {
+          try {
+            const backlogPath = path.join(rootDir, 'docs', 'backlog.json');
+            const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
+            if (fsSync.existsSync(backlogPath) && fsSync.existsSync(backlogScriptPath)) {
+              const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
+              const activeIds = Array.isArray(bj.activePlanTaskIds) ? bj.activePlanTaskIds : [];
+              const hasReadyActivePlan = activeIds.some(id =>
+                (bj.tasks || []).some(t => String(t.id).toUpperCase() === String(id).toUpperCase() && t.status === 'ready')
+              );
+              if (hasReadyActivePlan) {
+                execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+              }
+            }
+          } catch {}
+        }
       }
     }
   }
@@ -751,6 +773,11 @@ async function runSync() {
     // 1. Always sync Repo Paths, API Keys, MCP Configs & Customizations on the fly
     try {
       syncIntegrationsAndCustomizations(targetDir);
+    } catch {}
+
+    // 1b. Distill active hook tool payload: mirror <brainDir>/implementation_plan.md -> READY & auto-proceed READY -> IN PROGRESS on first workspace edit
+    try {
+      distillRecentWorkspaceActivity(targetDir, hookPayload);
     } catch {}
 
     // 2. Inspect latest git commit

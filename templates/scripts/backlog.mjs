@@ -337,7 +337,7 @@ function ensureTaskActionItems(task) {
 }
 
 // Self-healing ingestion of tickets from implementation_plan.md
-function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT) {
+function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT, existingTasks = []) {
   if (!planRaw || typeof planRaw !== 'string') return [];
   const results = [];
   const seenIds = new Set();
@@ -354,7 +354,7 @@ function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT) {
         }
       }
     }
-    const backtickFileRe = /`((?:src|server|bricks|apps|scripts|tests|public|schema|caddy)\/[^`\s]+)`/g;
+    const backtickFileRe = /`((?:src|server|bricks|apps|scripts|tests|public|schema|caddy|lib|bin|skills|templates)\/[^`\s]+)`/g;
     while ((m = backtickFileRe.exec(block)) !== null) {
       if (!files.includes(m[1])) files.push(m[1]);
     }
@@ -454,6 +454,71 @@ function extractPlanTicketsFromMarkdown(planRaw, rootDir = REPO_ROOT) {
     });
   }
 
+  // 4. H1 / Ad-Hoc `/plan` Fallback: If no explicit ticket IDs were found in sections/tables/bullets,
+  //    extract explicit ID from H1 or auto-mint the next sequential FEAT-/BUG- ticket from the H1 plan title!
+  if (results.length === 0) {
+    const h1Match = planRaw.match(/^#\s+([^\n]+)/m);
+    if (h1Match) {
+      const rawH1 = h1Match[1].replace(/`/g, '').trim();
+      const explicitH1Id = rawH1.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX)-\d+)\b/i);
+      const cleanTitle = rawH1
+        .replace(/^Implementation Plan\s*[—:-]\s*/i, '')
+        .replace(/\(\s*(?:FEAT|BUG|QA|REFACTOR|UX)-\d+\s*\)\s*$/i, '')
+        .replace(/^\[?(?:FEAT|BUG|QA|REFACTOR|UX)-\d+\]?\s*[:·—-]?\s*/i, '')
+        .trim();
+
+      if (cleanTitle && cleanTitle.length >= 4 && !/^(implementation plan|planned implementation|plan)$/i.test(cleanTitle)) {
+        const goalMatch = planRaw.match(/^##\s+(?:1\.\s+)?Goal Description\s*\r?\n([\s\S]*?)(?=\r?\n##\s+|\r?\n---\s*$|$)/im);
+        const goalDesc = goalMatch
+          ? goalMatch[1]
+              .split('\n')
+              .map(l => l.replace(/^[-*]\s+/, '').trim())
+              .filter(l => l && !l.startsWith('>') && !l.startsWith('```') && !l.startsWith('<!--'))
+              .join(' ')
+              .slice(0, 360)
+          : cleanTitle;
+
+        const isBug = /\b(fix|bug|regression|crash|broken|error|hotfix)\b/i.test(cleanTitle);
+        let resolvedId = explicitH1Id ? explicitH1Id[1].toUpperCase() : '';
+        if (!resolvedId) {
+          const matchingExisting = Array.isArray(existingTasks)
+            ? existingTasks.find(t => String(t.title || '').toLowerCase().trim() === cleanTitle.toLowerCase().trim())
+            : null;
+          if (matchingExisting && matchingExisting.id) {
+            resolvedId = String(matchingExisting.id).toUpperCase();
+          } else {
+            const prefix = isBug ? 'BUG' : 'FEAT';
+            const idRe = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+            const maxNum = (Array.isArray(existingTasks) ? existingTasks : []).reduce((max, t) => {
+              const m = String(t.id || '').match(idRe);
+              return m ? Math.max(max, parseInt(m[1], 10)) : max;
+            }, 100);
+            resolvedId = `${prefix}-${maxNum + 1}`;
+          }
+        }
+
+        const components = extractFilesFromBlock(planRaw);
+        const prioMatch = `${rawH1} ${goalDesc}`.match(/\b(P0|P1|P2|P3|HIGH|MEDIUM|LOW)\b/i);
+        const rawPrio = prioMatch ? prioMatch[1].toLowerCase() : (isBug ? 'high' : 'medium');
+        const priority = rawPrio === 'p0' || rawPrio === 'p1' || rawPrio === 'high'
+          ? 'high'
+          : rawPrio === 'p3' || rawPrio === 'low'
+            ? 'low'
+            : 'medium';
+
+        results.push({
+          id: resolvedId,
+          type: resolvedId.startsWith('BUG-') ? 'bug' : 'feature',
+          title: cleanTitle,
+          priority,
+          components,
+          description: goalDesc || cleanTitle,
+          isAdHocPlan: !explicitH1Id
+        });
+      }
+    }
+  }
+
   return results;
 }
 
@@ -468,16 +533,27 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
     for (const bd of brainDirs) {
       const bp = path.join(bd, 'implementation_plan.md');
       if (fs.existsSync(bp) && !candidateFiles.includes(bp)) {
-        candidateFiles.unshift(bp);
+        candidateFiles.push(bp);
       }
     }
   } catch {}
 
+  candidateFiles.sort((a, b) => {
+    try {
+      return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs;
+    } catch {
+      return 0;
+    }
+  });
+
   let addedOrHealed = 0;
-  for (const planFile of candidateFiles) {
+  const activePlanIds = [];
+  for (let idx = 0; idx < candidateFiles.length; idx++) {
+    const planFile = candidateFiles[idx];
+    const isPrimaryActivePlan = idx === 0;
     try {
       const raw = fs.readFileSync(planFile, 'utf8');
-      const extracted = extractPlanTicketsFromMarkdown(raw, rootDir);
+      const extracted = extractPlanTicketsFromMarkdown(raw, rootDir, data.tasks);
       for (const item of extracted) {
         const existing = data.tasks.find(t => String(t.id).toUpperCase() === item.id);
         if (!existing) {
@@ -485,7 +561,8 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             id: item.id,
             type: item.type || 'feature',
             title: item.title,
-            status: 'todo',
+            status: 'ready',
+            plannedAt: new Date().toISOString(),
             priority: item.priority || 'medium',
             components: item.components || [],
             attachments: [],
@@ -497,16 +574,39 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             ]
           };
           ensureTaskActionItems(newTask);
+          autoAnnotateTicket(newTask, rootDir);
           data.tasks.push(newTask);
           addedOrHealed++;
-        } else if (!existing.title || existing.title.startsWith('-')) {
-          existing.title = item.title;
-          if (!existing.description) existing.description = item.description;
-          ensureTaskActionItems(existing);
-          addedOrHealed++;
+          if (isPrimaryActivePlan && !activePlanIds.includes(newTask.id)) {
+            activePlanIds.push(newTask.id);
+          }
+        } else {
+          let changed = false;
+          if (!existing.title || existing.title.startsWith('-')) {
+            existing.title = item.title;
+            if (!existing.description) existing.description = item.description;
+            changed = true;
+          }
+          if (isPrimaryActivePlan && existing.status === 'todo') {
+            existing.status = 'ready';
+            existing.plannedAt = existing.plannedAt || new Date().toISOString();
+            changed = true;
+          }
+          if (changed) {
+            ensureTaskActionItems(existing);
+            autoAnnotateTicket(existing, rootDir);
+            addedOrHealed++;
+          }
+          if (isPrimaryActivePlan && existing.status !== 'done' && !activePlanIds.includes(existing.id)) {
+            activePlanIds.push(existing.id);
+          }
         }
       }
     } catch {}
+  }
+
+  if (activePlanIds.length > 0) {
+    data.activePlanTaskIds = activePlanIds;
   }
   return addedOrHealed;
 }
@@ -5405,6 +5505,57 @@ function main() {
     console.log(`   ${kickoffCmd}`);
     console.log(`   🎯 Best AGY Model: ${recModel}`);
     console.log(`   💰 Run "npm run backlog advise ${rawIds[0]}" for the full verbose 3-family model & quota-pool breakdown.\n`);
+    return;
+  }
+
+  if (command === 'proceed') {
+    const quietMode = args.includes('--quiet') || args.includes('-q');
+    const rawPositional = args.slice(1).filter(a => !a.startsWith('--') && a !== '-q').join(' ').split(/[\s,]+/).filter(Boolean);
+    let targetIds = rawPositional.map(id => id.toUpperCase());
+
+    if (targetIds.length === 0 && Array.isArray(data.activePlanTaskIds) && data.activePlanTaskIds.length > 0) {
+      targetIds = data.activePlanTaskIds
+        .map(id => String(id).toUpperCase())
+        .filter(id => {
+          const t = data.tasks.find(task => String(task.id).toUpperCase() === id);
+          return t && (t.status === 'ready' || t.status === 'todo');
+        });
+    }
+
+    if (targetIds.length === 0 && !quietMode) {
+      targetIds = data.tasks.filter(t => t.status === 'ready').map(t => String(t.id).toUpperCase());
+    }
+
+    if (targetIds.length === 0) {
+      if (!quietMode) {
+        console.log('ℹ️  No READY plan tickets found to transition to IN PROGRESS.');
+      }
+      return;
+    }
+
+    const transitioned = [];
+    for (const tid of targetIds) {
+      const task = data.tasks.find(t => String(t.id).toUpperCase() === tid);
+      if (!task || task.status === 'done' || task.status === 'in_progress') continue;
+      task.status = 'in_progress';
+      task.startedAt = new Date().toISOString();
+      ensureTaskActionItems(task);
+      const manifest = unpackTaskAttachments(task, REPO_ROOT);
+      if (!quietMode) printUnpackedManifest(manifest, REPO_ROOT);
+      transitioned.push(task);
+    }
+
+    if (transitioned.length > 0) {
+      saveBacklog(data);
+      renderMigrationBoard(data);
+      writeReviewPaneArtifacts(data, REPO_ROOT, true);
+      ensureDaemonRunning();
+      if (!quietMode) {
+        console.log(`\n🚀 PROCEED: Moved ${transitioned.map(t => `[${t.id}]`).join(', ')} from READY → IN PROGRESS!`);
+      }
+    } else if (!quietMode) {
+      console.log('ℹ️  Active plan tickets are already IN PROGRESS or DONE.');
+    }
     return;
   }
 
