@@ -1982,7 +1982,16 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         <button onclick="closeTodoIdeaModal()" class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 rounded hover:bg-slate-800 cursor-pointer">✕</button>
       </div>
       <div class="p-4 space-y-3">
-        <textarea id="todoIdeaInput" rows="3" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitIsolatedTodoIdea();}else if(event.key==='Escape'){closeTodoIdeaModal();}" placeholder="Describe your idea... (ID, type, priority, files &amp; ROI are auto-configured)" class="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 resize-none"></textarea>
+        <div class="relative">
+          <textarea id="todoIdeaInput" rows="3" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitIsolatedTodoIdea();}else if(event.key==='Escape'){closeTodoIdeaModal();}" placeholder="Describe or dictate your idea... (ID, type, priority, files &amp; ROI are auto-configured)" class="w-full bg-slate-950 border border-amber-500/40 rounded-xl pl-3 pr-11 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 resize-none"></textarea>
+          <button id="todoVoiceBtn" type="button" onclick="toggleTodoIdeaVoice(event)" class="absolute right-2 bottom-2.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1" title="Voice input: click to dictate your idea into TO DO">
+            <span id="todoVoiceIcon">🎙️</span>
+          </button>
+        </div>
+        <div id="todoVoiceStatus" class="hidden text-[11px] text-rose-300 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+          <span>Listening... speak your idea (click 🎙️ to stop or press Enter to save)</span>
+        </div>
         <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] text-slate-500">Press <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Enter</kbd> to save · <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Esc</kbd> to cancel</span>
           <button onclick="submitIsolatedTodoIdea()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition cursor-pointer">
@@ -2872,12 +2881,99 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       if (ideaInput) setTimeout(() => ideaInput.focus(), 20);
     }
 
+    let todoVoiceRecognition = null;
+    let todoVoiceActive = false;
+    let todoVoiceBaseText = '';
+
+    function setTodoVoiceUI(active) {
+      todoVoiceActive = active;
+      const btn = document.getElementById('todoVoiceBtn');
+      const icon = document.getElementById('todoVoiceIcon');
+      const status = document.getElementById('todoVoiceStatus');
+      if (btn) {
+        btn.className = active
+          ? 'absolute right-2 bottom-2.5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1 animate-pulse'
+          : 'absolute right-2 bottom-2.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1';
+      }
+      if (icon) icon.textContent = active ? '⏹️' : '🎙️';
+      if (status) status.classList.toggle('hidden', !active);
+    }
+
+    function stopTodoIdeaVoice() {
+      if (todoVoiceRecognition) {
+        try { todoVoiceRecognition.stop(); } catch (e) {}
+        todoVoiceRecognition = null;
+      }
+      setTodoVoiceUI(false);
+    }
+
+    function toggleTodoIdeaVoice(event) {
+      if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+      }
+      const ideaEl = document.getElementById('todoIdeaInput');
+      if (todoVoiceActive) {
+        stopTodoIdeaVoice();
+        if (ideaEl) ideaEl.focus();
+        return;
+      }
+
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) {
+        if (ideaEl) ideaEl.focus();
+        showToast('🎙️ Web Speech API unavailable in this frame — use macOS Dictation (fn ×2) in the text field!');
+        return;
+      }
+
+      try {
+        const rec = new SpeechRec();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = navigator.language || 'en-US';
+        todoVoiceBaseText = ideaEl ? ideaEl.value.trim() : '';
+
+        rec.onstart = () => {
+          setTodoVoiceUI(true);
+        };
+        rec.onresult = (ev) => {
+          if (!ideaEl) return;
+          let finalTranscript = '';
+          let interimTranscript = '';
+          for (let i = 0; i < ev.results.length; i++) {
+            const tr = ev.results[i][0] ? ev.results[i][0].transcript : '';
+            if (ev.results[i].isFinal) finalTranscript += tr;
+            else interimTranscript += tr;
+          }
+          const combined = (finalTranscript + interimTranscript).trim();
+          ideaEl.value = todoVoiceBaseText ? (todoVoiceBaseText + ' ' + combined) : combined;
+        };
+        rec.onerror = (ev) => {
+          stopTodoIdeaVoice();
+          if (ideaEl) ideaEl.focus();
+          const reason = ev && ev.error ? ev.error : 'unavailable';
+          showToast('🎙️ Voice capture paused (' + reason + ') — you can also use macOS Dictation (fn ×2) here.');
+        };
+        rec.onend = () => {
+          setTodoVoiceUI(false);
+          todoVoiceRecognition = null;
+        };
+        todoVoiceRecognition = rec;
+        rec.start();
+      } catch (e) {
+        stopTodoIdeaVoice();
+        if (ideaEl) ideaEl.focus();
+        showToast('🎙️ Voice API blocked in iframe — press macOS Dictation (fn ×2) directly in the text field!');
+      }
+    }
+
     function closeTodoIdeaModal() {
+      stopTodoIdeaVoice();
       const modal = document.getElementById('todoIdeaModal');
       if (modal) modal.classList.add('hidden');
     }
 
     async function submitIsolatedTodoIdea() {
+      stopTodoIdeaVoice();
       const ideaEl = document.getElementById('todoIdeaInput');
       const rawIdea = ideaEl ? ideaEl.value.trim() : '';
       if (!rawIdea) {
