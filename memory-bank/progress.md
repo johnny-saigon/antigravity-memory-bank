@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(worktree): prevent cross-worktree brain implementation_plan.md bleed and harden sandboxed worktree branch detection** (`1881828`)
 - [x] **feat(backlog): retrieve children tickets of non-completed parent tickets across CLI, API, and Kanban** (`0f98f7a`)
 - [x] **feat(backlog): worktree isolation & auto-upgrade (FEAT-137), READY plan examination modal (FEAT-138), residual children a/b/c (FEAT-139)** (`13d146e`)
 - [x] **feat(backlog): auto-register ad-hoc /plan into READY on review display & move READY -> IN PROGRESS on Proceed (FEAT-136)** (`0c33828`)
