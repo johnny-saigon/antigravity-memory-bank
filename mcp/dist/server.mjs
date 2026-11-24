@@ -36875,6 +36875,20 @@ function extractRootFromExtra(extra) {
       return path.resolve(p);
     }
   }
+  const cid = meta3.conversationId || meta3.cascadeId || meta3.threadId;
+  if (typeof cid === "string" && cid.trim()) {
+    try {
+      const htmlPath = path.join(process.env.HOME || os.homedir(), ".gemini", "antigravity", "brain", cid.trim(), "backlog.html");
+      if (fs.existsSync(htmlPath)) {
+        const m = fs.readFileSync(htmlPath, "utf8").match(/"repoRoot":("(?:[^"\\]|\\.)*")/);
+        if (m) {
+          const rr = JSON.parse(m[1]);
+          if (rr && fs.existsSync(rr)) return path.resolve(rr);
+        }
+      }
+    } catch {
+    }
+  }
   return null;
 }
 function resolveWorkspaceRoot(requestedRoot) {
