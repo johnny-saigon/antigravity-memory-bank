@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[BUG-112] Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart** (`HIGH` · Status: `done`): Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart
   - **[FEAT-143] Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)** (`HIGH` · Status: `done`): Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)
   - **[FEAT-142] Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors** (`HIGH` · Status: `done`): Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
   - **[BUG-110] ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)** (`HIGH` · Status: `done`): ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
-  - **[FEAT-141] Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees** (`HIGH` · Status: `done`): Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -21,6 +21,16 @@
 > - **Package Whitelist (`"files"`)**: `package.json` strictly restricts published package contents to `bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, and `install.sh`, excluding dogfood files (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`).
 
 ## 3. Proposed Changes
+### [BUG-112] Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart *(Completed & Verified Baseline)*
+- **Specification**: Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [CredentialManagerOAuthBridge.kt](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt) (`bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt`)
+  - `[VERIFIED]` [AvatarCropUploadModal.tsx](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx) (`bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`)
+  - `[VERIFIED]` [task.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/task.md) (`docs/planning/task.md`)
+- **Acceptance Criteria**:
+  - Implement and verify Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart across bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/planning/task.md
+  - Add both a non-regression unit/component test and an E2E test verifying the fix
+
 ### [FEAT-143] Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) *(Completed & Verified Baseline)*
 - **Specification**: Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)
 - **Component Modifications (Dependencies First)**:
@@ -51,15 +61,6 @@
 - **Acceptance Criteria**:
   - Complete implementation and verification for ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
   - Verify deterministic tests and lint checks for [BUG-110]
-
-### [FEAT-141] Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees *(Completed & Verified Baseline)*
-- **Specification**: Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
-  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
-- **Acceptance Criteria**:
-  - Implement and verify Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
-  - Pass deterministic lint, typecheck, and automated test verification (npm test)
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

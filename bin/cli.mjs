@@ -702,7 +702,7 @@ async function installSyncAndHooks(targetDir, detected) {
     }
   } catch {}
 
-  // 3. Install scripts/backlog.mjs
+  // 3. Install scripts/backlog.mjs (and sync templates/scripts/ if target is a linked worktree of antigravity-memory-bank)
   const backlogSrc = path.join(pkgRoot, 'templates/scripts/backlog.mjs');
   const backlogDest = path.join(targetDir, 'scripts/backlog.mjs');
   if (path.resolve(backlogSrc) !== path.resolve(backlogDest) && !detected.isSelfRepo) {
@@ -710,6 +710,17 @@ async function installSyncAndHooks(targetDir, detected) {
     await fs.copyFile(backlogSrc, backlogDest);
     await fs.chmod(backlogDest, 0o755);
     console.log('  ✓ Installed scripts/backlog.mjs (zero-token local backlog engine)');
+    // If targetDir is a linked worktree of antigravity-memory-bank containing templates/scripts/, keep parity mirrors aligned
+    const wtTemplatesDir = path.join(targetDir, 'templates/scripts');
+    if (fsSync.existsSync(wtTemplatesDir)) {
+      for (const mirrorName of ['backlog.mjs', 'sync-memory-context.mjs', 'sync-living-docs.mjs']) {
+        const mSrc = path.join(pkgRoot, 'templates/scripts', mirrorName);
+        const mDest = path.join(wtTemplatesDir, mirrorName);
+        if (fsSync.existsSync(mSrc) && path.resolve(mSrc) !== path.resolve(mDest)) {
+          await fs.copyFile(mSrc, mDest);
+        }
+      }
+    }
   } else {
     console.log('  ↷ Preserved upstream scripts/backlog.mjs (self-repository guard)');
   }
@@ -1813,6 +1824,7 @@ async function runFleetCommand(opts) {
             await harvestTrickleUpFixes(inst.path, { mainRoot: pkgRoot, author: opts.author });
           }
           const instDetected = await detectProjectContext(inst.path);
+          if (!inst.isMain) instDetected.isSelfRepo = false; // Linked worktrees must receive updated scripts/skills/AGENTS.md
           await upgradeMemory(inst.path, { ...opts, isWorktreeChild: true, yes: true, noTrickleUp: true }, instDetected);
           statusLabel = '✅ Upgraded';
         } else {

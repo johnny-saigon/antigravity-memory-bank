@@ -1043,9 +1043,17 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(html, /id="todoIdeaModal"/, 'backlog.html must include dedicated isolated #todoIdeaModal');
     assert.match(html, /id="todoIdeaInput"/, '#todoIdeaModal must use a single minimalist text input');
     assert.match(html, /id="todoVoiceBtn"/, '#todoIdeaModal must include voice input microphone button');
-    assert.match(html, /toggleTodoIdeaVoice/, '#todoIdeaModal must wire Web Speech voice input handler');
-    assert.match(html, /startMediaRecorderVoiceFallback/, '#todoIdeaModal must include dual-engine MediaRecorder fallback for restricted iframes');
-    assert.match(html, /macOS Dictation/, '#todoIdeaModal must inform users of native macOS dictation fn x2 fallback');
+    assert.match(html, /toggleTodoIdeaVoice/, '#todoIdeaModal must wire voice input handler');
+    assert.match(html, /finishTodoIdeaVoiceAndTranscribe/, '#todoIdeaModal must transcribe recorded audio via /api/voice-transcribe');
+    assert.match(html, /\/api\/voice-transcribe/, '#todoIdeaModal must send MediaRecorder audio to /api/voice-transcribe (PlayTask parity)');
+    assert.match(html, /\/api\/voice-record\/start/, '#todoIdeaModal must fall back to local bridge host-mic recording inside sandboxed Review Pane iframes');
+    assert.match(html, /\/api\/voice-record\/stop/, '#todoIdeaModal must stop & transcribe host-mic recording on finish');
+    assert.doesNotMatch(html, /webkitSpeechRecognition/, '#todoIdeaModal must not rely on Chromium cloud webkitSpeechRecognition which fails in Electron');
+    const bridgeSrc = fs.readFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'utf8');
+    assert.match(bridgeSrc, /import os from 'node:os'/, 'backlog.mjs must import node:os for ASR config & host-mic temp helpers');
+    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.8\.0'/, 'Bridge version must be bumped to 1.8.0 so stale daemons restart automatically');
+    assert.match(bridgeSrc, /transcribeViaGemini/, 'Bridge server must include Gemini multimodal audio transcription');
+    assert.match(bridgeSrc, /transcribeViaWhisperEndpoint/, 'Bridge server must include Whisper ASR transcription failover');
     assert.doesNotMatch(html, /id="todoIdeaType"/, '#todoIdeaModal must not clutter UI with manual Type/Priority dropdowns');
 
     // 2. Verify live POST /api/backlog-add-isolated adds an annotated TO DO ticket while leaving activePlanTaskIds, WIP, and implementation_plan.md untouched

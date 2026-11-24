@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T09:46:28.493Z",
+  "lastUpdated": "2026-11-24T10:27:13.559Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1931,6 +1931,77 @@
       "plannedAt": "2026-11-24T09:20:44.008Z",
       "startedAt": "2026-11-24T09:22:51.622Z",
       "completedAt": "2026-11-24T09:26:57.672Z"
+    },
+    {
+      "id": "BUG-112",
+      "type": "bug",
+      "title": "Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt",
+        "bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx",
+        "docs/planning/task.md"
+      ],
+      "attachments": [],
+      "description": "Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart",
+      "spec": "Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart",
+      "acceptanceCriteria": [
+        "Implement and verify Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart across bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/planning/task.md",
+        "Add both a non-regression unit/component test and an E2E test verifying the fix"
+      ],
+      "planningStartedAt": "2026-11-24T09:58:36.182Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T09:58:36.182Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T09:58:45.129Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T09:58:45.343Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T10:24:09.676Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T09:58:45.130Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "BUG-112-ACT-1",
+          "text": "Implement and verify Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart across bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/planning/task.md",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-112-ACT-2",
+          "text": "Add both a non-regression unit/component test and an E2E test verifying the fix",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T09:58:45.129Z",
+      "startedAt": "2026-11-24T09:58:45.343Z",
+      "completedAt": "2026-11-24T10:24:09.676Z"
     }
   ],
   "milestones": [

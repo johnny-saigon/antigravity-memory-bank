@@ -8,6 +8,7 @@
  */
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { spawn, spawnSync } from 'node:child_process';
@@ -2881,195 +2882,307 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       if (ideaInput) setTimeout(() => ideaInput.focus(), 20);
     }
 
-    let todoVoiceRecognition = null;
     let todoVoiceMediaStream = null;
     let todoVoiceMediaRecorder = null;
     let todoVoiceAudioChunks = [];
+    let todoVoiceRecorderMime = 'audio/webm';
     let todoVoiceActive = false;
-    let todoVoiceBaseText = '';
-    let todoVoiceEngine = null; // 'speech-rec' | 'media-stream'
+    let todoVoiceTranscribing = false;
+    let todoVoiceEngine = null; // 'media-recorder' | 'host-mic'
+    let todoVoiceSeconds = 0;
+    let todoVoiceTimer = null;
 
-    function setTodoVoiceUI(active, label) {
-      todoVoiceActive = active;
+    function formatTodoVoiceDuration(sec) {
+      const m = Math.floor(sec / 60);
+      const s = String(sec % 60).padStart(2, '0');
+      return m + ':' + s;
+    }
+
+    function setTodoVoiceUI(state, label) {
+      // state: 'idle' | 'recording' | 'transcribing'
+      todoVoiceActive = (state === 'recording');
+      todoVoiceTranscribing = (state === 'transcribing');
       const btn = document.getElementById('todoVoiceBtn');
       const icon = document.getElementById('todoVoiceIcon');
       const status = document.getElementById('todoVoiceStatus');
+      const ping = document.getElementById('todoVoicePing');
       const text = document.getElementById('todoVoiceText');
+
       if (btn) {
-        btn.className = active
-          ? 'absolute right-2 bottom-2.5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1 animate-pulse shadow-lg shadow-rose-900/40'
-          : 'absolute right-2 bottom-2.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1';
+        btn.disabled = (state === 'transcribing');
+        if (state === 'recording') {
+          btn.className = 'absolute right-2 bottom-2.5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1 shadow-lg shadow-rose-900/40';
+        } else if (state === 'transcribing') {
+          btn.className = 'absolute right-2 bottom-2.5 bg-amber-600/80 text-white border border-amber-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-wait flex items-center gap-1';
+        } else {
+          btn.className = 'absolute right-2 bottom-2.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1';
+        }
       }
-      if (icon) icon.textContent = active ? '⏹️' : '🎙️';
-      if (status) status.classList.toggle('hidden', !active);
-      if (text && label) text.textContent = label;
+      if (icon) {
+        if (state === 'recording') {
+          icon.textContent = '⏹️ ' + formatTodoVoiceDuration(todoVoiceSeconds);
+        } else if (state === 'transcribing') {
+          icon.textContent = '⏳';
+        } else {
+          icon.textContent = '🎙️';
+        }
+      }
+      if (status) {
+        status.classList.toggle('hidden', state === 'idle');
+        status.className = state === 'transcribing'
+          ? 'text-[11px] text-amber-300 flex items-center gap-1.5'
+          : (state === 'recording' ? 'text-[11px] text-rose-300 flex items-center gap-1.5' : 'hidden text-[11px] text-rose-300 flex items-center gap-1.5');
+      }
+      if (ping) {
+        ping.className = state === 'transcribing'
+          ? 'w-2 h-2 rounded-full bg-amber-400 animate-pulse'
+          : 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+      }
+      if (text && label) {
+        text.textContent = label;
+      }
     }
 
-    function stopTodoIdeaVoice() {
-      if (todoVoiceRecognition) {
-        try { todoVoiceRecognition.stop(); } catch (e) {}
-        todoVoiceRecognition = null;
+    function clearTodoVoiceTimer() {
+      if (todoVoiceTimer) {
+        clearInterval(todoVoiceTimer);
+        todoVoiceTimer = null;
       }
+    }
+
+    function startTodoVoiceTimer() {
+      clearTodoVoiceTimer();
+      todoVoiceSeconds = 0;
+      setTodoVoiceUI('recording', '🎙️ Recording 0:00 — speak your idea, then click ⏹️ to transcribe');
+      todoVoiceTimer = setInterval(() => {
+        todoVoiceSeconds += 1;
+        const dur = formatTodoVoiceDuration(todoVoiceSeconds);
+        const icon = document.getElementById('todoVoiceIcon');
+        const text = document.getElementById('todoVoiceText');
+        if (icon && todoVoiceActive) icon.textContent = '⏹️ ' + dur;
+        if (text && todoVoiceActive) text.textContent = '🎙️ Recording ' + dur + ' — speak your idea, then click ⏹️ to transcribe';
+      }, 1000);
+    }
+
+    function appendTranscriptToIdeaInput(transcript) {
+      const cleaned = String(transcript || '').trim();
+      if (!cleaned) return false;
+      const ideaEl = document.getElementById('todoIdeaInput');
+      if (!ideaEl) return false;
+      const existing = ideaEl.value.trim();
+      ideaEl.value = existing ? (existing + ' ' + cleaned) : cleaned;
+      ideaEl.scrollTop = ideaEl.scrollHeight;
+      ideaEl.focus();
+      return true;
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = String(reader.result || '');
+          const comma = res.indexOf(',');
+          resolve(comma >= 0 ? res.slice(comma + 1) : res);
+        };
+        reader.onerror = () => reject(new Error('Failed to encode audio blob'));
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function callBridgeJson(endpoint, payload) {
+      try {
+        const res = await fetch(BRIDGE_URL + endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload || {})
+        });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data) {
+          setBridgeBadge(true);
+          return data;
+        }
+        return data || { ok: false, error: 'Bridge HTTP ' + res.status };
+      } catch (err) {
+        return { ok: false, offline: true, error: err && err.message ? err.message : 'Bridge unreachable' };
+      }
+    }
+
+    function cancelTodoIdeaVoice() {
+      clearTodoVoiceTimer();
+      const engine = todoVoiceEngine;
+      todoVoiceEngine = null;
       if (todoVoiceMediaRecorder) {
         try {
-          if (todoVoiceMediaRecorder.state !== 'inactive') {
-            todoVoiceMediaRecorder.stop();
-          }
+          todoVoiceMediaRecorder.ondataavailable = null;
+          todoVoiceMediaRecorder.onstop = null;
+          if (todoVoiceMediaRecorder.state !== 'inactive') todoVoiceMediaRecorder.stop();
         } catch (e) {}
         todoVoiceMediaRecorder = null;
       }
       if (todoVoiceMediaStream) {
-        try {
-          todoVoiceMediaStream.getTracks().forEach(t => t.stop());
-        } catch (e) {}
+        try { todoVoiceMediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
         todoVoiceMediaStream = null;
       }
+      todoVoiceAudioChunks = [];
+      if (engine === 'host-mic') {
+        callBridgeJson('/api/voice-record/cancel', { repoRoot: rawData.repoRoot });
+      }
+      setTodoVoiceUI('idle');
+    }
+
+    async function finishTodoIdeaVoiceAndTranscribe() {
+      if (!todoVoiceActive) return '';
+      clearTodoVoiceTimer();
+      const engine = todoVoiceEngine;
       todoVoiceEngine = null;
-      setTodoVoiceUI(false);
+      const lang = navigator.language || 'en-US';
+
+      if (engine === 'media-recorder' && todoVoiceMediaRecorder) {
+        const recorder = todoVoiceMediaRecorder;
+        const mime = todoVoiceRecorderMime || 'audio/webm';
+        todoVoiceMediaRecorder = null;
+
+        setTodoVoiceUI('transcribing', '⏳ Transcribing voice capture...');
+
+        const blob = await new Promise((resolve) => {
+          recorder.onstop = () => {
+            const b = new Blob(todoVoiceAudioChunks, { type: mime });
+            todoVoiceAudioChunks = [];
+            if (todoVoiceMediaStream) {
+              try { todoVoiceMediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+              todoVoiceMediaStream = null;
+            }
+            resolve(b);
+          };
+          try {
+            if (recorder.state !== 'inactive') recorder.stop();
+            else resolve(new Blob(todoVoiceAudioChunks, { type: mime }));
+          } catch (e) {
+            resolve(new Blob(todoVoiceAudioChunks, { type: mime }));
+          }
+        });
+
+        if (!blob || blob.size < 64) {
+          setTodoVoiceUI('idle');
+          showToast('⚠️ No audio detected — please speak closer to the mic');
+          return '';
+        }
+
+        try {
+          const audioBase64 = await blobToBase64(blob);
+          const res = await callBridgeJson('/api/voice-transcribe', {
+            repoRoot: rawData.repoRoot,
+            audioBase64,
+            mimeType: mime,
+            lang
+          });
+          setTodoVoiceUI('idle');
+          if (res && res.ok) {
+            if (appendTranscriptToIdeaInput(res.transcript)) {
+              showToast('🎙️ Voice transcribed! Review or press Enter to add to TO DO');
+              return res.transcript;
+            }
+            showToast('⚠️ No speech recognized — please try speaking again');
+            return '';
+          }
+          showToast('❌ Voice transcription failed: ' + ((res && res.error) || 'Bridge unavailable'));
+        } catch (err) {
+          setTodoVoiceUI('idle');
+          showToast('❌ Voice transcription error: ' + err.message);
+        }
+        return '';
+      }
+
+      if (engine === 'host-mic') {
+        setTodoVoiceUI('transcribing', '⏳ Transcribing microphone recording...');
+        const res = await callBridgeJson('/api/voice-record/stop', {
+          repoRoot: rawData.repoRoot,
+          lang
+        });
+        setTodoVoiceUI('idle');
+        if (res && res.ok) {
+          if (appendTranscriptToIdeaInput(res.transcript)) {
+            showToast('🎙️ Voice transcribed! Review or press Enter to add to TO DO');
+            return res.transcript;
+          }
+          showToast('⚠️ No speech recognized — please try speaking again');
+          return '';
+        }
+        showToast('❌ Voice transcription failed: ' + ((res && res.error) || 'Bridge unavailable'));
+        return '';
+      }
+
+      setTodoVoiceUI('idle');
+      return '';
     }
 
     async function toggleTodoIdeaVoice(event) {
       if (event && typeof event.stopPropagation === 'function') {
         event.stopPropagation();
       }
+      if (todoVoiceTranscribing) return;
       const ideaEl = document.getElementById('todoIdeaInput');
+
       if (todoVoiceActive) {
-        stopTodoIdeaVoice();
+        await finishTodoIdeaVoiceAndTranscribe();
         if (ideaEl) ideaEl.focus();
-        showToast('🎙️ Voice capture finished — review or press Enter to add');
         return;
       }
 
-      todoVoiceBaseText = ideaEl ? ideaEl.value.trim() : '';
-
-      // Engine 1: Web Speech API (SpeechRecognition / webkitSpeechRecognition)
-      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRec) {
+      // Engine 1 (PlayTask VoiceButton Parity): In-page getUserMedia + MediaRecorder -> POST /api/voice-transcribe
+      if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function' && typeof MediaRecorder !== 'undefined') {
         try {
-          const rec = new SpeechRec();
-          rec.continuous = true;
-          rec.interimResults = true;
-          rec.maxAlternatives = 1;
-          rec.lang = navigator.language || 'en-US';
-
-          rec.onstart = () => {
-            todoVoiceEngine = 'speech-rec';
-            setTodoVoiceUI(true, '🎙️ Listening... speak your idea (click ⏹️ when done)');
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          todoVoiceMediaStream = stream;
+          todoVoiceAudioChunks = [];
+          const preferredMime = (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+            ? 'audio/webm;codecs=opus'
+            : ((MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4')) ? 'audio/mp4' : '');
+          todoVoiceRecorderMime = preferredMime ? preferredMime.split(';')[0] : 'audio/webm';
+          const recorder = preferredMime ? new MediaRecorder(stream, { mimeType: preferredMime }) : new MediaRecorder(stream);
+          recorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) todoVoiceAudioChunks.push(e.data);
           };
-
-          rec.onresult = (ev) => {
-            if (!ideaEl) return;
-            let finalTranscript = '';
-            let interimTranscript = '';
-            for (let i = 0; i < ev.results.length; i++) {
-              const tr = ev.results[i][0] ? ev.results[i][0].transcript : '';
-              if (ev.results[i].isFinal) finalTranscript += tr;
-              else interimTranscript += tr;
-            }
-            const combined = (finalTranscript + interimTranscript).trim();
-            ideaEl.value = todoVoiceBaseText ? (todoVoiceBaseText + ' ' + combined) : combined;
-            ideaEl.scrollTop = ideaEl.scrollHeight;
-          };
-
-          rec.onerror = (ev) => {
-            const errName = ev && ev.error ? ev.error : 'error';
-            stopTodoIdeaVoice();
-            if (ideaEl) ideaEl.focus();
-
-            // If SpeechRecognition is disallowed or blocked by sandbox, attempt Engine 2 (getUserMedia) or inform macOS dictation
-            if (errName === 'not-allowed' || errName === 'service-not-allowed' || errName === 'network') {
-              startMediaRecorderVoiceFallback(ideaEl, errName);
-            } else {
-              showToast('🎙️ Dictation paused (' + errName + ') — press fn ×2 for native macOS dictation');
-            }
-          };
-
-          rec.onend = () => {
-            setTodoVoiceUI(false);
-            todoVoiceRecognition = null;
-          };
-
-          todoVoiceRecognition = rec;
-          rec.start();
+          todoVoiceMediaRecorder = recorder;
+          todoVoiceEngine = 'media-recorder';
+          recorder.start(250);
+          startTodoVoiceTimer();
           return;
-        } catch (recErr) {
-          // Fall through to MediaRecorder fallback
+        } catch (iframeMicErr) {
+          // Sandboxed Review Pane iframe without allow="microphone" -> seamlessly fall through to Engine 2 (local macOS bridge host mic)
         }
       }
 
-      // If SpeechRec is absent or threw synchronously:
-      startMediaRecorderVoiceFallback(ideaEl, 'unsupported');
-    }
-
-    async function startMediaRecorderVoiceFallback(ideaEl, reason) {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        if (ideaEl) ideaEl.focus();
-        showToast('🎙️ Speech API unavailable in this frame — use native macOS Dictation (press fn ×2) in text field');
+      // Engine 2 (Review Pane Sandboxed Iframe Fallback): Record directly via local bridge macOS AVAudioRecorder -> Gemini/Whisper ASR
+      const hostStart = await callBridgeJson('/api/voice-record/start', { repoRoot: rawData.repoRoot });
+      if (hostStart && hostStart.ok) {
+        todoVoiceEngine = 'host-mic';
+        startTodoVoiceTimer();
         return;
       }
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        todoVoiceMediaStream = stream;
-        todoVoiceAudioChunks = [];
-        todoVoiceEngine = 'media-stream';
-
-        const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
-          ? 'audio/webm;codecs=opus'
-          : ((typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4')) ? 'audio/mp4' : '');
-        const recorder = (typeof MediaRecorder !== 'undefined')
-          ? (mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream))
-          : null;
-
-        if (!recorder) {
-          showToast('🎙️ Mic connected! Dictate with native macOS Dictation (press fn ×2)');
-          setTodoVoiceUI(true, '🎙️ Mic connected — speak or press fn ×2');
-          return;
-        }
-
-        todoVoiceMediaRecorder = recorder;
-
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) todoVoiceAudioChunks.push(e.data);
-        };
-
-        recorder.onstart = () => {
-          setTodoVoiceUI(true, '🎙️ Mic active (recording) — speak idea, then click ⏹️ or press fn ×2');
-          showToast('🎙️ Microphone active! Speak your idea, or press fn ×2 for live inline dictation.');
-        };
-
-        recorder.onstop = () => {
-          setTodoVoiceUI(false);
-          todoVoiceMediaRecorder = null;
-          if (todoVoiceMediaStream) {
-            try { todoVoiceMediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
-            todoVoiceMediaStream = null;
-          }
-          if (ideaEl && !ideaEl.value.trim()) {
-            showToast('💡 Audio captured! You can also use macOS Dictation (fn ×2) directly in the text field.');
-          }
-        };
-
-        recorder.start(500);
-      } catch (err) {
-        stopTodoIdeaVoice();
-        if (ideaEl) ideaEl.focus();
-        showToast('🎙️ Mic access restricted in review pane — press fn ×2 (macOS Dictation) directly in the text field!');
+      if (ideaEl) ideaEl.focus();
+      if (hostStart && hostStart.offline) {
+        showToast('⚠️ Local Backlog Bridge offline — run "npm run backlog serve" to enable voice capture');
+      } else {
+        showToast('❌ Could not start microphone: ' + ((hostStart && hostStart.error) || 'check macOS Microphone permissions'));
       }
     }
 
     function closeTodoIdeaModal() {
-      stopTodoIdeaVoice();
+      cancelTodoIdeaVoice();
       const modal = document.getElementById('todoIdeaModal');
       if (modal) modal.classList.add('hidden');
     }
 
     async function submitIsolatedTodoIdea() {
-      stopTodoIdeaVoice();
+      if (todoVoiceActive) {
+        await finishTodoIdeaVoiceAndTranscribe();
+      }
       const ideaEl = document.getElementById('todoIdeaInput');
       const rawIdea = ideaEl ? ideaEl.value.trim() : '';
       if (!rawIdea) {
-        showToast('⚠️ Please type an idea first');
+        showToast('⚠️ Please type or dictate an idea first');
         if (ideaEl) ideaEl.focus();
         return;
       }
@@ -5012,7 +5125,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 }
 
-const BRIDGE_VERSION = '1.6.0';
+const BRIDGE_VERSION = '1.8.0';
 
 function spawnBridgeDaemon() {
   try {
@@ -5041,8 +5154,22 @@ function ensureDaemonRunning() {
       try {
         const info = JSON.parse(raw || '{}');
         if (info.version !== BRIDGE_VERSION) {
-          spawnSync('pkill', ['-f', 'backlog.mjs serve'], { timeout: 1000 });
-          setTimeout(spawnBridgeDaemon, 80);
+          const shutReq = http.request({
+            hostname: '127.0.0.1',
+            port: DEFAULT_PORT,
+            path: '/api/shutdown',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': 2 },
+            timeout: 300
+          }, () => {
+            setTimeout(spawnBridgeDaemon, 120);
+          });
+          shutReq.on('error', () => {
+            spawnSync('pkill', ['-f', 'backlog.mjs serve'], { timeout: 1000 });
+            setTimeout(spawnBridgeDaemon, 120);
+          });
+          shutReq.write('{}');
+          shutReq.end();
         }
       } catch {}
     });
@@ -5053,6 +5180,387 @@ function ensureDaemonRunning() {
   req.on('timeout', () => {
     req.destroy();
   });
+}
+
+let activeHostVoiceSession = null;
+
+function parseEnvFileMap(filePath) {
+  const map = {};
+  try {
+    if (!fs.existsSync(filePath)) return map;
+    const raw = fs.readFileSync(filePath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq <= 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let val = trimmed.slice(eq + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (val && map[key] === undefined) map[key] = val;
+    }
+  } catch {}
+  return map;
+}
+
+function discoverAsrConfig(targetRoot) {
+  const cfg = {
+    geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
+    geminiModel: process.env.GEMINI_FAST_MODEL || process.env.GEMINI_MODEL || '',
+    whisperBaseUrl: process.env.VASTAI_WHISPER_BASE_URL || '',
+    whisperApiKey: process.env.VASTAI_WHISPER_API_KEY || '',
+    whisperModel: process.env.VASTAI_WHISPER_MODEL || 'Systran/faster-whisper-large-v3',
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
+    openaiBaseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    openaiWhisperModel: process.env.OPENAI_WHISPER_MODEL || 'whisper-1'
+  };
+
+  const candidateDirs = [];
+  if (targetRoot) candidateDirs.push(targetRoot);
+  if (REPO_ROOT && !candidateDirs.includes(REPO_ROOT)) candidateDirs.push(REPO_ROOT);
+  const homeGemini = path.join(os.homedir(), '.gemini');
+  candidateDirs.push(homeGemini);
+
+  const parentDir = path.dirname(targetRoot || REPO_ROOT);
+  try {
+    for (const entry of fs.readdirSync(parentDir, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+      const full = path.join(parentDir, entry.name);
+      if (!candidateDirs.includes(full)) candidateDirs.push(full);
+    }
+  } catch {}
+
+  const relEnvPaths = ['.env', '.env.local', 'server/.env', 'server/.env.local', 'apps/api/.env', 'apps/api/.env.local'];
+  for (const dir of candidateDirs) {
+    for (const rel of relEnvPaths) {
+      const envMap = parseEnvFileMap(path.join(dir, rel));
+      if (!cfg.geminiApiKey && (envMap.GEMINI_API_KEY || envMap.GOOGLE_API_KEY)) {
+        cfg.geminiApiKey = envMap.GEMINI_API_KEY || envMap.GOOGLE_API_KEY;
+      }
+      if (!cfg.geminiModel && (envMap.GEMINI_FAST_MODEL || envMap.GEMINI_MODEL)) {
+        cfg.geminiModel = envMap.GEMINI_FAST_MODEL || envMap.GEMINI_MODEL;
+      }
+      if (!cfg.whisperBaseUrl && envMap.VASTAI_WHISPER_BASE_URL) {
+        cfg.whisperBaseUrl = envMap.VASTAI_WHISPER_BASE_URL;
+        if (!cfg.whisperApiKey && envMap.VASTAI_WHISPER_API_KEY) cfg.whisperApiKey = envMap.VASTAI_WHISPER_API_KEY;
+        if (envMap.VASTAI_WHISPER_MODEL) cfg.whisperModel = envMap.VASTAI_WHISPER_MODEL;
+      }
+      if (!cfg.openaiApiKey && envMap.OPENAI_API_KEY) {
+        cfg.openaiApiKey = envMap.OPENAI_API_KEY;
+        if (envMap.OPENAI_BASE_URL) cfg.openaiBaseUrl = envMap.OPENAI_BASE_URL;
+      }
+    }
+  }
+  return cfg;
+}
+
+async function transcribeViaWhisperEndpoint(audioBuffer, mimeType, langHint, baseUrl, apiKey, model) {
+  const endpoint = baseUrl.replace(/\/+$/, '') + '/audio/transcriptions';
+  const cleanMime = (mimeType || 'audio/webm').split(';')[0].trim() || 'audio/webm';
+  const ext = cleanMime.includes('mp4') || cleanMime.includes('m4a') ? 'm4a' : (cleanMime.includes('wav') ? 'wav' : 'webm');
+  const form = new FormData();
+  const blob = new Blob([new Uint8Array(audioBuffer)], { type: cleanMime });
+  form.append('file', blob, 'voice.' + ext);
+  form.append('model', model);
+  if (langHint) {
+    const shortLang = String(langHint).split(/[-_]/)[0].toLowerCase();
+    if (shortLang && shortLang.length === 2) form.append('language', shortLang);
+  }
+  const headers = {};
+  if (apiKey) headers.Authorization = 'Bearer ' + apiKey;
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: form,
+    signal: AbortSignal.timeout(25000)
+  });
+  if (!res.ok) {
+    const errTxt = await res.text().catch(() => '');
+    throw new Error('Whisper HTTP ' + res.status + ': ' + errTxt.slice(0, 160));
+  }
+  const data = await res.json();
+  return String(data.text || data.transcript || '').trim();
+}
+
+async function transcribeViaGemini(audioBuffer, mimeType, langHint, apiKey, preferredModel) {
+  const cleanMime = (mimeType || 'audio/webm').split(';')[0].trim() || 'audio/webm';
+  const modelsToTry = [];
+  for (const m of ['gemini-3.5-flash-lite', 'gemini-3.8-flash', preferredModel, 'gemini-2.5-flash']) {
+    if (m && !modelsToTry.includes(m) && !m.includes('2.0-flash')) modelsToTry.push(m);
+  }
+  const langClause = langHint ? (' Language hint: ' + langHint + ' (preserve the exact spoken language, whether English, French, Dutch, or other).') : '';
+  let lastErr = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
+        signal: AbortSignal.timeout(25000),
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [
+              {
+                text: 'Transcribe this spoken audio accurately into plain text in the spoken language.' + langClause + ' Return ONLY the spoken words without extra commentary or surrounding quotes. If the audio contains only silence or background noise with no speech, return an empty string.'
+              },
+              {
+                inlineData: {
+                  mimeType: cleanMime,
+                  data: audioBuffer.toString('base64')
+                }
+              }
+            ]
+          }],
+          generationConfig: { temperature: 0.0 }
+        })
+      });
+      if (!res.ok) {
+        const errTxt = await res.text().catch(() => '');
+        lastErr = new Error('Gemini [' + model + '] HTTP ' + res.status + ': ' + errTxt.slice(0, 160));
+        continue;
+      }
+      const json = await res.json();
+      const rawText = (json.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
+      const cleaned = rawText.replace(/^(EMPTY|\(silence\)|\[silence\])$/i, '').trim();
+      return { transcript: cleaned, provider: 'gemini:' + model };
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error('Gemini audio transcription failed');
+}
+
+async function transcribeAudioBuffer(audioBuffer, mimeType, langHint, targetRoot) {
+  if (!audioBuffer || audioBuffer.length < 64) {
+    return { transcript: '', provider: 'empty' };
+  }
+  const cfg = discoverAsrConfig(targetRoot);
+  const errors = [];
+
+  if (cfg.whisperBaseUrl) {
+    try {
+      const text = await transcribeViaWhisperEndpoint(audioBuffer, mimeType, langHint, cfg.whisperBaseUrl, cfg.whisperApiKey, cfg.whisperModel);
+      return { transcript: text, provider: 'vastai-whisper' };
+    } catch (err) {
+      errors.push(err.message);
+    }
+  }
+
+  if (cfg.geminiApiKey) {
+    try {
+      return await transcribeViaGemini(audioBuffer, mimeType, langHint, cfg.geminiApiKey, cfg.geminiModel);
+    } catch (err) {
+      errors.push(err.message);
+    }
+  }
+
+  if (cfg.openaiApiKey) {
+    try {
+      const text = await transcribeViaWhisperEndpoint(audioBuffer, mimeType, langHint, cfg.openaiBaseUrl, cfg.openaiApiKey, cfg.openaiWhisperModel);
+      return { transcript: text, provider: 'openai-whisper' };
+    } catch (err) {
+      errors.push(err.message);
+    }
+  }
+
+  throw new Error(errors.length > 0 ? errors.join(' | ') : 'No ASR provider (GEMINI_API_KEY / WHISPER / OPENAI_API_KEY) found');
+}
+
+function ensureMacMicHelperBinary() {
+  if (process.platform !== 'darwin') {
+    throw new Error('Host microphone fallback is only supported on macOS');
+  }
+  const binPath = path.join(os.tmpdir(), 'agy-mic-recorder-v1');
+  if (fs.existsSync(binPath)) return binPath;
+
+  const swiftPath = path.join(os.tmpdir(), 'agy-mic-recorder-v1.swift');
+  const cachePath = path.join(os.tmpdir(), 'agy-swift-module-cache');
+  fs.mkdirSync(cachePath, { recursive: true });
+  const swiftSrc = [
+    'import Foundation',
+    'import AVFoundation',
+    '',
+    'let outPath = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "/tmp/agy_voice_capture.m4a"',
+    'let url = URL(fileURLWithPath: outPath)',
+    'let settings: [String: Any] = [',
+    '    AVFormatIDKey: Int(kAudioFormatMPEG4AAC),',
+    '    AVSampleRateKey: 16000,',
+    '    AVNumberOfChannelsKey: 1,',
+    '    AVEncoderAudioQualityKey: AVAudioQuality.medium.rawValue',
+    ']',
+    'do {',
+    '    let recorder = try AVAudioRecorder(url: url, settings: settings)',
+    '    recorder.prepareToRecord()',
+    '    if !recorder.record() {',
+    '        fputs("RECORD_START_FAILED\\n", stderr)',
+    '        exit(2)',
+    '    }',
+    '    print("RECORDING_STARTED")',
+    '    fflush(stdout)',
+    '    signal(SIGTERM, SIG_IGN)',
+    '    signal(SIGINT, SIG_IGN)',
+    '    let sigTermSrc = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)',
+    '    let sigIntSrc = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)',
+    '    let finish = {',
+    '        recorder.stop()',
+    '        print("RECORDING_STOPPED")',
+    '        fflush(stdout)',
+    '        exit(0)',
+    '    }',
+    '    sigTermSrc.setEventHandler(handler: finish)',
+    '    sigIntSrc.setEventHandler(handler: finish)',
+    '    sigTermSrc.resume()',
+    '    sigIntSrc.resume()',
+    '    DispatchQueue.global().async {',
+    '        _ = readLine()',
+    '        DispatchQueue.main.async(execute: finish)',
+    '    }',
+    '    RunLoop.main.run()',
+    '} catch {',
+    '    fputs("ERROR: \\(error.localizedDescription)\\n", stderr)',
+    '    exit(1)',
+    '}'
+  ].join('\n');
+
+  fs.writeFileSync(swiftPath, swiftSrc, 'utf8');
+  const compiled = spawnSync('swiftc', ['-module-cache-path', cachePath, swiftPath, '-o', binPath], {
+    timeout: 20000,
+    encoding: 'utf8'
+  });
+  if (compiled.status !== 0 || !fs.existsSync(binPath)) {
+    throw new Error('Failed to compile macOS mic helper: ' + (compiled.stderr || compiled.error?.message || 'unknown'));
+  }
+  return binPath;
+}
+
+function cleanupHostVoiceSession(session) {
+  if (!session) return;
+  if (session.autoStopTimer) clearTimeout(session.autoStopTimer);
+  try {
+    if (session.proc && !session.proc.killed) {
+      session.proc.kill('SIGTERM');
+    }
+  } catch {}
+  try {
+    if (session.outPath && fs.existsSync(session.outPath)) {
+      fs.unlinkSync(session.outPath);
+    }
+  } catch {}
+}
+
+async function startHostMicRecording() {
+  if (activeHostVoiceSession) {
+    cleanupHostVoiceSession(activeHostVoiceSession);
+    activeHostVoiceSession = null;
+  }
+  const binPath = ensureMacMicHelperBinary();
+  const outPath = path.join(os.tmpdir(), 'agy-voice-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '.m4a');
+  const proc = spawn(binPath, [outPath], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+  const session = { proc, outPath, startedAt: Date.now(), stderr: '', autoStopTimer: null };
+  activeHostVoiceSession = session;
+
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        cleanupHostVoiceSession(session);
+        if (activeHostVoiceSession === session) activeHostVoiceSession = null;
+        reject(new Error('Timed out waiting for macOS microphone stream'));
+      }
+    }, 4000);
+
+    proc.stdout.on('data', chunk => {
+      if (!settled && String(chunk).includes('RECORDING_STARTED')) {
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      }
+    });
+    proc.stderr.on('data', chunk => {
+      session.stderr += String(chunk);
+    });
+    proc.on('error', err => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      }
+    });
+    proc.on('exit', code => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(new Error(session.stderr.trim() || ('Recorder exited with code ' + code)));
+      }
+    });
+  });
+
+  session.autoStopTimer = setTimeout(() => {
+    if (activeHostVoiceSession === session) {
+      cleanupHostVoiceSession(session);
+      activeHostVoiceSession = null;
+    }
+  }, 90000);
+
+  return { ok: true, engine: 'host-mic' };
+}
+
+async function stopHostMicRecordingAndTranscribe(langHint, targetRoot) {
+  const session = activeHostVoiceSession;
+  activeHostVoiceSession = null;
+  if (!session) {
+    return { ok: false, error: 'No active microphone recording session' };
+  }
+  if (session.autoStopTimer) clearTimeout(session.autoStopTimer);
+
+  await new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        resolve();
+      }
+    };
+    const timer = setTimeout(() => {
+      try { session.proc.kill('SIGINT'); } catch {}
+      setTimeout(finish, 250);
+    }, 2000);
+
+    session.proc.once('exit', () => {
+      clearTimeout(timer);
+      finish();
+    });
+    try {
+      session.proc.stdin.write('\n');
+      session.proc.stdin.end();
+    } catch {
+      try { session.proc.kill('SIGINT'); } catch {}
+    }
+  });
+
+  let audioBuf = null;
+  try {
+    if (fs.existsSync(session.outPath)) {
+      audioBuf = fs.readFileSync(session.outPath);
+      fs.unlinkSync(session.outPath);
+    }
+  } catch {}
+
+  if (!audioBuf || audioBuf.length < 128) {
+    return { ok: true, transcript: '', provider: 'empty', engine: 'host-mic' };
+  }
+
+  const res = await transcribeAudioBuffer(audioBuf, 'audio/mp4', langHint, targetRoot);
+  return { ok: true, transcript: res.transcript, provider: res.provider, engine: 'host-mic' };
 }
 
 function startBridgeServer(port = DEFAULT_PORT) {
@@ -5136,13 +5644,50 @@ function startBridgeServer(port = DEFAULT_PORT) {
       const targetRoot = resolveSafeRepoRoot(url.searchParams.get('repoRoot'));
       const data = loadBacklog(targetRoot);
       const html = generateReviewArtifactHtml(data, targetRoot);
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Permissions-Policy': 'microphone=*', 'Cache-Control': 'no-store' });
       res.end(html);
       return;
     }
 
-    const executeBridgeAction = (endpoint, body) => {
+    const executeBridgeAction = async (endpoint, body) => {
       const targetRoot = resolveSafeRepoRoot(body.repoRoot);
+
+      if (endpoint === '/api/shutdown') {
+        setTimeout(() => {
+          if (activeHostVoiceSession) cleanupHostVoiceSession(activeHostVoiceSession);
+          server.close(() => process.exit(0));
+        }, 30);
+        return { status: 200, payload: { ok: true, shuttingDown: true } };
+      }
+
+      if (endpoint === '/api/voice-transcribe') {
+        const rawB64 = String(body.audioBase64 || '').replace(/^data:[^;]+;base64,/, '');
+        if (!rawB64) return { status: 400, payload: { ok: false, error: 'audioBase64 is required' } };
+        const buf = Buffer.from(rawB64, 'base64');
+        const mimeType = String(body.mimeType || 'audio/webm');
+        const lang = String(body.lang || '');
+        const tr = await transcribeAudioBuffer(buf, mimeType, lang, targetRoot);
+        return { status: 200, payload: { ok: true, transcript: tr.transcript, provider: tr.provider, engine: 'media-recorder' } };
+      }
+
+      if (endpoint === '/api/voice-record/start') {
+        const started = await startHostMicRecording();
+        return { status: 200, payload: started };
+      }
+
+      if (endpoint === '/api/voice-record/stop') {
+        const lang = String(body.lang || '');
+        const stopped = await stopHostMicRecordingAndTranscribe(lang, targetRoot);
+        return { status: stopped.ok ? 200 : 400, payload: stopped };
+      }
+
+      if (endpoint === '/api/voice-record/cancel') {
+        if (activeHostVoiceSession) {
+          cleanupHostVoiceSession(activeHostVoiceSession);
+          activeHostVoiceSession = null;
+        }
+        return { status: 200, payload: { ok: true, cancelled: true } };
+      }
 
       if (endpoint === '/api/clipboard') {
         const text = String(body.text || body.prompt || '');
@@ -5454,18 +5999,20 @@ function startBridgeServer(port = DEFAULT_PORT) {
     };
 
     if (req.method === 'GET' && url.pathname === '/api/trigger') {
-      try {
-        const endpoint = url.searchParams.get('endpoint') || '/api/kickoff';
-        const body = JSON.parse(url.searchParams.get('data') || '{}');
-        executeBridgeAction(endpoint, body);
-      } catch {}
-      const pixel = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
-      res.writeHead(200, {
-        'Content-Type': 'image/gif',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'no-store'
-      });
-      res.end(pixel);
+      (async () => {
+        try {
+          const endpoint = url.searchParams.get('endpoint') || '/api/kickoff';
+          const body = JSON.parse(url.searchParams.get('data') || '{}');
+          await executeBridgeAction(endpoint, body);
+        } catch {}
+        const pixel = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+        res.writeHead(200, {
+          'Content-Type': 'image/gif',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store'
+        });
+        res.end(pixel);
+      })();
       return;
     }
 
@@ -5475,10 +6022,10 @@ function startBridgeServer(port = DEFAULT_PORT) {
         rawBody += chunk;
         if (rawBody.length > 50 * 1024 * 1024) req.destroy();
       });
-      req.on('end', () => {
+      req.on('end', async () => {
         try {
           const body = rawBody ? JSON.parse(rawBody) : {};
-          const result = executeBridgeAction(url.pathname, body);
+          const result = await executeBridgeAction(url.pathname, body);
           sendJson(res, result.status, result.payload);
         } catch (err) {
           sendJson(res, 500, { ok: false, error: err.message });
