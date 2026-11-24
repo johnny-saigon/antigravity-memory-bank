@@ -57,6 +57,25 @@ function detectGitWorktreeContext(rootDir = REPO_ROOT) {
       const st = fs.statSync(dotGitPath);
       if (st.isFile()) {
         ctx.isLinkedWorktree = true;
+        try {
+          const rawGit = fs.readFileSync(dotGitPath, 'utf8');
+          const m = rawGit.match(/^gitdir:\s*(.+)$/m);
+          if (m) {
+            const gitDir = path.resolve(rootDir, m[1].trim());
+            const wtBase = path.basename(gitDir);
+            if (wtBase) ctx.branch = wtBase;
+            const headFile = path.join(gitDir, 'HEAD');
+            if (fs.existsSync(headFile)) {
+              const headRaw = fs.readFileSync(headFile, 'utf8').trim();
+              const refMatch = headRaw.match(/^ref:\s*refs\/heads\/(.+)$/);
+              if (refMatch && refMatch[1]) ctx.branch = refMatch[1].trim();
+            }
+          } else if (ctx.worktreeName) {
+            ctx.branch = ctx.worktreeName;
+          }
+        } catch {
+          if (ctx.worktreeName) ctx.branch = ctx.worktreeName;
+        }
       }
     }
     const brRes = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: rootDir, encoding: 'utf8', timeout: 1500 });
@@ -377,7 +396,7 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
     const projectSlug = (data && data.project) || path.basename(resolvedRoot).toLowerCase().replace(/[^a-z0-9]/g, '_');
     const escapedHome = homeDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const homeProjRegex = homeDir
-      ? new RegExp(`${escapedHome}/(?!\\.|Library/)(?:[^/"'\\\\\\s\`]+/){1,2}`, 'g')
+      ? new RegExp(`${escapedHome}/(?:\\.gemini/antigravity/worktrees/[^/"'\\\\\\s\`]+/[^/"'\\\\\\s\`]+|(?!\\.|Library/)(?:[^/"'\\\\\\s\`]+/){1,2})`, 'g')
       : null;
 
     const candidates = [];
@@ -835,6 +854,11 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
     const isPrimaryActivePlan = idx === 0;
     try {
       const raw = fs.readFileSync(planFile, 'utf8');
+      const resolvedRoot = path.resolve(rootDir);
+      const hasFileLinks = /file:\/\/\/(?:Users|home)\/[^\s)"'`]+/.test(raw);
+      if (hasFileLinks && !raw.includes(resolvedRoot)) {
+        continue;
+      }
       const extracted = extractPlanTicketsFromMarkdown(raw, rootDir, data.tasks);
       for (const item of extracted) {
         const existing = data.tasks.find(t => String(t.id).toUpperCase() === item.id);

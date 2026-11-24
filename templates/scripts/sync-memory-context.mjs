@@ -713,13 +713,19 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
           fsSync.existsSync(fStr)
         ) {
           try {
-            const planDir = path.join(rootDir, 'docs', 'planning');
-            fsSync.mkdirSync(planDir, { recursive: true });
-            fsSync.copyFileSync(fStr, path.join(planDir, base));
-            if (base === 'implementation_plan.md') {
-              const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
-              if (fsSync.existsSync(backlogScriptPath)) {
-                execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
+            const rawArtifact = fsSync.readFileSync(fStr, 'utf8');
+            // Strict worktree/workspace path check: only mirror if artifact references this exact rootDir
+            // (or has no absolute workspace file:// links at all), preventing main <-> worktree plan bleed
+            const hasAnyAbsPath = /\/Users\/[^\s)"'`]+|\/home\/[^\s)"'`]+/.test(rawArtifact);
+            if (!hasAnyAbsPath || rawArtifact.includes(rootDir)) {
+              const planDir = path.join(rootDir, 'docs', 'planning');
+              fsSync.mkdirSync(planDir, { recursive: true });
+              fsSync.copyFileSync(fStr, path.join(planDir, base));
+              if (base === 'implementation_plan.md') {
+                const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
+                if (fsSync.existsSync(backlogScriptPath)) {
+                  execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
+                }
               }
             }
           } catch {}
@@ -772,7 +778,8 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
         const st = fsSync.statSync(bp);
         if (st.mtimeMs > newestMtime + 500) {
           const content = fsSync.readFileSync(bp, 'utf8');
-          if (content.includes(rootDir) || content.includes(path.basename(rootDir))) {
+          // Require exact rootDir match (never path.basename(rootDir), which matches across main & worktrees!)
+          if (content.includes(rootDir)) {
             newestMtime = st.mtimeMs;
             newestBrainPlan = bp;
           }
