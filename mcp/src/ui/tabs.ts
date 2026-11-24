@@ -219,9 +219,9 @@ export function renderKanbanTab(
     <div class="mb-toolbar">
       <div class="mb-row">
         <input class="mb-input" style="min-width:190px;" id="kanbanSearchInput" placeholder="Filter tickets..." value="${esc(opts.search)}" />
-        <button class="mb-btn mb-btn-sm ${snap.branchScope === 'branch' ? 'mb-btn-primary' : ''}" data-action="toggle-branch-scope">
-          🌿 ${snap.branchScope === 'branch' ? `Branch: ${esc(snap.gitContext.branch)}` : `All Branches (${snap.totalTasksAllBranches})`}
-        </button>
+        <span class="mb-badge mb-badge-cyan" title="Strictly isolated to current Git branch (FEAT-151)">
+          🌿 Branch: ${esc(snap.gitContext.branch)}
+        </span>
       </div>
       <div class="mb-row">
         <button class="mb-btn mb-btn-primary mb-btn-sm" data-action="open-add-modal">+ Add Idea (0 Tokens)</button>

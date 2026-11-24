@@ -4,7 +4,7 @@
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
 > - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-> - **Backlog Progress**: `69/70` tickets completed (`0` in progress, `1` queued).
+> - **Backlog Progress**: `73/73` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline
 - [x] Ingest Three-Tier Memory Hierarchy (`~/.gemini/GEMINI.md`, `.agents/rules/infra.md`, `memory-bank/*.md`)
@@ -12,10 +12,11 @@
 - [x] Correlate local operational backlog (`docs/backlog.json`) with 3-Artifact Planning Mode (`task.md`, `implementation_plan.md`, `walkthrough.md`)
 
 ## 2. Active Sprint & Planning Focus (`In Progress`)
-- [ ] **Ready for Next Sprint Wave**: Run `/backlog-plan FEAT-149` (to review blueprint) or `/backlog-start FEAT-149` (to execute **[FEAT-149] turn the phone on**)
+- [x] All currently tracked backlog tickets in `docs/backlog.json` are completed and verified.
+- [ ] Capture next feature wave via `npm run backlog add "<title>"` or the Review pane Kanban (`backlog.html`).
 
 ## 3. Queued Backlog & Next Implementation Wave (`To-Do`)
-- [ ] **[FEAT-149]** (`MEDIUM`) turn the phone on — Plan: `/backlog-plan FEAT-149` · Start: `/backlog-start FEAT-149`
+- *(No pending `todo` tickets — backlog is 100% clear)*
 
 ## 4. Completed & Verified Engineering Tasks (`Done`)
 - [x] **[FEAT-101]** Three-Tier Memory Bank Brick, 2-Phase Continuous Cycle & <150-Line Linter
@@ -87,3 +88,7 @@
 - [x] **[FEAT-150-ACT-1]** 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity
 - [x] **[FEAT-150-ACT-2]** 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)
 - [x] **[FEAT-150-ACT-3]** 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout
+- [x] **[FEAT-151]** Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board
+- [x] **[FEAT-151-ACT-1]** 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
+- [x] **[FEAT-151-ACT-2]** 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
+- [x] **[FEAT-151-ACT-3]** 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout

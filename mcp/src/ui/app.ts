@@ -419,18 +419,26 @@ function render() {
 
   const snap = state.snapshot;
   const { canMessage, canContext } = getCapabilities();
+  const isConversationBound = canMessage;
+  if (isConversationBound && state.activeTab === 'fleet') {
+    state.activeTab = 'kanban';
+  }
 
-  const header = `<div class="mb-header">
-    <div class="mb-header-top">
-      <div class="mb-brand">
-        <span>🧠 Memory Bank</span>
-        <select id="workspaceSwitcher" class="mb-select">
+  const workspaceControl = isConversationBound
+    ? `<span id="workspaceBadge" class="mb-badge mb-badge-cyan" title="Strictly locked to active workspace &amp; Git branch (FEAT-151)">${snap?.gitContext.isWorktree ? '🌿' : '🏛️'} ${esc(snap?.project || 'Workspace')} [${esc(snap?.gitContext.branch || 'main')}]</span>`
+    : `<select id="workspaceSwitcher" class="mb-select">
           ${(state.fleet.length > 0 ? state.fleet : snap ? [{ project: snap.project, role: snap.gitContext.isWorktree ? 'worktree' : 'main', branch: snap.gitContext.branch, path: snap.repoRoot }] : [])
             .map(
               (f) => `<option value="${esc(f.path)}" ${f.path === state.repoRoot ? 'selected' : ''}>${f.role === 'worktree' ? '🌿' : '🏛️'} ${esc(f.project)} [${esc(f.branch)}]</option>`
             )
             .join('')}
-        </select>
+        </select>`;
+
+  const header = `<div class="mb-header">
+    <div class="mb-header-top">
+      <div class="mb-brand">
+        <span>🧠 Memory Bank</span>
+        ${workspaceControl}
       </div>
       <div class="mb-row">
         <button class="mb-btn mb-btn-sm" data-action="refresh-all" ${state.busy ? 'disabled' : ''}>🔄 Refresh</button>
@@ -440,7 +448,7 @@ function render() {
       <button class="mb-tab ${state.activeTab === 'kanban' ? 'active' : ''}" data-action="switch-tab" data-tab="kanban">📋 Kanban ${snap ? `(${snap.counts.todo + snap.counts.ready + snap.counts.inProgress})` : ''}</button>
       <button class="mb-tab ${state.activeTab === 'memory' ? 'active' : ''}" data-action="switch-tab" data-tab="memory">🧠 Memory &amp; Rules ${snap && snap.memoryAudit.violations > 0 ? '⚠️' : ''}</button>
       <button class="mb-tab ${state.activeTab === 'credits' ? 'active' : ''}" data-action="switch-tab" data-tab="credits">⚡ Credits &amp; Usage</button>
-      <button class="mb-tab ${state.activeTab === 'fleet' ? 'active' : ''}" data-action="switch-tab" data-tab="fleet">🚀 Fleet (${state.fleet.length})</button>
+      ${!isConversationBound ? `<button class="mb-tab ${state.activeTab === 'fleet' ? 'active' : ''}" data-action="switch-tab" data-tab="fleet">🚀 Fleet (${state.fleet.length})</button>` : ''}
       <button class="mb-tab ${state.activeTab === 'bricks' ? 'active' : ''}" data-action="switch-tab" data-tab="bricks">🧱 Bricks &amp; Docs</button>
     </div>
   </div>`;
@@ -602,28 +610,27 @@ document.addEventListener('click', async (e) => {
   }
   if (action === 'expand-dashboard') {
     state.mode = 'dashboard';
-    await Promise.all([refreshSnapshot(), refreshFleet()]);
+    const { canMessage } = getCapabilities();
+    await Promise.all([refreshSnapshot(), ...(canMessage ? [] : [refreshFleet()])]);
     return;
   }
   if (action === 'switch-tab') {
-    state.activeTab = (el.getAttribute('data-tab') as TabKey) || 'kanban';
+    const nextTab = (el.getAttribute('data-tab') as TabKey) || 'kanban';
+    const { canMessage } = getCapabilities();
+    state.activeTab = canMessage && nextTab === 'fleet' ? 'kanban' : nextTab;
     render();
-    if (state.activeTab === 'fleet') await refreshFleet();
+    if (state.activeTab === 'fleet' && !canMessage) await refreshFleet();
     if (state.activeTab === 'bricks') await refreshBricks();
     return;
   }
   if (action === 'refresh-all') {
     state.busy = true;
     render();
-    await Promise.all([refreshSnapshot(), refreshFleet()]);
+    const { canMessage } = getCapabilities();
+    await Promise.all([refreshSnapshot(), ...(canMessage ? [] : [refreshFleet()])]);
     if (state.activeTab === 'bricks') await refreshBricks();
     state.busy = false;
     render();
-    return;
-  }
-  if (action === 'toggle-branch-scope') {
-    state.branchScope = state.branchScope === 'branch' ? 'all' : 'branch';
-    await refreshSnapshot();
     return;
   }
   if (action === 'clear-selection') {

@@ -6,18 +6,6 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ## 1. Active Feature Backlog
 
-### FEAT-149: turn the phone on
-- **Status:** Backlog (`TODO`)
-- **Priority:** Medium
-- **Description:** turn the phone on
-- **Technical Specification:**
-  turn the phone on
-- **Acceptance Criteria:**
-  - [ ] Implement and verify turn the phone on
-  - [ ] Pass deterministic lint, typecheck, and automated test verification (npm test)
-
----
-
 ### FEAT-101: Three-Tier Memory Bank Brick, 2-Phase Continuous Cycle & <150-Line Linter
 - **Status:** Completed (`DONE`)
 - **Priority:** High
@@ -803,6 +791,44 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-151: Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`
+- **Description:** Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board
+- **Technical Specification:**
+  Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board
+- **Acceptance Criteria:**
+  - [x] Implement and verify Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board across scripts/lint-memory.mjs, scripts/sync-memory-context.mjs
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
+### FEAT-151-ACT-1: 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Description:** 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
+- **Technical Specification:**
+  1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
+  - [x] Verify deterministic tests and lint checks for [FEAT-151-ACT-1]
+
+---
+
+### FEAT-151-ACT-2: 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `scripts/backlog.mjs`, `docs/BACKLOG.md`, `docs/backlog.html`, `docs/backlog.json`
+- **Description:** 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
+- **Technical Specification:**
+  2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
+  - [x] Verify deterministic tests and lint checks for [FEAT-151-ACT-2]
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)
@@ -846,6 +872,17 @@ This board tracks active development tickets, feature backlogs, architecture ini
 - **Acceptance Criteria:**
   - [x] Complete implementation and verification for 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout
   - [x] Verify deterministic tests and lint checks for [FEAT-150-ACT-3]
+
+---
+
+### FEAT-151-ACT-3: 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
+- **Status:** Completed (`DONE`)
+- **Platform:** docs/quality/TEST_PLAN_AND_SUITES.md
+- **Scope:**
+  3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
+  - [x] Verify deterministic tests and lint checks for [FEAT-151-ACT-3]
 
 ---
 

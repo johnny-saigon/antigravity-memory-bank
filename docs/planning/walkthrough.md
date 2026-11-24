@@ -7,7 +7,7 @@
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-- **Backlog Completion**: **69 / 70** tickets verified `DONE` (0 in progress, 1 queued).
+- **Backlog Completion**: **73 / 73** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
 - **feat(docs): unify `FEAT-121` Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/design/DESIGN.md`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `.agents/rules/docs-living-specs.md`, `README.md`) and roll out `upgrade` across `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `wiro` (`10/10` canonical docs active, custom/nested docs classified & archived with repo-wide link rewriting, `10/10` ingestion checklist passed)**
@@ -17,6 +17,30 @@
 - **feat(organize): implement `FEAT-117` AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
+### ✅ [FEAT-151-ACT-3]: 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout *(Verified 2026-11-24)*
+- **Summary**: 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
+- **Verified Components**: [TEST_PLAN_AND_SUITES.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/quality/TEST_PLAN_AND_SUITES.md)
+- **Verified Criterion**: ✓ Complete implementation and verification for 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
+- **Verified Criterion**: ✓ Verify deterministic tests and lint checks for [FEAT-151-ACT-3]
+
+### ✅ [FEAT-151-ACT-2]: 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html *(Verified 2026-11-24)*
+- **Summary**: 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
+- **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [BACKLOG.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG.md), [backlog.html](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.html), [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json)
+- **Verified Criterion**: ✓ Complete implementation and verification for 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
+- **Verified Criterion**: ✓ Verify deterministic tests and lint checks for [FEAT-151-ACT-2]
+
+### ✅ [FEAT-151-ACT-1]: 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server *(Verified 2026-11-24)*
+- **Summary**: 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
+- **Verified Components**: `workspace`
+- **Verified Criterion**: ✓ Complete implementation and verification for 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
+- **Verified Criterion**: ✓ Verify deterministic tests and lint checks for [FEAT-151-ACT-1]
+
+### ✅ [FEAT-151]: Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board *(Verified 2026-11-24)*
+- **Summary**: Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board
+- **Verified Components**: [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs), [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs)
+- **Verified Criterion**: ✓ Implement and verify Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board across scripts/lint-memory.mjs, scripts/sync-memory-context.mjs
+- **Verified Criterion**: ✓ Pass deterministic lint, typecheck, and automated test verification (npm test)
+
 ### ✅ [FEAT-150-ACT-3]: 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout *(Verified 2026-11-24)*
 - **Summary**: 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout
 - **Verified Components**: [TEST_PLAN_AND_SUITES.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/quality/TEST_PLAN_AND_SUITES.md)
@@ -404,7 +428,7 @@
 | :--- | :--- | :--- |
 | **Memory Bank Line Budget (`< 150 lines`)** | `npm run lint:memory` | ✅ Verified (`0` violations) |
 | **10-Point Baseline Ingestion Checklist** | `npx antigravity-memory-bank upgrade` | ✅ `10/10` Passed |
-| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (69/70 Done) |
+| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (73/73 Done) |
 | **Automated Verification Command** | `npm run lint:memory` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm test` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm run test:e2e` | ✅ Configured & Active |

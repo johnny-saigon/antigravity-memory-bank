@@ -2143,7 +2143,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       <button onclick="setFilter('in_progress', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-[var(--muted-foreground,#94a3b8)]">In Progress</button>
       <button onclick="setFilter('high', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-rose-400">🔥 High Priority</button>
       <button onclick="setFilter('done', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-emerald-400">Done</button>
-      <button id="branchFilterToggle" onclick="toggleBranchFilter()" class="bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer" title="Toggle between current branch/worktree tickets only vs all branches (FEAT-137)">🌿 Branch Only</button>
+      <span id="branchFilterBadge" class="bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold" title="Strictly isolated to current branch (FEAT-151)">🌿 Branch: ${escapeHtmlServer(branchCtx.branch || 'main')}</span>
       <span class="text-slate-600 px-1">|</span>
       <div class="flex items-center gap-1 bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] rounded-md px-2 py-0.5">
         <span class="text-[11px] text-slate-400 font-medium">⇅ Sort All:</span>
@@ -2884,23 +2884,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       renderBoard();
     }
 
-    function toggleBranchFilter() {
-      branchOnlyMode = !branchOnlyMode;
-      const btn = document.getElementById('branchFilterToggle');
-      if (btn) {
-        if (branchOnlyMode) {
-          btn.textContent = '🌿 Branch Only';
-          btn.className = 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer';
-        } else {
-          btn.textContent = '🌐 All Branches';
-          btn.className = 'bg-slate-800 text-slate-300 border border-slate-600 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer';
-        }
-      }
-      renderBoard();
-    }
-
     function isClientTaskInActiveBranch(task) {
-      if (!branchOnlyMode) return true;
       const ctx = rawData.gitContext;
       if (!ctx || !ctx.hasGit || !ctx.branch || ctx.branch === 'HEAD') return true;
       const activeBranches = Array.isArray(task.activeBranches) ? task.activeBranches : [];

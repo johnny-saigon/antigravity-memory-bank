@@ -23,6 +23,7 @@
 | **`BUG-113`** | Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) — Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) | DONE | `core` |
 | **`BUG-114`** | Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning — Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning | DONE | `docs/PLANNING_GUIDE.md` |
 | **`BUG-115`** | Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan — Recorded in backlog.json | DONE | `scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json` |
+| **`COMMIT-6884f9d`** | fix(mcp-app): gracefully fall back to git HEAD when docs/backlog.json has conflict markers — Git fix commit `6884f9d` | DONE | `git history` |
 | **`COMMIT-8216efd`** | fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115) — Git fix commit `8216efd` | DONE | `git history` |
 | **`COMMIT-c296aaf`** | fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112) — Git fix commit `c296aaf` | DONE | `git history` |
 | **`COMMIT-cfd803c`** | fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111) — Git fix commit `cfd803c` | DONE | `git history` |
@@ -32,7 +33,6 @@
 | **`COMMIT-c9b5ee9`** | fix(backlog): enforce exact repoRoot ownership in findTargetBrainDirs to prevent sibling repo collision — Git fix commit `c9b5ee9` | DONE | `git history` |
 | **`COMMIT-f3e143e`** | fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight) — Git fix commit `f3e143e` | DONE | `git history` |
 | **`COMMIT-86d8f52`** | fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci] — Git fix commit `86d8f52` | DONE | `git history` |
-| **`COMMIT-04218b1`** | fix(cli): untrack docs/backlog.html from git index during commit [skip ci] — Git fix commit `04218b1` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

@@ -1878,6 +1878,88 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     }
   });
 
+  test('3p. FEAT-151: strict single-branch & single-workspace isolation on main and linked worktrees', async () => {
+    const isoMain = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-iso-main-'));
+    const isoWt = path.join(os.tmpdir(), `agmb-iso-wt-${Date.now()}`);
+    let mcpProc = null;
+    try {
+      execFileSync('git', ['init', '-b', 'main'], { cwd: isoMain, stdio: 'ignore' });
+      execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: isoMain, stdio: 'ignore' });
+      execFileSync('git', ['config', 'user.name', 'Test'], { cwd: isoMain, stdio: 'ignore' });
+      execFileSync(process.execPath, [CLI_PATH, 'init', isoMain, '-y', '--name', 'IsoApp'], {
+        cwd: isoMain,
+        env: testEnv,
+        stdio: 'ignore'
+      });
+
+      const seedTasks = [
+        { id: 'FEAT-301', type: 'feature', title: 'Main Branch Ticket', status: 'todo', priority: 'high', branch: 'main' },
+        { id: 'FEAT-302', type: 'feature', title: 'Legacy Untagged Ticket', status: 'done', priority: 'low' },
+        { id: 'FEAT-303', type: 'feature', title: 'Other Feature Branch Ticket', status: 'todo', priority: 'high', branch: 'feature/isolated' }
+      ];
+      fs.writeFileSync(path.join(isoMain, 'docs', 'backlog.json'), JSON.stringify({ project: 'IsoApp', tasks: seedTasks }, null, 2) + '\n');
+      execFileSync('git', ['add', '-A'], { cwd: isoMain, stdio: 'ignore' });
+      execFileSync('git', ['commit', '-m', 'init'], { cwd: isoMain, stdio: 'ignore' });
+      execFileSync('git', ['worktree', 'add', '-b', 'feature/isolated', isoWt], { cwd: isoMain, stdio: 'ignore' });
+
+      const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
+      const distHtml = fs.readFileSync(path.join(REPO_ROOT, 'mcp', 'dist', 'app.html'), 'utf8');
+      assert.equal(distHtml.includes('toggle-branch-scope'), false, 'MCP UI must not expose toggle-branch-scope');
+      assert.equal(distHtml.includes('All Branches'), false, 'MCP UI must not expose All Branches toggle');
+      assert.equal(distHtml.includes('workspaceBadge'), true, 'Conversation-bound Side Pane must render read-only workspaceBadge');
+
+      mcpProc = spawn(process.execPath, [distServer, `--data-dir=${os.tmpdir()}`], {
+        cwd: os.tmpdir(),
+        env: { ...testEnv, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      const pending = new Map();
+      let buf = '';
+      let nextId = 1;
+      mcpProc.stdout.on('data', (chunk) => {
+        buf += chunk.toString();
+        let nl;
+        while ((nl = buf.indexOf('\n')) !== -1) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          const msg = JSON.parse(line);
+          if (msg.id && pending.has(msg.id)) {
+            const { resolve } = pending.get(msg.id);
+            pending.delete(msg.id);
+            resolve(msg);
+          }
+        }
+      });
+      const rpc = (method, params = {}) =>
+        new Promise((resolve, reject) => {
+          const id = nextId++;
+          const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout on ${method}`)); }, 15000);
+          pending.set(id, { resolve: (m) => { clearTimeout(timer); resolve(m); } });
+          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
+        });
+      await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'iso-e2e', version: '1.0' } });
+      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+
+      // 1. Main checkout must show ONLY main + legacy untagged tickets, strictly hiding feature/isolated
+      const mainSnap = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: { repoRoot: isoMain } });
+      const mainIds = (mainSnap.result?.structuredContent?.tasks || []).map((t) => t.id).sort();
+      assert.deepEqual(mainIds, ['FEAT-301', 'FEAT-302']);
+      assert.equal(mainSnap.result?.structuredContent?.counts?.total, 2);
+
+      // 2. Linked worktree feature/isolated must show ONLY feature/isolated tickets, hiding main & untagged
+      const wtSnap = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: { repoRoot: isoWt } });
+      const wtIds = (wtSnap.result?.structuredContent?.tasks || []).map((t) => t.id).sort();
+      assert.deepEqual(wtIds, ['FEAT-303']);
+      assert.equal(wtSnap.result?.structuredContent?.counts?.total, 1);
+    } finally {
+      if (mcpProc && !mcpProc.killed) { try { mcpProc.kill('SIGKILL'); } catch {} }
+      try { execFileSync('git', ['worktree', 'remove', '--force', isoWt], { cwd: isoMain, stdio: 'ignore' }); } catch {}
+      try { fs.rmSync(isoWt, { recursive: true, force: true }); } catch {}
+      try { fs.rmSync(isoMain, { recursive: true, force: true }); } catch {}
+    }
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

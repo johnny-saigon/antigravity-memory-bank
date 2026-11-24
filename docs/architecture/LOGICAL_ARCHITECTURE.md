@@ -34,10 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-137`** | Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io) | 🟢 DONE | `bin/cli.mjs`, `scripts/backlog.mjs`, `scripts/sync-memory-context.mjs` |
-| **`FEAT-138`** | ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH) | 🟢 DONE | `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/PLANNING_GUIDE.md`, `docs/planning/implementation_plan.md` |
-| **`FEAT-139`** | ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH) | 🟢 DONE | — |
-| **`FEAT-140`** | ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH) | 🟢 DONE | — |
 | **`FEAT-141`** | Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees | 🟢 DONE | — |
 | **`FEAT-142`** | Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors | 🟢 DONE | — |
 | **`FEAT-143`** | Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) | 🟢 DONE | `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md` |
@@ -54,6 +50,10 @@ flowchart LR
 | **`FEAT-150-ACT-1`** | 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity | 🟢 DONE | `bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt` |
 | **`FEAT-150-ACT-2`** | 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html) | 🟢 DONE | `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md` |
 | **`FEAT-150-ACT-3`** | 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout | 🟢 DONE | `docs/quality/TEST_PLAN_AND_SUITES.md` |
+| **`FEAT-151`** | Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs` |
+| **`FEAT-151-ACT-1`** | 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server | 🟢 DONE | — |
+| **`FEAT-151-ACT-2`** | 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html | 🟢 DONE | `scripts/backlog.mjs`, `docs/BACKLOG.md`, `docs/backlog.html` |
+| **`FEAT-151-ACT-3`** | 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout | 🟢 DONE | `docs/quality/TEST_PLAN_AND_SUITES.md` |
 <!-- ag-section:logical-features:end -->
 
 ---

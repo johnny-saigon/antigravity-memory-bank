@@ -1,50 +1,8 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T15:23:54.325Z",
+  "lastUpdated": "2026-11-24T15:50:05.842Z",
   "project": "antigravity-memory-bank",
   "tasks": [
-    {
-      "id": "FEAT-149",
-      "type": "feature",
-      "title": "turn the phone on",
-      "status": "todo",
-      "priority": "medium",
-      "components": [],
-      "attachments": [],
-      "description": "turn the phone on",
-      "spec": "turn the phone on",
-      "acceptanceCriteria": [
-        "Implement and verify turn the phone on",
-        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
-      ],
-      "createdAt": "2026-11-24T14:44:26.934Z",
-      "annotations": {
-        "annotatedAt": "2026-11-24T14:44:26.936Z",
-        "complexityTier": "tier2_standard",
-        "recommendedPlanModel": "Gemini 4 Neon (Medium)",
-        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
-        "estimatedSavings": "45%–65% via Workhorse Execution"
-      },
-      "actionItems": [
-        {
-          "id": "FEAT-149-ACT-1",
-          "text": "Implement and verify turn the phone on",
-          "owner": "antigravity",
-          "done": false
-        },
-        {
-          "id": "FEAT-149-ACT-2",
-          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
-          "owner": "antigravity",
-          "done": false
-        }
-      ],
-      "branch": "main",
-      "worktree": "antigravity-memory-bank",
-      "activeBranches": [
-        "main"
-      ]
-    },
     {
       "id": "FEAT-101",
       "type": "feature",
@@ -3179,6 +3137,301 @@
       ],
       "startedAt": "2026-11-24T14:55:23.667Z",
       "completedAt": "2026-11-24T15:00:11.585Z"
+    },
+    {
+      "id": "FEAT-151",
+      "type": "feature",
+      "title": "Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/lint-memory.mjs",
+        "scripts/sync-memory-context.mjs"
+      ],
+      "attachments": [],
+      "description": "Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board",
+      "spec": "Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board",
+      "acceptanceCriteria": [
+        "Implement and verify Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board across scripts/lint-memory.mjs, scripts/sync-memory-context.mjs",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T15:39:07.254Z",
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "planning",
+          "at": "2026-11-24T15:39:07.254Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T15:46:42.328Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T15:47:28.212Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:50:02.792Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T15:46:42.328Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-151-ACT-1",
+          "text": "Implement and verify Strict Single-Branch & Single-Workspace Isolation in Memory Bank Board across scripts/lint-memory.mjs, scripts/sync-memory-context.mjs",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-151-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-151-ACT-1",
+          "childTicketId": "FEAT-151-ACT-1",
+          "text": "[FEAT-151-ACT-1] 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-151-ACT-2",
+          "childTicketId": "FEAT-151-ACT-2",
+          "text": "[FEAT-151-ACT-2] 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-151-ACT-3",
+          "childTicketId": "FEAT-151-ACT-3",
+          "text": "[FEAT-151-ACT-3] 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "childTicketIds": [
+        "FEAT-151-ACT-1",
+        "FEAT-151-ACT-2",
+        "FEAT-151-ACT-3"
+      ],
+      "plannedAt": "2026-11-24T15:46:42.328Z",
+      "startedAt": "2026-11-24T15:47:28.212Z",
+      "completedAt": "2026-11-24T15:50:02.828Z"
+    },
+    {
+      "id": "FEAT-151-ACT-1",
+      "parentId": "FEAT-151",
+      "isActionChild": true,
+      "actionIndex": 1,
+      "type": "feature",
+      "title": "1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server",
+      "status": "done",
+      "plannedAt": "2026-11-24T15:46:42.224Z",
+      "priority": "medium",
+      "components": [],
+      "attachments": [],
+      "description": "1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server",
+      "spec": "1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server",
+        "Verify deterministic tests and lint checks for [FEAT-151-ACT-1]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T15:46:42.225Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T15:47:28.098Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:50:02.716Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-151-ACT-1-ACT-1",
+          "text": "Complete implementation and verification for 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-151-ACT-1-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-151-ACT-1]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T15:46:42.226Z",
+        "complexityTier": "tier2_standard",
+        "recommendedPlanModel": "Gemini 4 Neon (Medium)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "45%–65% via Workhorse Execution"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T15:47:28.098Z",
+      "completedAt": "2026-11-24T15:50:02.716Z"
+    },
+    {
+      "id": "FEAT-151-ACT-2",
+      "parentId": "FEAT-151",
+      "isActionChild": true,
+      "actionIndex": 2,
+      "type": "ux",
+      "title": "2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html",
+      "status": "done",
+      "plannedAt": "2026-11-24T15:46:42.262Z",
+      "priority": "medium",
+      "components": [
+        "scripts/backlog.mjs",
+        "docs/BACKLOG.md",
+        "docs/backlog.html",
+        "docs/backlog.json"
+      ],
+      "attachments": [],
+      "description": "2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html",
+      "spec": "2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html",
+        "Verify deterministic tests and lint checks for [FEAT-151-ACT-2]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T15:46:42.262Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T15:47:28.139Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:50:02.754Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-151-ACT-2-ACT-1",
+          "text": "Complete implementation and verification for 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-151-ACT-2-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-151-ACT-2]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T15:46:42.263Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T15:47:28.139Z",
+      "completedAt": "2026-11-24T15:50:02.754Z"
+    },
+    {
+      "id": "FEAT-151-ACT-3",
+      "parentId": "FEAT-151",
+      "isActionChild": true,
+      "actionIndex": 3,
+      "type": "qa",
+      "title": "3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout",
+      "status": "done",
+      "plannedAt": "2026-11-24T15:46:42.295Z",
+      "priority": "medium",
+      "components": [
+        "docs/quality/TEST_PLAN_AND_SUITES.md"
+      ],
+      "attachments": [],
+      "description": "3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout",
+      "spec": "3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout",
+        "Verify deterministic tests and lint checks for [FEAT-151-ACT-3]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T15:46:42.295Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T15:47:28.176Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:50:02.792Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-151-ACT-3-ACT-1",
+          "text": "Complete implementation and verification for 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-151-ACT-3-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-151-ACT-3]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T15:46:42.296Z",
+        "complexityTier": "tier2_standard",
+        "recommendedPlanModel": "Gemini 4 Neon (Medium)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "45%–65% via Workhorse Execution"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T15:47:28.176Z",
+      "completedAt": "2026-11-24T15:50:02.792Z"
     }
   ],
   "milestones": [

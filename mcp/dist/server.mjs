@@ -37109,18 +37109,23 @@ function recordTransition(task, newStatus, liveActivity = null) {
   }
 }
 function isTaskVisibleInBranch(task, gitCtx) {
-  if (!gitCtx || !gitCtx.isWorktree) return true;
-  if (!task.branch) return true;
-  if (task.branch === gitCtx.branch) return true;
-  if (Array.isArray(task.activeBranches) && task.activeBranches.includes(gitCtx.branch)) return true;
-  return false;
+  if (!task) return false;
+  if (!gitCtx || !gitCtx.isGit || !gitCtx.branch || gitCtx.branch === "HEAD") return true;
+  const activeBranches = Array.isArray(task.activeBranches) ? task.activeBranches : [];
+  if (task.branch === gitCtx.branch || activeBranches.includes(gitCtx.branch)) {
+    return true;
+  }
+  if (gitCtx.isWorktree || !["main", "master"].includes(gitCtx.branch)) {
+    return false;
+  }
+  return !task.branch && activeBranches.length === 0;
 }
-function buildWorkspaceSnapshot(requestedRoot, branchScope = "branch") {
+function buildWorkspaceSnapshot(requestedRoot) {
   const rootDir = resolveWorkspaceRoot(requestedRoot);
   const gitCtx = detectGitContext(rootDir);
   const backlog = loadBacklogData(rootDir);
   const allTasks = Array.isArray(backlog.tasks) ? backlog.tasks : [];
-  const tasks = branchScope === "all" ? allTasks : allTasks.filter((t) => isTaskVisibleInBranch(t, gitCtx));
+  const tasks = allTasks.filter((t) => isTaskVisibleInBranch(t, gitCtx));
   const memoryAudit = auditWorkspaceMemory(rootDir);
   const creditTelemetry = readBrainCreditTelemetry();
   const plan = loadImplementationPlanSummary(rootDir);
@@ -37128,12 +37133,20 @@ function buildWorkspaceSnapshot(requestedRoot, branchScope = "branch") {
     repoRoot: rootDir,
     project: backlog.project || path.basename(rootDir),
     gitContext: gitCtx,
-    branchScope,
+    branchScope: "branch",
     totalTasksAllBranches: allTasks.length,
     activePlanTaskIds: Array.isArray(backlog.activePlanTaskIds) ? backlog.activePlanTaskIds : [],
     columnSorts: backlog.meta && backlog.meta.columnSorts || {},
     tasks,
-    counts: summarizeBacklogCounts(rootDir),
+    counts: {
+      total: tasks.length,
+      todo: tasks.filter((t) => t.status === "todo").length,
+      ready: tasks.filter((t) => t.status === "ready").length,
+      inProgress: tasks.filter((t) => t.status === "in_progress" || t.status === "testing").length,
+      done: tasks.filter((t) => t.status === "done").length,
+      planningLocked: tasks.filter((t) => Boolean(t.planningLocked || t.status === "ready" && t.liveActivity === "planning")).length,
+      project: backlog.project || path.basename(rootDir)
+    },
     memoryAudit,
     creditTelemetry,
     implementationPlan: plan
