@@ -5,7 +5,6 @@
 ## 1. Repository Paths & Workspace Topology
 - **Workspace Root**: `~/work/antigravity-memory-bank/antigravity-memory-bank` · **Git Remote**: `https://github.com/johnny-saigon/antigravity-memory-bank` (`main`)
 - **Directory Layout**: `lib/`, `bin/`, `scripts/`, `docs/`, `templates/`, `memory-bank/`, `.agents/`
-- **Git Worktree Installations (3: 1 Main + 2 Linked)**: Main `[main]` (`~/Documents/antigravity-memory-bank`) · Worktree `[memory_bank_skills]` (`~/.gemini/antigravity/worktrees/antigravity-memory-bank/memory_bank_skills`) · Worktree `[memory_bank_video_plan]` (`~/.gemini/antigravity/worktrees/antigravity-memory-bank/memory_bank_video_plan`)
 
 ## 2. Environment Files, API Keys & Host Auth Stores
 - **Workspace `.env` Files**: None detected (uses pre-authenticated host stores & `~/.gemini/config/mcp_config.json`).

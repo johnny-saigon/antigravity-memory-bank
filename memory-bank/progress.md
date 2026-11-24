@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(mcp-app): gracefully fall back to git HEAD when docs/backlog.json has conflict markers** (`6884f9d`)
 - [x] **feat(kanban): delete ticket from any column across CLI, HTTP bridge, HTML & MCP App (FEAT-150)** (`43f367c`)
 - [x] **feat(kanban): delete ticket from any column across CLI, HTTP bridge, HTML & MCP App (FEAT-150)** (`18f0710`)
 - [x] **feat(mcp-app): native Antigravity Memory Bank MCP App plugin (SEP-1865) & 5-tab Control Plane (FEAT-148)** (`1a195d9`)
