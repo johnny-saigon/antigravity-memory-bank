@@ -1044,6 +1044,8 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(html, /id="todoIdeaInput"/, '#todoIdeaModal must use a single minimalist text input');
     assert.match(html, /id="todoVoiceBtn"/, '#todoIdeaModal must include voice input microphone button');
     assert.match(html, /toggleTodoIdeaVoice/, '#todoIdeaModal must wire Web Speech voice input handler');
+    assert.match(html, /startMediaRecorderVoiceFallback/, '#todoIdeaModal must include dual-engine MediaRecorder fallback for restricted iframes');
+    assert.match(html, /macOS Dictation/, '#todoIdeaModal must inform users of native macOS dictation fn x2 fallback');
     assert.doesNotMatch(html, /id="todoIdeaType"/, '#todoIdeaModal must not clutter UI with manual Type/Priority dropdowns');
 
     // 2. Verify live POST /api/backlog-add-isolated adds an annotated TO DO ticket while leaving activePlanTaskIds, WIP, and implementation_plan.md untouched

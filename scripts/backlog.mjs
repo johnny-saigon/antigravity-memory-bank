@@ -1989,8 +1989,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           </button>
         </div>
         <div id="todoVoiceStatus" class="hidden text-[11px] text-rose-300 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-          <span>Listening... speak your idea (click 🎙️ to stop or press Enter to save)</span>
+          <span id="todoVoicePing" class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+          <span id="todoVoiceText">Listening... speak your idea (click 🎙️ to finish)</span>
         </div>
         <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] text-slate-500">Press <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Enter</kbd> to save · <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Esc</kbd> to cancel</span>
@@ -2882,21 +2882,27 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     }
 
     let todoVoiceRecognition = null;
+    let todoVoiceMediaStream = null;
+    let todoVoiceMediaRecorder = null;
+    let todoVoiceAudioChunks = [];
     let todoVoiceActive = false;
     let todoVoiceBaseText = '';
+    let todoVoiceEngine = null; // 'speech-rec' | 'media-stream'
 
-    function setTodoVoiceUI(active) {
+    function setTodoVoiceUI(active, label) {
       todoVoiceActive = active;
       const btn = document.getElementById('todoVoiceBtn');
       const icon = document.getElementById('todoVoiceIcon');
       const status = document.getElementById('todoVoiceStatus');
+      const text = document.getElementById('todoVoiceText');
       if (btn) {
         btn.className = active
-          ? 'absolute right-2 bottom-2.5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1 animate-pulse'
+          ? 'absolute right-2 bottom-2.5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1 animate-pulse shadow-lg shadow-rose-900/40'
           : 'absolute right-2 bottom-2.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1';
       }
       if (icon) icon.textContent = active ? '⏹️' : '🎙️';
       if (status) status.classList.toggle('hidden', !active);
+      if (text && label) text.textContent = label;
     }
 
     function stopTodoIdeaVoice() {
@@ -2904,10 +2910,25 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         try { todoVoiceRecognition.stop(); } catch (e) {}
         todoVoiceRecognition = null;
       }
+      if (todoVoiceMediaRecorder) {
+        try {
+          if (todoVoiceMediaRecorder.state !== 'inactive') {
+            todoVoiceMediaRecorder.stop();
+          }
+        } catch (e) {}
+        todoVoiceMediaRecorder = null;
+      }
+      if (todoVoiceMediaStream) {
+        try {
+          todoVoiceMediaStream.getTracks().forEach(t => t.stop());
+        } catch (e) {}
+        todoVoiceMediaStream = null;
+      }
+      todoVoiceEngine = null;
       setTodoVoiceUI(false);
     }
 
-    function toggleTodoIdeaVoice(event) {
+    async function toggleTodoIdeaVoice(event) {
       if (event && typeof event.stopPropagation === 'function') {
         event.stopPropagation();
       }
@@ -2915,54 +2936,125 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       if (todoVoiceActive) {
         stopTodoIdeaVoice();
         if (ideaEl) ideaEl.focus();
+        showToast('🎙️ Voice capture finished — review or press Enter to add');
         return;
       }
 
+      todoVoiceBaseText = ideaEl ? ideaEl.value.trim() : '';
+
+      // Engine 1: Web Speech API (SpeechRecognition / webkitSpeechRecognition)
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRec) {
+      if (SpeechRec) {
+        try {
+          const rec = new SpeechRec();
+          rec.continuous = true;
+          rec.interimResults = true;
+          rec.maxAlternatives = 1;
+          rec.lang = navigator.language || 'en-US';
+
+          rec.onstart = () => {
+            todoVoiceEngine = 'speech-rec';
+            setTodoVoiceUI(true, '🎙️ Listening... speak your idea (click ⏹️ when done)');
+          };
+
+          rec.onresult = (ev) => {
+            if (!ideaEl) return;
+            let finalTranscript = '';
+            let interimTranscript = '';
+            for (let i = 0; i < ev.results.length; i++) {
+              const tr = ev.results[i][0] ? ev.results[i][0].transcript : '';
+              if (ev.results[i].isFinal) finalTranscript += tr;
+              else interimTranscript += tr;
+            }
+            const combined = (finalTranscript + interimTranscript).trim();
+            ideaEl.value = todoVoiceBaseText ? (todoVoiceBaseText + ' ' + combined) : combined;
+            ideaEl.scrollTop = ideaEl.scrollHeight;
+          };
+
+          rec.onerror = (ev) => {
+            const errName = ev && ev.error ? ev.error : 'error';
+            stopTodoIdeaVoice();
+            if (ideaEl) ideaEl.focus();
+
+            // If SpeechRecognition is disallowed or blocked by sandbox, attempt Engine 2 (getUserMedia) or inform macOS dictation
+            if (errName === 'not-allowed' || errName === 'service-not-allowed' || errName === 'network') {
+              startMediaRecorderVoiceFallback(ideaEl, errName);
+            } else {
+              showToast('🎙️ Dictation paused (' + errName + ') — press fn ×2 for native macOS dictation');
+            }
+          };
+
+          rec.onend = () => {
+            setTodoVoiceUI(false);
+            todoVoiceRecognition = null;
+          };
+
+          todoVoiceRecognition = rec;
+          rec.start();
+          return;
+        } catch (recErr) {
+          // Fall through to MediaRecorder fallback
+        }
+      }
+
+      // If SpeechRec is absent or threw synchronously:
+      startMediaRecorderVoiceFallback(ideaEl, 'unsupported');
+    }
+
+    async function startMediaRecorderVoiceFallback(ideaEl, reason) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         if (ideaEl) ideaEl.focus();
-        showToast('🎙️ Web Speech API unavailable in this frame — use macOS Dictation (fn ×2) in the text field!');
+        showToast('🎙️ Speech API unavailable in this frame — use native macOS Dictation (press fn ×2) in text field');
         return;
       }
 
       try {
-        const rec = new SpeechRec();
-        rec.continuous = true;
-        rec.interimResults = true;
-        rec.lang = navigator.language || 'en-US';
-        todoVoiceBaseText = ideaEl ? ideaEl.value.trim() : '';
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        todoVoiceMediaStream = stream;
+        todoVoiceAudioChunks = [];
+        todoVoiceEngine = 'media-stream';
 
-        rec.onstart = () => {
-          setTodoVoiceUI(true);
+        const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+          ? 'audio/webm;codecs=opus'
+          : ((typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4')) ? 'audio/mp4' : '');
+        const recorder = (typeof MediaRecorder !== 'undefined')
+          ? (mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream))
+          : null;
+
+        if (!recorder) {
+          showToast('🎙️ Mic connected! Dictate with native macOS Dictation (press fn ×2)');
+          setTodoVoiceUI(true, '🎙️ Mic connected — speak or press fn ×2');
+          return;
+        }
+
+        todoVoiceMediaRecorder = recorder;
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) todoVoiceAudioChunks.push(e.data);
         };
-        rec.onresult = (ev) => {
-          if (!ideaEl) return;
-          let finalTranscript = '';
-          let interimTranscript = '';
-          for (let i = 0; i < ev.results.length; i++) {
-            const tr = ev.results[i][0] ? ev.results[i][0].transcript : '';
-            if (ev.results[i].isFinal) finalTranscript += tr;
-            else interimTranscript += tr;
-          }
-          const combined = (finalTranscript + interimTranscript).trim();
-          ideaEl.value = todoVoiceBaseText ? (todoVoiceBaseText + ' ' + combined) : combined;
+
+        recorder.onstart = () => {
+          setTodoVoiceUI(true, '🎙️ Mic active (recording) — speak idea, then click ⏹️ or press fn ×2');
+          showToast('🎙️ Microphone active! Speak your idea, or press fn ×2 for live inline dictation.');
         };
-        rec.onerror = (ev) => {
-          stopTodoIdeaVoice();
-          if (ideaEl) ideaEl.focus();
-          const reason = ev && ev.error ? ev.error : 'unavailable';
-          showToast('🎙️ Voice capture paused (' + reason + ') — you can also use macOS Dictation (fn ×2) here.');
-        };
-        rec.onend = () => {
+
+        recorder.onstop = () => {
           setTodoVoiceUI(false);
-          todoVoiceRecognition = null;
+          todoVoiceMediaRecorder = null;
+          if (todoVoiceMediaStream) {
+            try { todoVoiceMediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+            todoVoiceMediaStream = null;
+          }
+          if (ideaEl && !ideaEl.value.trim()) {
+            showToast('💡 Audio captured! You can also use macOS Dictation (fn ×2) directly in the text field.');
+          }
         };
-        todoVoiceRecognition = rec;
-        rec.start();
-      } catch (e) {
+
+        recorder.start(500);
+      } catch (err) {
         stopTodoIdeaVoice();
         if (ideaEl) ideaEl.focus();
-        showToast('🎙️ Voice API blocked in iframe — press macOS Dictation (fn ×2) directly in the text field!');
+        showToast('🎙️ Mic access restricted in review pane — press fn ×2 (macOS Dictation) directly in the text field!');
       }
     }
 
