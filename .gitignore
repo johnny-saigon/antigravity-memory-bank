@@ -10,6 +10,7 @@ build/
 .env.*
 !.env.example
 docs/backlog.html
+.agents/plugins/memory-bank-board/
 docs/attachments/*/extracted/
 memory-backups/
 

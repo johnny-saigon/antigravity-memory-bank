@@ -1190,6 +1190,8 @@ async function initMemory(targetDir, opts, detected) {
     }
   }
 
+  await installWorkspaceBoardPlugin(targetDir);
+
   console.log('\n✅ Antigravity Memory Bank successfully activated on the fly!');
   console.log('⚡ Immediate In-Window Activation:');
   console.log('   Because workspace skills, rules, and lifecycle hooks (.agents/hooks.json) are dynamically ingested,');
@@ -1432,6 +1434,8 @@ Immediately after closing the previous session, initialize the new working cycle
       }
     } catch {}
   }
+
+  await installWorkspaceBoardPlugin(targetDir);
 
   console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
@@ -1871,6 +1875,7 @@ async function runFleetCommand(opts) {
           await upgradeMemory(inst.path, { ...opts, isWorktreeChild: true, yes: true, noTrickleUp: true }, instDetected);
           statusLabel = '✅ Upgraded';
         } else {
+          await installWorkspaceBoardPlugin(inst.path);
           statusLabel = '✅ Upstream Main';
         }
       }
@@ -1904,6 +1909,47 @@ async function runFleetCommand(opts) {
     }
   }
   return reportRows;
+}
+
+async function installWorkspaceBoardPlugin(targetDir) {
+  const homeDir = process.env.HOME || os.homedir();
+  const globalServer = path.join(homeDir, '.gemini', 'config', 'plugins', 'memory-bank', 'mcp', 'dist', 'server.mjs');
+  const resolvedServer = fsSync.existsSync(globalServer)
+    ? globalServer
+    : path.join(pkgRoot, 'mcp', 'dist', 'server.mjs');
+  if (!fsSync.existsSync(resolvedServer)) return;
+
+  const absTarget = path.resolve(targetDir);
+  const projectName = path.basename(absTarget);
+  const pluginDir = path.join(absTarget, '.agents', 'plugins', 'memory-bank-board');
+  await fs.mkdir(pluginDir, { recursive: true });
+
+  const pluginJson = {
+    name: 'memory-bank-board',
+    displayName: 'Memory Bank',
+    version: '2.0.0',
+    description: `Workspace-locked Memory Bank Kanban & Control Plane for ${projectName}.`
+  };
+  const mcpConfig = {
+    mcpServers: {
+      board: {
+        command: 'node',
+        args: [resolvedServer, `--repo-root=${absTarget}`, '--mode=workspace']
+      }
+    }
+  };
+  await fs.writeFile(path.join(pluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2) + '\n', 'utf8');
+  await fs.writeFile(path.join(pluginDir, 'mcp_config.json'), JSON.stringify(mcpConfig, null, 2) + '\n', 'utf8');
+
+  // Ensure .agents/plugins/memory-bank-board/ is gitignored so absolute local paths are never committed
+  const gitignorePath = path.join(absTarget, '.gitignore');
+  try {
+    const existing = fsSync.existsSync(gitignorePath) ? await fs.readFile(gitignorePath, 'utf8') : '';
+    if (!existing.includes('.agents/plugins/memory-bank-board/')) {
+      const next = existing.trimEnd() + '\n.agents/plugins/memory-bank-board/\n';
+      await fs.writeFile(gitignorePath, next, 'utf8');
+    }
+  } catch {}
 }
 
 async function copyDirRecursive(srcDir, destDir) {

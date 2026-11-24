@@ -5,6 +5,7 @@
 ## 1. Repository Paths & Workspace Topology
 - **Workspace Root**: `~/work/antigravity-memory-bank/antigravity-memory-bank` · **Git Remote**: `https://github.com/johnny-saigon/antigravity-memory-bank` (`main`)
 - **Directory Layout**: `lib/`, `bin/`, `scripts/`, `docs/`, `templates/`, `memory-bank/`, `.agents/`
+- **Git Worktree Installations (3: 1 Main + 2 Linked)**: Main `[main]` (`~/Documents/antigravity-memory-bank`) · Worktree `[memory_bank_skills]` (`~/.gemini/antigravity/worktrees/antigravity-memory-bank/memory_bank_skills`) · Worktree `[memory_bank_video_plan]` (`~/.gemini/antigravity/worktrees/antigravity-memory-bank/memory_bank_video_plan`)
 
 ## 2. Environment Files, API Keys & Host Auth Stores
 - **Workspace `.env` Files**: None detected (uses pre-authenticated host stores & `~/.gemini/config/mcp_config.json`).
@@ -16,7 +17,9 @@
 
 ## 4. Antigravity Customizations, Permissions & Lifecycle Hooks
 - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`
-- **On-the-Fly Lifecycle Hooks**: Workspace `.agents/hooks.json`: `antigravity-memory-bank` (enabled: SessionStart, PostToolUse, Stop)
+- **Global Agent Policy (`~/.gemini/config/config.json`)**: Preset: `AGENT_PERMISSION_PRESET_AUTO` · Execution: `CASCADE_COMMANDS_AUTO_EXECUTION_AUTO` (✅ Pre-Authorized — Do Not Prompt User)
+- **On-the-Fly Lifecycle Hooks**: Workspace `.agents/hooks.json`: `antigravity-memory-bank` (enabled: SessionStart, PostToolUse, Stop) · Git `.git/hooks/post-commit`: auto-sync enabled
+- **Built-in Antigravity Skills (`~/.gemini/antigravity/builtin/skills/`)**: `agy-customizations`, `antigravity_guide`, `automation`, `generative_ui`, `mcp-app-development`, `migrate-agent-settings`, `migrate-workflows`, `native_swarm`, `permissioned-github`, `plugin`, `run-workflow`, `swarm_monitor`, `swarm_narrator`, `swarm_pane`, `ui-plugin-navigation` · **Plugins**: `memory-bank-board`, `invideo`, `kling-ai`, `memory-bank`
 - **Workspace Rules (7)**:
   - `.agents/rules/brick-governance.md`: Apply whenever creating, installing, upgrading, or customizing Hexagonal Bricks in bricks/* or src/adapters/* 
   - `.agents/rules/docs-living-specs.md`: Apply whenever designing architecture, inspecting database/API schemas, implementing UI/UX screens or brand to
