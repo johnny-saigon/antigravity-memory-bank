@@ -247,7 +247,15 @@ async function detectProjectContext(targetDir) {
     if (remoteMatch && !detected.hasPackageJson) {
       detected.name = remoteMatch[2];
     }
-  } catch {}
+  } catch {
+    // Support linked git worktrees where `.git` is a gitfile (`gitdir: ...`)
+    try {
+      const dotGitStat = await fs.stat(path.join(targetDir, '.git'));
+      if (dotGitStat.isFile()) {
+        detected.hasGit = true;
+      }
+    } catch {}
+  }
 
   try {
     const mbStat = await fs.stat(path.join(targetDir, 'memory-bank'));
@@ -1340,6 +1348,36 @@ Immediately after closing the previous session, initialize the new working cycle
     } catch {
       console.log('  ℹ️ Working tree clean or changes already committed.');
     }
+  }
+
+  // 8b. Propagate Memory Bank updates to all linked Git Worktrees automatically (FEAT-137)
+  if (!opts.isWorktreeChild && !opts.noWorktrees && detected.hasGit) {
+    try {
+      const wtOut = execSync('git worktree list --porcelain', { cwd: targetDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      const resolvedMain = fsSync.realpathSync(path.resolve(targetDir));
+      const linkedWorktrees = [];
+      for (const line of wtOut.split('\n')) {
+        if (line.startsWith('worktree ')) {
+          const rawWt = line.slice('worktree '.length).trim();
+          const wtPath = fsSync.existsSync(rawWt) ? fsSync.realpathSync(rawWt) : path.resolve(rawWt);
+          if (wtPath && wtPath !== resolvedMain && fsSync.existsSync(wtPath)) {
+            linkedWorktrees.push(wtPath);
+          }
+        }
+      }
+      if (linkedWorktrees.length > 0) {
+        console.log(`\n🌿 Detected ${linkedWorktrees.length} linked Git worktree(s) — propagating Memory Bank updates (preserving isolated branch backlogs)...`);
+        for (const wtDir of linkedWorktrees) {
+          try {
+            const wtDetected = await detectProjectContext(wtDir);
+            await upgradeMemory(wtDir, { ...opts, isWorktreeChild: true, yes: true, commit: false }, wtDetected);
+            console.log(`  ✓ Propagated Memory Bank update to worktree: ${wtDir}`);
+          } catch (wtErr) {
+            console.warn(`  ⚠️ Worktree upgrade skipped for ${wtDir}: ${wtErr.message}`);
+          }
+        }
+      }
+    } catch {}
   }
 
   console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');

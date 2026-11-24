@@ -693,61 +693,101 @@ function syncIntegrationsAndCustomizations(rootDir) {
  */
 function distillRecentWorkspaceActivity(rootDir, hookPayload) {
   const touchedFiles = new Set();
-  if (hookPayload && hookPayload.toolCall && hookPayload.toolCall.args) {
-    const tcArgs = hookPayload.toolCall.args;
-    const f = tcArgs.Path || tcArgs.TargetFile || tcArgs.AbsolutePath;
-    if (f) {
-      const fStr = String(f);
-      const base = path.basename(fStr);
-      // Auto-mirror brain planning artifacts (implementation_plan.md, task.md, walkthrough.md) into docs/planning/
-      // AND auto-ingest any planned ticket IDs (`FEAT-*`, `BUG-*`, `UX-*`, `QA-*`) directly into docs/backlog.json
-      if (
-        fStr.includes('/.gemini/antigravity/brain/') &&
-        ['implementation_plan.md', 'task.md', 'walkthrough.md'].includes(base) &&
-        fsSync.existsSync(fStr)
-      ) {
-        try {
-          const planDir = path.join(rootDir, 'docs', 'planning');
-          fsSync.mkdirSync(planDir, { recursive: true });
-          fsSync.copyFileSync(fStr, path.join(planDir, base));
-          if (base === 'implementation_plan.md') {
-            const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
-            if (fsSync.existsSync(backlogScriptPath)) {
-              execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
-            }
-          }
-        } catch {}
-      }
-      if (fStr.startsWith(rootDir + '/')) {
-        const rel = fStr.slice(rootDir.length + 1);
-        if (!rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html')) {
-          touchedFiles.add(rel);
-        }
-        // Auto-transition active READY plan tickets -> IN PROGRESS on the first non-artifact workspace code edit after Proceed
-        const isWorkspaceCodeEdit =
-          !rel.startsWith('memory-bank/') &&
-          !rel.startsWith('docs/backlog') &&
-          !rel.startsWith('docs/planning/') &&
-          rel !== 'docs/INDEX.md';
-        if (isWorkspaceCodeEdit) {
+  if (hookPayload) {
+    const tcArgs =
+      (hookPayload.toolCall && hookPayload.toolCall.args) ||
+      hookPayload.tool_input ||
+      hookPayload.toolInput ||
+      hookPayload.args ||
+      null;
+    if (tcArgs) {
+      const f = tcArgs.Path || tcArgs.path || tcArgs.TargetFile || tcArgs.AbsolutePath || tcArgs.file_path;
+      if (f) {
+        const fStr = String(f);
+        const base = path.basename(fStr);
+        // Auto-mirror brain planning artifacts (implementation_plan.md, task.md, walkthrough.md) into docs/planning/
+        // AND auto-ingest any planned ticket IDs (`FEAT-*`, `BUG-*`, `UX-*`, `QA-*`) directly into docs/backlog.json
+        if (
+          fStr.includes('/.gemini/antigravity/brain/') &&
+          ['implementation_plan.md', 'task.md', 'walkthrough.md'].includes(base) &&
+          fsSync.existsSync(fStr)
+        ) {
           try {
-            const backlogPath = path.join(rootDir, 'docs', 'backlog.json');
-            const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
-            if (fsSync.existsSync(backlogPath) && fsSync.existsSync(backlogScriptPath)) {
-              const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
-              const activeIds = Array.isArray(bj.activePlanTaskIds) ? bj.activePlanTaskIds : [];
-              const hasReadyActivePlan = activeIds.some(id =>
-                (bj.tasks || []).some(t => String(t.id).toUpperCase() === String(id).toUpperCase() && t.status === 'ready')
-              );
-              if (hasReadyActivePlan) {
-                execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+            const planDir = path.join(rootDir, 'docs', 'planning');
+            fsSync.mkdirSync(planDir, { recursive: true });
+            fsSync.copyFileSync(fStr, path.join(planDir, base));
+            if (base === 'implementation_plan.md') {
+              const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
+              if (fsSync.existsSync(backlogScriptPath)) {
+                execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
               }
             }
           } catch {}
         }
+        if (fStr.startsWith(rootDir + '/')) {
+          const rel = fStr.slice(rootDir.length + 1);
+          if (!rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html')) {
+            touchedFiles.add(rel);
+          }
+          // Auto-transition active READY plan tickets -> IN PROGRESS on the first non-artifact workspace code edit after Proceed
+          const isWorkspaceCodeEdit =
+            !rel.startsWith('memory-bank/') &&
+            !rel.startsWith('docs/backlog') &&
+            !rel.startsWith('docs/planning/') &&
+            rel !== 'docs/INDEX.md';
+          if (isWorkspaceCodeEdit) {
+            try {
+              const backlogPath = path.join(rootDir, 'docs', 'backlog.json');
+              const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
+              if (fsSync.existsSync(backlogPath) && fsSync.existsSync(backlogScriptPath)) {
+                const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
+                const activeIds = Array.isArray(bj.activePlanTaskIds) ? bj.activePlanTaskIds : [];
+                const hasReadyActivePlan = activeIds.some(id =>
+                  (bj.tasks || []).some(t => String(t.id).toUpperCase() === String(id).toUpperCase() && t.status === 'ready')
+                );
+                if (hasReadyActivePlan) {
+                  execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+                }
+              }
+            } catch {}
+          }
+        }
       }
     }
   }
+
+  // Fallback: even if hookPayload stdin is empty or uses a different schema, detect when any brain
+  // implementation_plan.md for this workspace is newer than docs/planning/implementation_plan.md and auto-sync to READY!
+  try {
+    const brainBase = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
+    const wsPlanPath = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
+    const wsPlanMtime = fsSync.existsSync(wsPlanPath) ? fsSync.statSync(wsPlanPath).mtimeMs : 0;
+    if (fsSync.existsSync(brainBase)) {
+      let newestBrainPlan = null;
+      let newestMtime = wsPlanMtime;
+      for (const entry of fsSync.readdirSync(brainBase, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+        const bp = path.join(brainBase, entry.name, 'implementation_plan.md');
+        if (!fsSync.existsSync(bp)) continue;
+        const st = fsSync.statSync(bp);
+        if (st.mtimeMs > newestMtime + 500) {
+          const content = fsSync.readFileSync(bp, 'utf8');
+          if (content.includes(rootDir) || content.includes(path.basename(rootDir))) {
+            newestMtime = st.mtimeMs;
+            newestBrainPlan = bp;
+          }
+        }
+      }
+      if (newestBrainPlan) {
+        fsSync.mkdirSync(path.dirname(wsPlanPath), { recursive: true });
+        fsSync.copyFileSync(newestBrainPlan, wsPlanPath);
+        const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
+        if (fsSync.existsSync(backlogScriptPath)) {
+          execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
+        }
+      }
+    }
+  } catch {}
   try {
     const statusOut = execSync('git status --porcelain', { cwd: rootDir, stdio: 'pipe' }).toString().trim();
     if (statusOut) {
@@ -915,6 +955,45 @@ async function runSync() {
         execSync('node scripts/sync-living-docs.mjs --quiet', { cwd: targetDir, stdio: 'ignore' });
       } catch {}
     }
+
+    // 4c. Propagate newer Memory Bank scripts, skills, rules & AGENTS.md to linked Git Worktrees (FEAT-137)
+    try {
+      const dotGitStat = fsSync.existsSync(path.join(targetDir, '.git')) ? fsSync.statSync(path.join(targetDir, '.git')) : null;
+      if (dotGitStat && dotGitStat.isDirectory()) {
+        const wtOut = execSync('git worktree list --porcelain', { cwd: targetDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        const resolvedMain = fsSync.realpathSync(path.resolve(targetDir));
+        const linkedWorktrees = wtOut
+          .split('\n')
+          .filter(l => l.startsWith('worktree '))
+          .map(l => {
+            const rawWt = l.slice('worktree '.length).trim();
+            return fsSync.existsSync(rawWt) ? fsSync.realpathSync(rawWt) : path.resolve(rawWt);
+          })
+          .filter(p => p && p !== resolvedMain && fsSync.existsSync(p));
+        const syncRelFiles = [
+          'AGENTS.md',
+          'scripts/backlog.mjs',
+          'scripts/sync-memory-context.mjs',
+          'scripts/lint-memory.mjs',
+          'scripts/sync-living-docs.mjs',
+          '.agents/hooks.json'
+        ];
+        for (const wtDir of linkedWorktrees) {
+          for (const rel of syncRelFiles) {
+            const src = path.join(resolvedMain, rel);
+            const dst = path.join(wtDir, rel);
+            if (fsSync.existsSync(src)) {
+              const srcStat = fsSync.statSync(src);
+              const dstStat = fsSync.existsSync(dst) ? fsSync.statSync(dst) : null;
+              if (!dstStat || srcStat.mtimeMs > dstStat.mtimeMs + 1000) {
+                fsSync.mkdirSync(path.dirname(dst), { recursive: true });
+                fsSync.copyFileSync(src, dst);
+              }
+            }
+          }
+        }
+      }
+    } catch {}
 
     // 5. Run line budget audit if not in quiet hook mode
     if (!hookEvent) {

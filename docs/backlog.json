@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T07:54:04.924Z",
+  "lastUpdated": "2026-11-24T08:33:29.006Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1407,6 +1407,156 @@
       },
       "startedAt": "2026-11-24T07:54:04.697Z",
       "completedAt": "2026-11-24T07:54:04.740Z"
+    },
+    {
+      "id": "FEAT-137",
+      "type": "feature",
+      "title": "Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io)",
+      "status": "done",
+      "plannedAt": "2026-11-24T07:54:56.832Z",
+      "priority": "medium",
+      "components": [
+        "bin/cli.mjs",
+        "scripts/backlog.mjs",
+        "scripts/sync-memory-context.mjs",
+        "scripts/sync-living-docs.mjs",
+        "scripts/lint-memory.mjs",
+        "skills/<name>/",
+        "scripts/*.mjs",
+        "skills/*/SKILL.md",
+        "lib/repo-organizer.mjs",
+        "skills/m*/",
+        "scripts/minit.mjs",
+        "scripts/mstart.mjs",
+        "scripts/msync.mjs",
+        "scripts/mclear.mjs",
+        "scripts/mcontext.mjs"
+      ],
+      "attachments": [],
+      "description": "Repackage the **antigravity-memory-bank** project into **11 cohesive, self-contained, `m*`-prefixed Agent Skills** (`minit`, `mstart`, `msync`, `mclear`, `mcontext`, `mbacklog`, `mplan`, `msprint`, `mdocs`, `morganize`, `mbrick`) conforming to the open **Agent Skills (`agentskills.io`)** and **`npx skills` / Agensi.io** specification so each skill can be lis",
+      "spec": "Repackage the **antigravity-memory-bank** project into **11 cohesive, self-contained, `m*`-prefixed Agent Skills** (`minit`, `mstart`, `msync`, `mclear`, `mcontext`, `mbacklog`, `mplan`, `msprint`, `mdocs`, `morganize`, `mbrick`) conforming to the open **Agent Skills (`agentskills.io`)** and **`npx skills` / Agensi.io** specification so each skill can be lis",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io)",
+        "Verify deterministic tests and lint checks for [FEAT-137]"
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-137-ACT-1",
+          "text": "Complete implementation and verification for Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-137-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-137]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T07:54:56.833Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "completedAt": "2026-11-24T08:33:28.050Z"
+    },
+    {
+      "id": "FEAT-138",
+      "type": "ux",
+      "title": "### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)",
+      "status": "done",
+      "plannedAt": "2026-11-24T08:32:12.541Z",
+      "priority": "high",
+      "components": [
+        "bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx",
+        "docs/PLANNING_GUIDE.md",
+        "docs/planning/implementation_plan.md",
+        "docs/quality/TEST_PLAN_AND_SUITES.md"
+      ],
+      "attachments": [],
+      "description": "### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)",
+      "spec": "### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)",
+        "Verify deterministic tests and lint checks for [FEAT-138]"
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-138-ACT-1",
+          "text": "Complete implementation and verification for ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-138-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-138]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T08:32:12.543Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "completedAt": "2026-11-24T08:33:28.081Z"
+    },
+    {
+      "id": "FEAT-139",
+      "type": "feature",
+      "title": "### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)",
+      "status": "done",
+      "plannedAt": "2026-11-24T08:32:12.574Z",
+      "priority": "high",
+      "components": [],
+      "attachments": [],
+      "description": "### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)",
+      "spec": "### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)",
+        "Verify deterministic tests and lint checks for [FEAT-139]"
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-139-ACT-1",
+          "text": "Complete implementation and verification for ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-139-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-139]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T08:32:12.575Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "completedAt": "2026-11-24T08:33:28.109Z"
     }
   ],
   "milestones": [

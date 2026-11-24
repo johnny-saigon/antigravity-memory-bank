@@ -807,6 +807,96 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.ok(movedTicket.startedAt, 'Proceeded ticket must record startedAt timestamp');
   });
 
+  test('3f. FEAT-137/138/139: worktree branch isolation & auto-upgrade, READY plan examination modal, and residual children (a, b, c)', () => {
+    // 1. FEAT-138: Verify READY ticket examination modal embeds implementationPlanMd & Code button in backlog.html
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'add', 'Inspectable Ready Feature', '--id', 'FEAT-701', '--priority', 'high'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'ready', 'FEAT-701'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const htmlOut = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(htmlOut, /inspectorPlanExamination/, 'backlog.html must include READY plan examination container');
+    assert.match(htmlOut, /openCodeFromInspector/, 'backlog.html must include direct CODE button inside examination modal');
+    assert.match(htmlOut, /"implementationPlanMd":/, 'backlog.html payload must embed implementationPlanMd for READY examination');
+
+    // 2. FEAT-139: Verify done --residual keeps parent in IN PROGRESS (collapsed) and spawns open collapsible a, b, c children
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'start', 'FEAT-701'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const resOut = execFileSync(
+      process.execPath,
+      [
+        path.join(tmpRepo, 'scripts', 'backlog.mjs'),
+        'done',
+        'FEAT-701',
+        '--residual',
+        'Polish edge case A|Add mobile test B|Update docs C'
+      ],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    assert.match(resOut, /FEAT-701a, FEAT-701b, FEAT-701c/);
+
+    const afterResidual = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const parentTask = afterResidual.tasks.find((t) => t.id === 'FEAT-701');
+    const childA = afterResidual.tasks.find((t) => t.id === 'FEAT-701a');
+    const childB = afterResidual.tasks.find((t) => t.id === 'FEAT-701b');
+    const childC = afterResidual.tasks.find((t) => t.id === 'FEAT-701c');
+    assert.equal(parentTask.status, 'in_progress', 'Parent with residual tasks must remain IN PROGRESS');
+    assert.equal(parentTask.collapsed, true, 'Parent with residual tasks must be collapsed by default');
+    assert.equal(parentTask.coreCompleted, true, 'Parent must record coreCompleted: true');
+    assert.ok(childA && childB && childC, 'Residual children FEAT-701a, FEAT-701b, FEAT-701c must be created');
+    assert.equal(childA.parentId, 'FEAT-701');
+    assert.equal(childA.collapsed, false, 'Residual child tickets must be open (not collapsed) by default');
+
+    // Completing all 3 residual children must automatically roll up the parent to DONE
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'done', 'FEAT-701a', 'FEAT-701b', 'FEAT-701c', '--force'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const afterRollup = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    assert.equal(afterRollup.tasks.find((t) => t.id === 'FEAT-701').status, 'done', 'Parent must auto-complete once all residual children are DONE');
+
+    // 3. FEAT-137: Real Git Worktree isolation + automatic upgrade propagation
+    execFileSync('git', ['add', '-A'], { cwd: tmpRepo, stdio: 'pipe' });
+    execFileSync('git', ['commit', '-m', 'chore: baseline before worktree test'], { cwd: tmpRepo, stdio: 'pipe' });
+    const wtDir = path.join(os.tmpdir(), `agy-wt-test-${Date.now()}`);
+    try {
+      execFileSync('git', ['worktree', 'add', '-b', 'feat/worktree-iso', wtDir], { cwd: tmpRepo, stdio: 'pipe' });
+      // Add a branch-specific ticket inside the worktree
+      execFileSync(
+        process.execPath,
+        [path.join(wtDir, 'scripts', 'backlog.mjs'), 'add', 'Worktree Only Ticket', '--id', 'FEAT-901'],
+        { cwd: wtDir, env: testEnv, stdio: 'pipe' }
+      );
+      const wtList = execFileSync(
+        process.execPath,
+        [path.join(wtDir, 'scripts', 'backlog.mjs'), 'list'],
+        { cwd: wtDir, env: testEnv, encoding: 'utf8' }
+      );
+      assert.match(wtList, /FEAT-901/, 'Worktree backlog list must show tickets created/run in its branch');
+      assert.doesNotMatch(wtList, /FEAT-701/, 'Worktree backlog list must isolate and hide tickets from main branch');
+
+      // Run `cli.mjs upgrade` on main repo and verify it propagates to the linked worktree automatically
+      const upgOut = execFileSync(process.execPath, [CLI_PATH, 'upgrade', tmpRepo, '-y', '--no-organize'], {
+        cwd: tmpRepo,
+        env: testEnv,
+        encoding: 'utf8'
+      });
+      assert.match(upgOut, /Detected 1 linked Git worktree\(s\) — propagating Memory Bank updates/);
+    } finally {
+      try { execFileSync('git', ['worktree', 'remove', '--force', wtDir], { cwd: tmpRepo, stdio: 'pipe' }); } catch {}
+      try { fs.rmSync(wtDir, { recursive: true, force: true }); } catch {}
+    }
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

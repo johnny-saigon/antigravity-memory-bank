@@ -40,6 +40,205 @@ function getDisplayProjectName(data, rootDir = REPO_ROOT) {
 }
 
 /**
+ * Detect active Git branch & linked Worktree context (FEAT-137)
+ * Enables strict branch/worktree backlog isolation so each worktree shows ONLY tickets run in its branch.
+ */
+function detectGitWorktreeContext(rootDir = REPO_ROOT) {
+  const ctx = {
+    branch: 'main',
+    isLinkedWorktree: false,
+    worktreeName: path.basename(path.resolve(rootDir)),
+    hasGit: false
+  };
+  try {
+    const dotGitPath = path.join(rootDir, '.git');
+    if (fs.existsSync(dotGitPath)) {
+      ctx.hasGit = true;
+      const st = fs.statSync(dotGitPath);
+      if (st.isFile()) {
+        ctx.isLinkedWorktree = true;
+      }
+    }
+    const brRes = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: rootDir, encoding: 'utf8', timeout: 1500 });
+    if (brRes.status === 0 && brRes.stdout.trim()) {
+      ctx.branch = brRes.stdout.trim();
+      ctx.hasGit = true;
+    }
+    const gitDirRes = spawnSync('git', ['rev-parse', '--git-dir'], { cwd: rootDir, encoding: 'utf8', timeout: 1500 });
+    const commonDirRes = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd: rootDir, encoding: 'utf8', timeout: 1500 });
+    if (gitDirRes.status === 0 && commonDirRes.status === 0) {
+      const gDir = path.resolve(rootDir, gitDirRes.stdout.trim());
+      const cDir = path.resolve(rootDir, commonDirRes.stdout.trim());
+      if (gDir !== cDir) ctx.isLinkedWorktree = true;
+    }
+  } catch {}
+  return ctx;
+}
+
+function stampTaskBranch(task, rootDir = REPO_ROOT, providedCtx = null) {
+  if (!task || typeof task !== 'object') return task;
+  const ctx = providedCtx || detectGitWorktreeContext(rootDir);
+  if (!ctx.branch) return task;
+  if (!task.branch) task.branch = ctx.branch;
+  task.worktree = ctx.worktreeName;
+  if (!Array.isArray(task.activeBranches)) task.activeBranches = [];
+  if (!task.activeBranches.includes(ctx.branch)) {
+    task.activeBranches.push(ctx.branch);
+  }
+  return task;
+}
+
+function isTaskVisibleInBranch(task, branchCtx) {
+  if (!task) return false;
+  if (!branchCtx || !branchCtx.hasGit || !branchCtx.branch || branchCtx.branch === 'HEAD') return true;
+  const activeBranches = Array.isArray(task.activeBranches) ? task.activeBranches : [];
+  if (task.branch === branchCtx.branch || activeBranches.includes(branchCtx.branch)) {
+    return true;
+  }
+  // In a linked worktree or non-default feature branch, hide inherited main tickets not run in this branch
+  if (branchCtx.isLinkedWorktree || !['main', 'master'].includes(branchCtx.branch)) {
+    return false;
+  }
+  // In main checkout on main/master: show untagged legacy main tickets, hide tickets belonging exclusively to another branch
+  return !task.branch && activeBranches.length === 0;
+}
+
+/**
+ * Load active implementation_plan.md & extract per-ticket blueprint sections for READY examination modal (FEAT-138)
+ */
+function loadActiveImplementationPlanData(rootDir = REPO_ROOT, data = null) {
+  const candidates = [];
+  const wsPlan = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
+  if (fs.existsSync(wsPlan)) candidates.push(wsPlan);
+  try {
+    const brainDirs = findTargetBrainDirs(data || { tasks: [] }, rootDir);
+    for (const bd of brainDirs) {
+      const bp = path.join(bd, 'implementation_plan.md');
+      if (fs.existsSync(bp) && !candidates.includes(bp)) candidates.push(bp);
+    }
+  } catch {}
+  candidates.sort((a, b) => {
+    try { return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs; } catch { return 0; }
+  });
+
+  let fullMd = '';
+  let sourcePath = '';
+  for (const c of candidates) {
+    try {
+      const raw = fs.readFileSync(c, 'utf8');
+      if (raw && raw.trim().length > 20) {
+        fullMd = raw;
+        sourcePath = c;
+        break;
+      }
+    } catch {}
+  }
+
+  const perTicketSections = {};
+  if (fullMd) {
+    const secRe = /^#{2,4}\s+([^\n]+)\r?\n([\s\S]*?)(?=^#{2,3}\s+|$)/gm;
+    let m;
+    while ((m = secRe.exec(fullMd)) !== null) {
+      const heading = m[1] || '';
+      const idMatch = heading.match(/\b((?:FEAT|BUG|QA|REFACTOR|UX|AUTH-INFRA)-\d+[a-z]?)\b/i);
+      if (idMatch) {
+        const id = idMatch[1].toUpperCase();
+        perTicketSections[id] = `### ${heading.trim()}\n${(m[2] || '').trim()}`;
+      }
+    }
+  }
+
+  return { fullMd, sourcePath, perTicketSections };
+}
+
+/**
+ * Spawn letter-suffixed residual child tickets (<PARENT_ID>a, b, c...) when a ticket is marked DONE with residual tasks (FEAT-139)
+ * Keeps the parent in IN PROGRESS in a collapsed state while creating open, collapsible child tickets beneath it.
+ */
+function spawnResidualChildTickets(parentTask, residualTexts, data, rootDir = REPO_ROOT) {
+  const cleanResiduals = (Array.isArray(residualTexts) ? residualTexts : [])
+    .map(s => String(s || '').trim())
+    .filter(Boolean);
+  if (!parentTask || cleanResiduals.length === 0) return [];
+
+  const branchCtx = detectGitWorktreeContext(rootDir);
+  parentTask.status = 'in_progress';
+  parentTask.coreCompleted = true;
+  parentTask.collapsed = true;
+  stampTaskBranch(parentTask, rootDir, branchCtx);
+
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const existingChildIds = new Set(
+    (data.tasks || []).map(t => String(t.id || '').toLowerCase())
+  );
+
+  const createdChildren = [];
+  let letterIdx = 0;
+  for (const residualTitle of cleanResiduals) {
+    while (
+      letterIdx < letters.length &&
+      existingChildIds.has(`${parentTask.id}${letters[letterIdx]}`.toLowerCase())
+    ) {
+      letterIdx++;
+    }
+    const suffix = letterIdx < letters.length ? letters[letterIdx++] : String(letterIdx++ - letters.length + 1);
+    const childId = `${parentTask.id}${suffix}`;
+    existingChildIds.add(childId.toLowerCase());
+
+    const childTask = {
+      id: childId,
+      parentId: parentTask.id,
+      isResidualChild: true,
+      residualLetter: suffix,
+      type: parentTask.type || 'feature',
+      title: residualTitle,
+      status: 'in_progress',
+      collapsed: false,
+      priority: parentTask.priority || 'medium',
+      components: Array.isArray(parentTask.components) ? [...parentTask.components] : [],
+      attachments: [],
+      description: `Residual follow-up (${suffix}) under [${parentTask.id}] ${parentTask.title}: ${residualTitle}`,
+      spec: `Residual follow-up (${suffix}) under [${parentTask.id}] ${parentTask.title}: ${residualTitle}`,
+      acceptanceCriteria: [
+        `Complete residual task: ${residualTitle}`,
+        `Verify and mark [${childId}] done`
+      ],
+      createdAt: new Date().toISOString(),
+      startedAt: new Date().toISOString()
+    };
+    stampTaskBranch(childTask, rootDir, branchCtx);
+    ensureTaskActionItems(childTask);
+    autoAnnotateTicket(childTask, rootDir);
+    data.tasks.push(childTask);
+    createdChildren.push(childTask);
+  }
+
+  // Mark existing pending action items on parent as migrated to child tickets
+  if (Array.isArray(parentTask.actionItems)) {
+    parentTask.actionItems.forEach(item => { item.done = true; });
+  }
+  parentTask.waitingOn = `Residual child tickets: ${createdChildren.map(c => c.id).join(', ')}`;
+  return createdChildren;
+}
+
+/**
+ * When a residual child ticket is marked DONE, auto-complete parent if all its residual children are now DONE (FEAT-139)
+ */
+function rollupParentIfAllChildrenDone(childTask, data) {
+  if (!childTask || !childTask.parentId || !data || !Array.isArray(data.tasks)) return null;
+  const parent = data.tasks.find(t => String(t.id).toUpperCase() === String(childTask.parentId).toUpperCase());
+  if (!parent || !parent.coreCompleted || parent.status === 'done') return null;
+  const siblings = data.tasks.filter(t => String(t.parentId || '').toUpperCase() === String(parent.id).toUpperCase());
+  if (siblings.length > 0 && siblings.every(s => s.status === 'done')) {
+    parent.status = 'done';
+    parent.completedAt = new Date().toISOString();
+    delete parent.waitingOn;
+    return parent;
+  }
+  return null;
+}
+
+/**
  * Copy text directly to the native OS clipboard (pbcopy on macOS, clip on Windows, xclip/xsel on Linux)
  */
 function copyToNativeOsClipboard(text) {
@@ -575,6 +774,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
           };
           ensureTaskActionItems(newTask);
           autoAnnotateTicket(newTask, rootDir);
+          stampTaskBranch(newTask, rootDir);
           data.tasks.push(newTask);
           addedOrHealed++;
           if (isPrimaryActivePlan && !activePlanIds.includes(newTask.id)) {
@@ -595,6 +795,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
           if (changed) {
             ensureTaskActionItems(existing);
             autoAnnotateTicket(existing, rootDir);
+            stampTaskBranch(existing, rootDir);
             addedOrHealed++;
           }
           if (isPrimaryActivePlan && existing.status !== 'done' && !activePlanIds.includes(existing.id)) {
@@ -1126,7 +1327,7 @@ function autoAnnotateTicket(task, rootDir = REPO_ROOT) {
   return task;
 }
 
-function renderCardServer(task) {
+function renderCardServer(task, allTasks = []) {
   const isDone = task.status === 'done';
   const isInProgress = task.status === 'in_progress' || task.status === 'testing';
   const isReady = task.status === 'ready';
@@ -1182,22 +1383,34 @@ function renderCardServer(task) {
        </div>`
     : '';
 
+  const isCollapsed = Boolean(task.collapsed);
+  const childTasks = Array.isArray(allTasks)
+    ? allTasks.filter(c => c.parentId === task.id && (c.status === 'in_progress' || c.status === 'testing'))
+    : [];
+  const hasChildren = childTasks.length > 0;
+  const collapseBtnHtml = (hasChildren || task.isResidualChild || isInProgress)
+    ? `<button onclick="toggleCardCollapse('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">${isCollapsed ? '▸' : '▾'}</button>`
+    : '';
+
   return `
-        <div data-task-id="${safeIdAttr}" data-col="${colKey}" draggable="true" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl p-3 shadow-sm transition group cursor-grab active:cursor-grabbing">
-          <div class="flex items-start justify-between gap-2 mb-1.5">
+        <div data-task-id="${safeIdAttr}" data-col="${colKey}" draggable="true" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl ${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing ${task.isResidualChild ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
+          <div class="flex items-start justify-between gap-2 ${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
+              ${collapseBtnHtml}
               <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
-              <span class="font-mono text-xs font-bold text-blue-400">${safeIdHtml}</span>
+              <span class="font-mono text-xs font-bold ${task.isResidualChild ? 'text-cyan-300' : 'text-blue-400'}">${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 ${prioColor}">${escapeHtmlServer(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">${typeBadge}</span>
+              ${task.coreCompleted && hasChildren ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Primary work done; tracking residual child tickets">🧩 Main Done · ${childTasks.length} Residual</span>` : ''}
+              ${task.isResidualChild ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task ${escapeHtmlServer(task.residualLetter || '')}</span>` : ''}
               ${!isReady && !isInProgress && !isDone && task.annotations ? `<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>` : ''}
-              ${isReady ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Planned &amp; ready for workhorse execution">📐 READY</span>` : ''}
-              ${isInProgress ? `<span onclick="openTaskInspector('${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ ${pendingActions.length} Action${pendingActions.length === 1 ? '' : 's'}</span>` : ''}
+              ${isReady ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">📐 READY</span>` : ''}
+              ${isInProgress && !isCollapsed ? `<span onclick="openTaskInspector('${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ ${pendingActions.length} Action${pendingActions.length === 1 ? '' : 's'}</span>` : ''}
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
               <button onclick="moveTaskManual('${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
               <button onclick="moveTaskManual('${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
-              <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
+              <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
               ${!isDone
                 ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
                    ${!isReady && !isInProgress ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>` : ''}
@@ -1208,9 +1421,10 @@ function renderCardServer(task) {
                 : ''}
             </div>
           </div>
-          <h3 class="text-xs font-semibold text-[var(--foreground,#f8fafc)] leading-snug mb-1.5 ${isDone ? 'line-through opacity-70' : ''}">
+          <h3 class="text-xs font-semibold text-[var(--foreground,#f8fafc)] leading-snug ${isCollapsed ? 'truncate' : 'mb-1.5'} ${isDone ? 'line-through opacity-70' : ''}">
             ${safeTitleHtml}
           </h3>
+          ${isCollapsed ? '' : `
           ${safeDescHtml ? `<p class="text-xs text-[var(--muted-foreground,#94a3b8)] line-clamp-2 mb-2 leading-relaxed">${safeDescHtml}</p>` : ''}
           ${actionItemsPreviewHtml}
           ${!isDone
@@ -1232,7 +1446,8 @@ function renderCardServer(task) {
                      ? `<button onclick="openTaskInspector('${safeIdAttr}', event)" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="View Action Items being waited on &amp; do or assign to Antigravity"><span>⏳</span> Action Items (${pendingActions.length})</button>
                         <button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Choose AGY Coding Model &amp; continue [${safeIdAttr}]"><span>💻</span> Code</button>`
                      : isReady
-                       ? `<button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Select best AGY Coding Model, move [${safeIdAttr}] to IN PROGRESS &amp; execute plan"><span>💻</span> Code</button>
+                       ? `<button onclick="openTaskInspector('${safeIdAttr}', event)" class="bg-indigo-600/25 hover:bg-indigo-600/45 text-indigo-200 border border-indigo-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Examine full Implementation Plan, Model Options &amp; Code [${safeIdAttr}]"><span>🔎</span> Examine</button>
+                          <button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Select best AGY Coding Model, move [${safeIdAttr}] to IN PROGRESS &amp; execute plan"><span>💻</span> Code</button>
                           <button onclick="openModelSelectorModal('${safeIdAttr}', 'plan', event)" class="bg-purple-600/15 hover:bg-purple-600/35 text-purple-300 border border-purple-500/30 text-xs font-semibold px-2 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Re-plan [${safeIdAttr}] with optimal AGY Planning Model"><span>📐</span> Re-Plan</button>`
                        : `<button onclick="openModelSelectorModal('${safeIdAttr}', 'plan', event)" class="bg-purple-600/25 hover:bg-purple-600/45 text-purple-200 border border-purple-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Select best AGY Planning Model, move [${safeIdAttr}] to READY &amp; run /backlog-plan"><span>📐</span> Plan</button>`}
                    <button onclick="triggerAttachFile('${safeIdAttr}')" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/50 text-xs px-2 py-1 rounded-md transition cursor-pointer" title="Attach UX/UI .zip or spec file">📎</button>
@@ -1240,25 +1455,53 @@ function renderCardServer(task) {
               : `<span class="text-xs text-emerald-400 font-medium">✓ Completed</span>`}
             <button onclick="copyCliCommand('npm run backlog status ${safeIdAttr} in_progress')" class="text-xs text-[var(--muted-foreground,#94a3b8)] hover:text-white font-mono cursor-pointer">CLI copy</button>
           </div>
+          `}
         </div>`;
 }
 
 // Generate the interactive HTML artifact for Antigravity's Review pane
 function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   const displayProject = getDisplayProjectName(data, rootDir);
-  const payload = { ...data, repoRoot: rootDir };
+  const branchCtx = detectGitWorktreeContext(rootDir);
+  const planData = loadActiveImplementationPlanData(rootDir, data);
+  const enrichedTasks = (data.tasks || []).map(t => {
+    const idKey = String(t.id || '').toUpperCase();
+    const isActivePlan = Array.isArray(data.activePlanTaskIds) &&
+      data.activePlanTaskIds.some(aid => String(aid).toUpperCase() === idKey);
+    const extractedPlanSection = planData.perTicketSections[idKey] || (isActivePlan ? planData.fullMd : '');
+    return extractedPlanSection ? { ...t, extractedPlanSection } : t;
+  });
+  const payload = {
+    ...data,
+    tasks: enrichedTasks,
+    repoRoot: rootDir,
+    gitContext: branchCtx,
+    implementationPlanMd: planData.fullMd || '',
+    implementationPlanPath: planData.sourcePath || ''
+  };
   const jsonString = JSON.stringify(payload).replace(/</g, '\\u003c');
   const savedSorts = (data.meta && data.meta.columnSorts) || {};
 
-  const initialTodo = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'todo'), savedSorts.todo || 'custom');
-  const initialReady = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'ready'), savedSorts.ready || 'custom');
-  const initialInProg = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'in_progress' || t.status === 'testing'), savedSorts.in_progress || 'custom');
-  const initialDone = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'done'), savedSorts.done || 'custom');
+  const branchTasks = enrichedTasks.filter(t => isTaskVisibleInBranch(t, branchCtx));
+  const initialTodo = sortColumnTasksServer(branchTasks.filter(t => t.status === 'todo'), savedSorts.todo || 'custom');
+  const initialReady = sortColumnTasksServer(branchTasks.filter(t => t.status === 'ready'), savedSorts.ready || 'custom');
+  const initialInProg = sortColumnTasksServer(
+    branchTasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && !(t.isResidualChild && branchTasks.some(p => p.id === t.parentId && (p.status === 'in_progress' || p.status === 'testing')))),
+    savedSorts.in_progress || 'custom'
+  );
+  const initialDone = sortColumnTasksServer(branchTasks.filter(t => t.status === 'done'), savedSorts.done || 'custom');
 
-  const todoHtml = initialTodo.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks — drag a ticket here</div>';
-  const readyHtml = initialReady.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready yet — click 📐 Plan or drag here</div>';
-  const inProgHtml = initialInProg.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress — drag a ticket here</div>';
-  const doneHtml = initialDone.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks — drag a ticket here</div>';
+  const renderServerWithChildren = (t) => {
+    const kids = branchTasks.filter(c => c.parentId === t.id && (c.status === 'in_progress' || c.status === 'testing'));
+    if (kids.length === 0) return renderCardServer(t, branchTasks);
+    const kidsHtml = kids.map(k => renderCardServer(k, branchTasks)).join('');
+    return `<div class="space-y-2">${renderCardServer(t, branchTasks)}<div class="ml-3 pl-2.5 border-l-2 border-blue-500/45 space-y-2">${kidsHtml}</div></div>`;
+  };
+
+  const todoHtml = initialTodo.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks in this branch — drag a ticket here</div>';
+  const readyHtml = initialReady.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready in this branch — click 📐 Plan or drag here</div>';
+  const inProgHtml = initialInProg.map(renderServerWithChildren).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress in this branch — drag a ticket here</div>';
+  const doneHtml = initialDone.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks in this branch — drag a ticket here</div>';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1298,6 +1541,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         <span class="text-xl">📅</span>
         <h1 class="text-xl font-bold tracking-tight text-[var(--foreground,#f8fafc)]">${displayProject} Local Backlog</h1>
         <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2 py-0.5 rounded-full font-medium">0 Tokens • Frugal Mode</span>
+        <span id="branchScopeBadge" class="bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 text-xs px-2 py-0.5 rounded-full font-mono" title="Only tickets created or run in this Git branch/worktree are displayed by default (FEAT-137)">🌿 ${escapeHtmlServer(branchCtx.branch || 'main')}${branchCtx.isLinkedWorktree ? ' · Worktree Isolated' : ''}</span>
         <span id="bridgeStatusBadge" class="bg-slate-700/60 text-slate-300 border border-slate-600/40 text-xs px-2 py-0.5 rounded-full font-mono">Bridge: Ready</span>
       </div>
       <p class="text-xs text-[var(--muted-foreground,#94a3b8)] mt-1">
@@ -1431,6 +1675,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       <button onclick="setFilter('in_progress', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-[var(--muted-foreground,#94a3b8)]">In Progress</button>
       <button onclick="setFilter('high', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-rose-400">🔥 High Priority</button>
       <button onclick="setFilter('done', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-emerald-400">Done</button>
+      <button id="branchFilterToggle" onclick="toggleBranchFilter()" class="bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer" title="Toggle between current branch/worktree tickets only vs all branches (FEAT-137)">🌿 Branch Only</button>
       <span class="text-slate-600 px-1">|</span>
       <div class="flex items-center gap-1 bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] rounded-md px-2 py-0.5">
         <span class="text-[11px] text-slate-400 font-medium">⇅ Sort All:</span>
@@ -1452,20 +1697,29 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     <div class="bg-[var(--card,#1e293b)] border border-blue-500/40 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
       <!-- Modal Header -->
       <div class="p-4 border-b border-[var(--border,#334155)] flex items-start justify-between gap-3 bg-slate-900/60">
-        <div>
+        <div class="flex-1">
           <div class="flex items-center gap-2 flex-wrap mb-1">
             <span id="inspectorTaskId" class="font-mono text-sm font-bold text-blue-400"></span>
             <span id="inspectorStatusBadge" class="badge rounded px-2 py-0.5 text-xs"></span>
             <span id="inspectorPriorityBadge" class="badge border rounded px-2 py-0.5 text-xs"></span>
+            <span id="inspectorBranchBadge" class="hidden text-[11px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 px-2 py-0.5 rounded"></span>
           </div>
           <h2 id="inspectorTaskTitle" class="text-sm font-bold text-white leading-snug"></h2>
           <p id="inspectorTaskDesc" class="text-xs text-slate-400 mt-1 leading-relaxed"></p>
         </div>
-        <button onclick="closeTaskInspector()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-800">✕</button>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="inspectorHeaderCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Select Stage B AGY Coding Model, move to IN PROGRESS &amp; execute plan (FEAT-138)">
+            <span>💻</span> Code
+          </button>
+          <button onclick="closeTaskInspector()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-800 cursor-pointer">✕</button>
+        </div>
       </div>
 
       <!-- Modal Body -->
       <div class="p-4 overflow-y-auto flex-1 space-y-4">
+        <!-- READY Ticket Examination View: Implementation Plan, Target Details & Stage B Model Selection (FEAT-138) -->
+        <div id="inspectorPlanExamination" class="hidden space-y-3"></div>
+
         <!-- Waiting On Summary -->
         <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
           <label class="block text-xs font-bold text-amber-300 mb-1 flex items-center justify-between">
@@ -1524,7 +1778,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             <span>✅</span> I Completed My Actions → Resume in Chat
           </button>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="inspectorFooterCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Choose Stage B AGY Coding Model &amp; start coding this READY ticket (FEAT-138)">
+            <span>💻</span> Code (Select Model &amp; Start)
+          </button>
+          <button onclick="completeWithResidualFromInspector()" class="bg-purple-600/25 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer" title="Keep parent collapsed in IN PROGRESS &amp; spawn residual child tickets (a, b, c) (FEAT-139)">
+            🧩 Done + Residual (a, b, c)
+          </button>
           <button onclick="markInspectedTaskDone()" class="bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer">
             ✅ Mark Ticket Done
           </button>
@@ -1649,6 +1909,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     let rawData = ${jsonString};
     const BRIDGE_URL = 'http://127.0.0.1:${DEFAULT_PORT}';
     let currentFilter = 'all';
+    let branchOnlyMode = true;
+    let inspectorShowFullPlan = false;
     let bridgeOnline = false;
     let activeAttachTaskId = null;
     let activeInspectTaskId = null;
@@ -1916,8 +2178,119 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       showToast('✅ Marked your action items done & copied verification prompt for Antigravity!');
     }
 
+    function openCodeFromInspector(ev) {
+      if (ev) ev.stopPropagation();
+      if (!activeInspectTaskId) return;
+      const tid = activeInspectTaskId;
+      closeTaskInspector();
+      openModelSelectorModal(tid, 'code', ev);
+    }
+
+    function toggleInspectorFullPlan() {
+      inspectorShowFullPlan = !inspectorShowFullPlan;
+      renderTaskInspectorModal();
+    }
+
+    async function completeWithResidualFromInspector() {
+      if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      if (!task) return;
+      const pendingItems = getClientTaskActionItems(task).filter(i => !i.done).map(i => i.text);
+      let residualList = pendingItems;
+      if (residualList.length === 0) {
+        const entered = window.prompt('Enter residual follow-up task(s) separated by "|" (e.g. "Add mobile E2E test|Update docs"):', '');
+        if (!entered || !entered.trim()) return;
+        residualList = entered.split('|').map(s => s.trim()).filter(Boolean);
+      }
+      if (residualList.length === 0) return;
+
+      closeTaskInspector();
+      task.status = 'in_progress';
+      task.coreCompleted = true;
+      task.collapsed = true;
+      const letters = 'abcdefghijklmnopqrstuvwxyz';
+      let lIdx = 0;
+      const spawned = [];
+      for (const rTitle of residualList) {
+        while (lIdx < letters.length && rawData.tasks.some(t => t.id.toLowerCase() === (task.id + letters[lIdx]).toLowerCase())) {
+          lIdx++;
+        }
+        const suffix = letters[lIdx++] || String(lIdx);
+        const childId = task.id + suffix;
+        const child = {
+          id: childId,
+          parentId: task.id,
+          isResidualChild: true,
+          residualLetter: suffix,
+          type: task.type || 'feature',
+          title: rTitle,
+          status: 'in_progress',
+          collapsed: false,
+          priority: task.priority || 'medium',
+          components: Array.isArray(task.components) ? [...task.components] : [],
+          attachments: [],
+          description: 'Residual follow-up (' + suffix + ') under [' + task.id + ']: ' + rTitle,
+          branch: task.branch || (rawData.gitContext && rawData.gitContext.branch) || 'main'
+        };
+        rawData.tasks.push(child);
+        spawned.push(childId);
+      }
+      renderBoard();
+      const res = await callLocalBridge('/api/done-residual', {
+        repoRoot: rawData.repoRoot,
+        id: task.id,
+        residuals: residualList
+      });
+      if (res && res.ok) {
+        showToast('🧩 Kept [' + task.id + '] collapsed in IN PROGRESS & created residual children: ' + spawned.join(', '));
+      } else {
+        const cmd = 'npm run backlog done ' + task.id + ' --residual "' + residualList.join('|').replace(/"/g, '\\\\"') + '"';
+        copyTextToClipboard(cmd, true, task.id);
+        showToast('🧩 Spawned ' + spawned.join(', ') + ' — CLI command copied to persist!');
+      }
+    }
+
+    function toggleCardCollapse(taskId, ev) {
+      if (ev) ev.stopPropagation();
+      const task = rawData.tasks.find(t => t.id === taskId);
+      if (!task) return;
+      task.collapsed = !task.collapsed;
+      renderBoard();
+    }
+
+    function toggleBranchFilter() {
+      branchOnlyMode = !branchOnlyMode;
+      const btn = document.getElementById('branchFilterToggle');
+      if (btn) {
+        if (branchOnlyMode) {
+          btn.textContent = '🌿 Branch Only';
+          btn.className = 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer';
+        } else {
+          btn.textContent = '🌐 All Branches';
+          btn.className = 'bg-slate-800 text-slate-300 border border-slate-600 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer';
+        }
+      }
+      renderBoard();
+    }
+
+    function isClientTaskInActiveBranch(task) {
+      if (!branchOnlyMode) return true;
+      const ctx = rawData.gitContext;
+      if (!ctx || !ctx.hasGit || !ctx.branch || ctx.branch === 'HEAD') return true;
+      const activeBranches = Array.isArray(task.activeBranches) ? task.activeBranches : [];
+      if (task.branch === ctx.branch || activeBranches.includes(ctx.branch)) return true;
+      if (ctx.isLinkedWorktree || (ctx.branch !== 'main' && ctx.branch !== 'master')) return false;
+      return !task.branch && activeBranches.length === 0;
+    }
+
     async function markInspectedTaskDone() {
       if (!activeInspectTaskId) return;
+      const task = rawData.tasks.find(t => t.id === activeInspectTaskId);
+      const pending = task ? getClientTaskActionItems(task).filter(i => !i.done) : [];
+      if (task && pending.length > 0 && !task.isResidualChild) {
+        await completeWithResidualFromInspector();
+        return;
+      }
       const id = activeInspectTaskId;
       closeTaskInspector();
       await updateTaskStatus(id, 'done');
@@ -1938,8 +2311,82 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       document.getElementById('inspectorTaskDesc').textContent = task.description || task.spec || '';
       document.getElementById('inspectorWaitingOnInput').value = task.waitingOn || '';
 
+      const branchBadge = document.getElementById('inspectorBranchBadge');
+      if (branchBadge) {
+        if (task.branch) {
+          branchBadge.textContent = '🌿 ' + task.branch;
+          branchBadge.classList.remove('hidden');
+        } else {
+          branchBadge.classList.add('hidden');
+        }
+      }
+
+      const headerCodeBtn = document.getElementById('inspectorHeaderCodeBtn');
+      const footerCodeBtn = document.getElementById('inspectorFooterCodeBtn');
+      const showCodeButtons = task.status === 'ready' || task.status === 'in_progress' || task.status === 'testing';
+      if (headerCodeBtn) headerCodeBtn.classList.toggle('hidden', !showCodeButtons);
+      if (footerCodeBtn) footerCodeBtn.classList.toggle('hidden', !showCodeButtons);
+
+      // Render FEAT-138 READY Ticket Examination View (Implementation Plan, Ticket Details & Direct Model/CODE Selection)
+      const planExamEl = document.getElementById('inspectorPlanExamination');
+      if (planExamEl) {
+        const isReadyOrPlanned = task.status === 'ready' || Boolean(task.extractedPlanSection) || Boolean(task.plannedAt);
+        if (isReadyOrPlanned) {
+          const planMd = inspectorShowFullPlan
+            ? (rawData.implementationPlanMd || task.extractedPlanSection || task.spec || task.description || '')
+            : (task.extractedPlanSection || rawData.implementationPlanMd || task.spec || task.description || '');
+          const codeOptions = getModelOptionsForTicket(task, 'code');
+          const safeId = escapeAttr(task.id);
+          const compsHtml = (task.components && task.components.length > 0)
+            ? task.components.map(c => '<span class="font-mono text-[11px] bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded">' + escapeHtml(c) + '</span>').join(' ')
+            : '<span class="text-slate-400 text-[11px]">Auto-discovered during execution</span>';
+          planExamEl.innerHTML = \`
+            <div class="bg-purple-950/35 border border-purple-500/45 rounded-xl p-3.5 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-purple-200">📐 Implementation Plan &amp; Readiness Examination</span>
+                  \${task.plannedAt ? '<span class="text-[10px] font-mono text-purple-300/80">Planned: ' + escapeHtml(String(task.plannedAt).slice(0, 16).replace('T', ' ')) + '</span>' : ''}
+                </div>
+                <div class="flex items-center gap-1.5">
+                  \${rawData.implementationPlanMd ? '<button onclick="toggleInspectorFullPlan()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-purple-200 border border-purple-500/35 px-2 py-0.5 rounded cursor-pointer">' + (inspectorShowFullPlan ? '🔎 Ticket Section Only' : '📄 Full implementation_plan.md') + '</button>' : ''}
+                  <button onclick="openCodeFromInspector(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">💻 Code Now</button>
+                </div>
+              </div>
+              <div class="text-xs text-slate-300 flex flex-wrap items-center gap-1.5">
+                <strong class="text-slate-200">Target Files:</strong> \${compsHtml}
+              </div>
+              <div class="bg-slate-950/90 border border-slate-700/80 rounded-lg p-3 max-h-56 overflow-y-auto">
+                <pre class="whitespace-pre-wrap font-mono text-[11px] text-slate-200 leading-relaxed">\${escapeHtml(planMd || 'No implementation plan recorded yet. Click Re-Plan to generate one.')}</pre>
+              </div>
+              <div class="space-y-1.5">
+                <div class="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">⚡ Select Stage B AGY Coding Model to Start Coding Immediately (Saves 55%–80% Credits):</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  \${codeOptions.map(opt => \`
+                    <button onclick="closeTaskInspector(); confirmModelAndRun('\${safeId}', 'code', '\${escapeAttr(opt.name)}', '\${escapeAttr(opt.modelId)}', '\${escapeAttr(opt.effort)}')" class="text-left p-2 rounded-lg border transition cursor-pointer \${opt.recommended ? 'border-emerald-400/70 bg-emerald-950/40 hover:bg-emerald-900/50' : 'border-slate-700 bg-slate-900/80 hover:border-slate-500'}">
+                      <div class="flex items-center justify-between gap-1">
+                        <span class="font-bold text-white text-xs">\${escapeHtml(opt.name)}</span>
+                        \${opt.recommended ? '<span class="text-[10px] font-bold text-amber-300">🏆 Best ROI</span>' : ''}
+                      </div>
+                      <div class="text-[11px] text-emerald-300/90 font-mono mt-0.5">\${escapeHtml(opt.burn)}</div>
+                      <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">\${escapeHtml(opt.pool)}</div>
+                    </button>
+                  \`).join('')}
+                </div>
+              </div>
+            </div>
+          \`;
+          planExamEl.classList.remove('hidden');
+        } else {
+          planExamEl.classList.add('hidden');
+          planExamEl.innerHTML = '';
+        }
+      }
+
       const statusBadge = document.getElementById('inspectorStatusBadge');
-      if (task.status === 'in_progress' || task.status === 'testing') {
+      if (task.status === 'ready') {
+        statusBadge.textContent = '📐 READY (PLANNED)';
+        statusBadge.className = 'badge rounded px-2 py-0.5 text-xs bg-purple-500/20 text-purple-200 border border-purple-500/40';
+      } else if (task.status === 'in_progress' || task.status === 'testing') {
         statusBadge.textContent = '⚡ IN PROGRESS';
         statusBadge.className = 'badge rounded px-2 py-0.5 text-xs bg-blue-500/20 text-blue-300 border border-blue-500/40';
       } else if (task.status === 'done') {
@@ -3242,24 +3689,34 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         </div>
       \` : '';
 
+      const isCollapsed = Boolean(task.collapsed);
+      const childTasks = (rawData.tasks || []).filter(c => c.parentId === task.id && (c.status === 'in_progress' || c.status === 'testing') && isClientTaskInActiveBranch(c));
+      const hasChildren = childTasks.length > 0;
+      const collapseBtnHtml = (hasChildren || task.isResidualChild || isInProgress)
+        ? \`<button onclick="toggleCardCollapse('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="\${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">\${isCollapsed ? '▸' : '▾'}</button>\`
+        : '';
+
       return \`
-        <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" draggable="true" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl p-3 shadow-sm transition group cursor-grab active:cursor-grabbing">
-          <div class="flex items-start justify-between gap-2 mb-1.5">
+        <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" draggable="true" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl \${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing \${task.isResidualChild ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
+          <div class="flex items-start justify-between gap-2 \${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
+              \${collapseBtnHtml}
               <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
-              <span class="font-mono text-xs font-bold text-blue-400">\${safeIdHtml}</span>
+              <span class="font-mono text-xs font-bold \${task.isResidualChild ? 'text-cyan-300' : 'text-blue-400'}">\${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 \${prioColor}">\${escapeHtml(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">\${typeBadge}</span>
+              \${task.coreCompleted && hasChildren ? \`<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Primary work done; tracking residual child tickets">🧩 Main Done · \${childTasks.length} Residual</span>\` : ''}
+              \${task.isResidualChild ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task \${escapeHtml(task.residualLetter || '')}</span>\` : ''}
               \${!isReady && !isInProgress && !isDone && task.annotations ? \`<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>\` : ''}
-              \${isReady ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Planned &amp; ready for workhorse execution">📐 READY</span>\` : ''}
-              \${isInProgress ? \`<span onclick="openTaskInspector('\${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ \${pendingActions.length} Action\${pendingActions.length === 1 ? '' : 's'}</span>\` : ''}
+              \${isReady ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">📐 READY</span>\` : ''}
+              \${isInProgress && !isCollapsed ? \`<span onclick="openTaskInspector('\${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ \${pendingActions.length} Action\${pendingActions.length === 1 ? '' : 's'}</span>\` : ''}
             </div>
             
             <!-- Quick Reorder & Status Toggles -->
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
               <button onclick="moveTaskManual('\${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
               <button onclick="moveTaskManual('\${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
-              <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
+              <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
               \${!isDone ? \`
                 <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
                 \${!isReady && !isInProgress ? \`<button onclick="updateTaskStatus('\${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>\` : ''}
@@ -3273,10 +3730,11 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             </div>
           </div>
 
-          <h3 class="text-xs font-semibold text-[var(--foreground,#f8fafc)] leading-snug mb-1.5 \${isDone ? 'line-through opacity-70' : ''}">
+          <h3 class="text-xs font-semibold text-[var(--foreground,#f8fafc)] leading-snug \${isCollapsed ? 'truncate' : 'mb-1.5'} \${isDone ? 'line-through opacity-70' : ''}">
             \${safeTitleHtml}
           </h3>
 
+          \${isCollapsed ? '' : \`
           \${safeDescHtml ? \`
             <p class="text-xs text-[var(--muted-foreground,#94a3b8)] line-clamp-2 mb-2 leading-relaxed">
               \${safeDescHtml}
@@ -3319,6 +3777,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                     <span>💻</span> Code
                   </button>
                 \` : isReady ? \`
+                  <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="bg-indigo-600/25 hover:bg-indigo-600/45 text-indigo-200 border border-indigo-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Examine full Implementation Plan, Model Options &amp; Code [\${safeIdAttr}]">
+                    <span>🔎</span> Examine
+                  </button>
                   <button onclick="openModelSelectorModal('\${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Select best AGY Coding Model, move [\${safeIdAttr}] to IN PROGRESS &amp; execute plan">
                     <span>💻</span> Code
                   </button>
@@ -3341,6 +3802,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
               CLI copy
             </button>
           </div>
+          \`}
         </div>
       \`;
     }
@@ -3350,6 +3812,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       updateSortButtonsUI();
       
       const filterTask = (t) => {
+        if (!isClientTaskInActiveBranch(t)) return false;
         const matchesQuery = !q || t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q));
         if (!matchesQuery) return false;
         if (currentFilter === 'all') return true;
@@ -3363,17 +3826,24 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       const todoTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'todo' && filterTask(t)), columnSorts.todo);
       const readyTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'ready' && filterTask(t)), columnSorts.ready);
-      const inProgressTasks = sortColumnTasks(rawData.tasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && filterTask(t)), columnSorts.in_progress);
+      const allInProgressTasks = sortColumnTasks(rawData.tasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && filterTask(t)), columnSorts.in_progress);
+      const inProgressTopLevel = allInProgressTasks.filter(t => !(t.isResidualChild && allInProgressTasks.some(p => p.id === t.parentId)));
       const doneTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'done' && filterTask(t)), columnSorts.done);
 
-      document.getElementById('col-todo').innerHTML = todoTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks — drag a ticket here</div>';
-      document.getElementById('col-ready').innerHTML = readyTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready yet — click 📐 Plan or drag here</div>';
-      document.getElementById('col-inprogress').innerHTML = inProgressTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress — drag a ticket here</div>';
-      document.getElementById('col-done').innerHTML = doneTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks — drag a ticket here</div>';
+      const renderInProgWithChildren = (t) => {
+        const kids = allInProgressTasks.filter(c => c.parentId === t.id);
+        if (kids.length === 0) return renderCard(t);
+        return '<div class="space-y-2">' + renderCard(t) + '<div class="ml-3 pl-2.5 border-l-2 border-blue-500/45 space-y-2">' + kids.map(renderCard).join('') + '</div></div>';
+      };
+
+      document.getElementById('col-todo').innerHTML = todoTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks in this branch — drag a ticket here</div>';
+      document.getElementById('col-ready').innerHTML = readyTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready in this branch — click 📐 Plan or drag here</div>';
+      document.getElementById('col-inprogress').innerHTML = inProgressTopLevel.map(renderInProgWithChildren).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress in this branch — drag a ticket here</div>';
+      document.getElementById('col-done').innerHTML = doneTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks in this branch — drag a ticket here</div>';
 
       document.getElementById('count-todo').textContent = todoTasks.length;
       document.getElementById('count-ready').textContent = readyTasks.length;
-      document.getElementById('count-inprogress').textContent = inProgressTasks.length;
+      document.getElementById('count-inprogress').textContent = allInProgressTasks.length;
       document.getElementById('count-done').textContent = doneTasks.length;
     }
 
@@ -4193,7 +4663,16 @@ function startBridgeServer(port = DEFAULT_PORT) {
     if (req.method === 'GET' && url.pathname === '/api/backlog') {
       const targetRoot = resolveSafeRepoRoot(url.searchParams.get('repoRoot'));
       const data = loadBacklog(targetRoot);
-      sendJson(res, 200, { ok: true, repoRoot: targetRoot, ...data });
+      const gitContext = detectGitWorktreeContext(targetRoot);
+      const planData = loadActiveImplementationPlanData(targetRoot, data);
+      const enrichedTasks = (data.tasks || []).map(t => {
+        const idKey = String(t.id || '').toUpperCase();
+        const isActivePlan = Array.isArray(data.activePlanTaskIds) &&
+          data.activePlanTaskIds.some(aid => String(aid).toUpperCase() === idKey);
+        const extractedPlanSection = planData.perTicketSections[idKey] || (isActivePlan ? planData.fullMd : '');
+        return extractedPlanSection ? { ...t, extractedPlanSection } : t;
+      });
+      sendJson(res, 200, { ok: true, repoRoot: targetRoot, gitContext, implementationPlanMd: planData.fullMd || '', ...data, tasks: enrichedTasks });
       return;
     }
 
@@ -4213,6 +4692,19 @@ function startBridgeServer(port = DEFAULT_PORT) {
         const text = String(body.text || body.prompt || '');
         const copied = text ? copyToNativeOsClipboard(text) : false;
         return { status: 200, payload: { ok: true, copied } };
+      }
+
+      if (endpoint === '/api/done-residual') {
+        const id = String(body.id || '').trim();
+        const residuals = Array.isArray(body.residuals) ? body.residuals : [];
+        const data = loadBacklog(targetRoot);
+        const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
+        if (!task) return { status: 404, payload: { ok: false, error: 'Task not found' } };
+        const created = spawnResidualChildTickets(task, residuals, data, targetRoot);
+        saveBacklog(data, targetRoot);
+        renderMigrationBoard(data, targetRoot);
+        writeReviewPaneArtifacts(data, targetRoot);
+        return { status: 200, payload: { ok: true, id: task.id, createdIds: created.map(c => c.id) } };
       }
 
       if (endpoint === '/api/kickoff') {
@@ -4581,14 +5073,18 @@ function main() {
   const data = loadBacklog();
 
   if (command === 'list') {
-    const filter = args[1] || 'all';
+    const showAllBranches = args.includes('--all-branches');
+    const filter = args.slice(1).find(a => !a.startsWith('--')) || 'all';
     const displayProject = getDisplayProjectName(data);
-    console.log(`\n📋 ${displayProject} Local Backlog (${data.tasks.length} total tasks):`);
+    const branchCtx = detectGitWorktreeContext(REPO_ROOT);
+    const scopedTasks = showAllBranches ? data.tasks : data.tasks.filter(t => isTaskVisibleInBranch(t, branchCtx));
+    console.log(`\n📋 ${displayProject} Local Backlog — 🌿 Branch: ${branchCtx.branch}${branchCtx.isLinkedWorktree ? ' (Worktree Isolated)' : ''} (${scopedTasks.length}/${data.tasks.length} tasks):`);
     console.log('='.repeat(70));
 
-    const filtered = data.tasks.filter(t => {
+    const filtered = scopedTasks.filter(t => {
       if (filter === 'all') return true;
       if (filter === 'todo') return t.status === 'todo';
+      if (filter === 'ready') return t.status === 'ready';
       if (filter === 'in_progress') return t.status === 'in_progress' || t.status === 'testing';
       if (filter === 'done') return t.status === 'done';
       if (filter === 'high') return t.priority === 'high';
@@ -4698,6 +5194,7 @@ function main() {
     }
 
     autoAnnotateTicket(newTask, REPO_ROOT);
+    stampTaskBranch(newTask, REPO_ROOT);
 
     if (rawAttachments.length > 0) {
       attachFilesToTask(newTask, rawAttachments, REPO_ROOT, true);
@@ -4959,16 +5456,51 @@ function main() {
   }
 
   if (command === 'done') {
-    const rawIds = args.slice(1).join(' ').split(/[\s,]+/).filter(Boolean);
+    const forceComplete = args.includes('--force');
+    let residualRaw = '';
+    const rawIdArgs = [];
+    for (let i = 1; i < args.length; i++) {
+      if ((args[i] === '--residual' || args[i] === '--remaining') && args[i + 1]) {
+        residualRaw = args[++i];
+      } else if (args[i] === '--force') {
+        // handled above
+      } else if (!args[i].startsWith('--')) {
+        rawIdArgs.push(args[i]);
+      }
+    }
+    const rawIds = rawIdArgs.join(' ').split(/[\s,]+/).filter(Boolean);
     if (rawIds.length === 0) {
-      console.error('❌ Usage: npm run backlog done <id> [, <id2> ...]');
+      console.error('❌ Usage: npm run backlog done <id> [, <id2> ...] [--residual "Task A|Task B"] [--force]');
       process.exit(1);
     }
 
+    const explicitResiduals = residualRaw
+      ? residualRaw.split('|').map(s => s.trim()).filter(Boolean)
+      : [];
+
     const matchedTasks = [];
+    const residualResults = [];
+    const rolledUpParents = [];
+
     for (const rawId of rawIds) {
       const task = data.tasks.find(t => t.id.toLowerCase() === rawId.toLowerCase());
-      if (task) {
+      if (!task) {
+        console.warn(`⚠️  Task ${rawId} not found in backlog.`);
+        continue;
+      }
+      stampTaskBranch(task, REPO_ROOT);
+
+      // Check for explicit --residual items OR pending unchecked actionItems on non-child tickets (unless --force)
+      const pendingActionTexts = (!forceComplete && !task.isResidualChild && Array.isArray(task.actionItems))
+        ? task.actionItems.filter(item => !item.done && item.owner === 'user').map(item => item.text)
+        : [];
+      const residualsToSpawn = explicitResiduals.length > 0 ? explicitResiduals : pendingActionTexts;
+
+      if (residualsToSpawn.length > 0 && !forceComplete) {
+        const spawned = spawnResidualChildTickets(task, residualsToSpawn, data, REPO_ROOT);
+        residualResults.push({ parent: task, children: spawned });
+        matchedTasks.push(task);
+      } else {
         task.status = 'done';
         task.completedAt = new Date().toISOString();
         if (Array.isArray(task.actionItems)) {
@@ -4976,8 +5508,8 @@ function main() {
         }
         delete task.waitingOn;
         matchedTasks.push(task);
-      } else {
-        console.warn(`⚠️  Task ${rawId} not found in backlog.`);
+        const rolledParent = rollupParentIfAllChildrenDone(task, data);
+        if (rolledParent) rolledUpParents.push(rolledParent);
       }
     }
 
@@ -4988,7 +5520,7 @@ function main() {
 
     if (Array.isArray(data.activePlanTaskIds)) {
       data.activePlanTaskIds = data.activePlanTaskIds.filter(
-        activeId => !matchedTasks.some(t => t.id.toLowerCase() === String(activeId).toLowerCase())
+        activeId => !matchedTasks.some(t => t.status === 'done' && t.id.toLowerCase() === String(activeId).toLowerCase())
       );
     }
 
@@ -5003,9 +5535,20 @@ function main() {
     } catch {}
     ensureDaemonRunning();
 
-    const idList = matchedTasks.map(t => t.id).join(', ');
-    console.log(`\n✅ Task(s) [${idList}] marked COMPLETED (DONE)!`);
-    console.log(`💡 Next step: Run /update-memory to close the memory cycle and commit.\n`);
+    if (residualResults.length > 0) {
+      for (const rr of residualResults) {
+        console.log(`\n🧩 [${rr.parent.id}] Main work done with residual tasks -> Kept [${rr.parent.id}] in IN PROGRESS (collapsed) and created open child ticket(s): ${rr.children.map(c => c.id).join(', ')}`);
+      }
+    }
+    const fullyDone = matchedTasks.filter(t => t.status === 'done');
+    if (fullyDone.length > 0) {
+      const idList = fullyDone.map(t => t.id).join(', ');
+      console.log(`\n✅ Task(s) [${idList}] marked COMPLETED (DONE)!`);
+      if (rolledUpParents.length > 0) {
+        console.log(`🎉 All residual children completed — auto-completed parent ticket(s): ${rolledUpParents.map(p => `[${p.id}]`).join(', ')}`);
+      }
+      console.log(`💡 Next step: Run /update-memory to close the memory cycle and commit.\n`);
+    }
     return;
   }
 

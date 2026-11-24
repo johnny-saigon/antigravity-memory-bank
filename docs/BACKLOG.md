@@ -490,6 +490,44 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-137: Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io)
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `bin/cli.mjs`, `scripts/backlog.mjs`, `scripts/sync-memory-context.mjs`, `scripts/sync-living-docs.mjs`, `scripts/lint-memory.mjs`, `skills/<name>/`, `scripts/*.mjs`, `skills/*/SKILL.md`, `lib/repo-organizer.mjs`, `skills/m*/`, `scripts/minit.mjs`, `scripts/mstart.mjs`, `scripts/msync.mjs`, `scripts/mclear.mjs`, `scripts/mcontext.mjs`
+- **Description:** Repackage the **antigravity-memory-bank** project into **11 cohesive, self-contained, `m*`-prefixed Agent Skills** (`minit`, `mstart`, `msync`, `mclear`, `mcontext`, `mbacklog`, `mplan`, `msprint`, `mdocs`, `morganize`, `mbrick`) conforming to the open **Agent Skills (`agentskills.io`)** and **`npx skills` / Agensi.io** specification so each skill can be lis
+- **Technical Specification:**
+  Repackage the **antigravity-memory-bank** project into **11 cohesive, self-contained, `m*`-prefixed Agent Skills** (`minit`, `mstart`, `msync`, `mclear`, `mcontext`, `mbacklog`, `mplan`, `msprint`, `mdocs`, `morganize`, `mbrick`) conforming to the open **Agent Skills (`agentskills.io`)** and **`npx skills` / Agensi.io** specification so each skill can be lis
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io)
+  - [x] Verify deterministic tests and lint checks for [FEAT-137]
+
+---
+
+### FEAT-138: ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/PLANNING_GUIDE.md`, `docs/planning/implementation_plan.md`, `docs/quality/TEST_PLAN_AND_SUITES.md`
+- **Description:** ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
+- **Technical Specification:**
+  ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
+  - [x] Verify deterministic tests and lint checks for [FEAT-138]
+
+---
+
+### FEAT-139: ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Description:** ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
+- **Technical Specification:**
+  ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
+  - [x] Verify deterministic tests and lint checks for [FEAT-139]
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

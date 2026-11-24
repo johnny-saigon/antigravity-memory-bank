@@ -7,7 +7,7 @@
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-- **Backlog Completion**: **43 / 43** tickets verified `DONE` (0 in progress, 0 queued).
+- **Backlog Completion**: **46 / 46** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
 - **feat(docs): unify `FEAT-121` Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/design/DESIGN.md`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `.agents/rules/docs-living-specs.md`, `README.md`) and roll out `upgrade` across `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `wiro` (`10/10` canonical docs active, custom/nested docs classified & archived with repo-wide link rewriting, `10/10` ingestion checklist passed)**
@@ -17,6 +17,24 @@
 - **feat(organize): implement `FEAT-117` AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
+### ✅ [FEAT-139]: ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH) *(Verified 2026-11-24)*
+- **Summary**: ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
+- **Verified Components**: `workspace`
+- **Verified Criterion**: ✓ Complete implementation and verification for ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
+- **Verified Criterion**: ✓ Verify deterministic tests and lint checks for [FEAT-139]
+
+### ✅ [FEAT-138]: ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH) *(Verified 2026-11-24)*
+- **Summary**: ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
+- **Verified Components**: [AvatarCropUploadModal.tsx](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx), [PLANNING_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/PLANNING_GUIDE.md), [implementation_plan.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), [TEST_PLAN_AND_SUITES.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/quality/TEST_PLAN_AND_SUITES.md)
+- **Verified Criterion**: ✓ Complete implementation and verification for ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
+- **Verified Criterion**: ✓ Verify deterministic tests and lint checks for [FEAT-138]
+
+### ✅ [FEAT-137]: Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io) *(Verified 2026-11-24)*
+- **Summary**: Repackage the **antigravity-memory-bank** project into **11 cohesive, self-contained, `m*`-prefixed Agent Skills** (`minit`, `mstart`, `msync`, `mclear`, `mcontext`, `mbacklog`, `mplan`, `msprint`, `mdocs`, `morganize`, `mbrick`) conforming to the open **Agent Skills (`agentskills.io`)** and **`npx skills` / Agensi.io** specification so each skill can be lis
+- **Verified Components**: [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs), [sync-living-docs.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-living-docs.mjs), [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs), [<name>](file:///Users/jbb/Documents/antigravity-memory-bank/skills/<name>), [*.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/*.mjs), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/*/SKILL.md), [repo-organizer.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/repo-organizer.mjs), [m*](file:///Users/jbb/Documents/antigravity-memory-bank/skills/m*), [minit.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/minit.mjs), [mstart.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/mstart.mjs), [msync.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/msync.mjs), [mclear.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/mclear.mjs), [mcontext.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/mcontext.mjs)
+- **Verified Criterion**: ✓ Complete implementation and verification for Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io)
+- **Verified Criterion**: ✓ Verify deterministic tests and lint checks for [FEAT-137]
+
 ### ✅ [FEAT-136]: Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed) *(Verified 2026-11-24)*
 - **Summary**: Enable seamless Kanban tracking for **ad-hoc `/plan` questions or changes** without breaking Antigravity's native blue **Proceed** button:
 - **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs), [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs), [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/sync-memory-context.mjs), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/.agents/skills/backlog-plan/SKILL.md), [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md), [AGENTS.md.tpl](file:///Users/jbb/Documents/antigravity-memory-bank/templates/AGENTS.md.tpl), [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/rules/AGENTS.md), [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs)
@@ -249,7 +267,7 @@
 | :--- | :--- | :--- |
 | **Memory Bank Line Budget (`< 150 lines`)** | `npm run lint:memory` | ✅ Verified (`0` violations) |
 | **10-Point Baseline Ingestion Checklist** | `npx antigravity-memory-bank upgrade` | ✅ `10/10` Passed |
-| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (43/43 Done) |
+| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (46/46 Done) |
 | **Automated Verification Command** | `npm run lint:memory` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm test` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm run test:e2e` | ✅ Configured & Active |
