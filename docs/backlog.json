@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T08:42:02.933Z",
+  "lastUpdated": "2026-11-24T09:09:23.591Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1659,6 +1659,206 @@
           "at": "2026-11-24T08:42:02.043Z"
         }
       ]
+    },
+    {
+      "id": "FEAT-141",
+      "type": "feature",
+      "title": "Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees",
+      "status": "done",
+      "priority": "high",
+      "components": [],
+      "attachments": [],
+      "description": "Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees",
+      "spec": "Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees",
+      "acceptanceCriteria": [
+        "Implement and verify Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T08:43:47.882Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T08:43:47.882Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T08:45:50.633Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T09:05:41.159Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T09:09:22.591Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T08:45:50.636Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-141-ACT-1",
+          "text": "Implement and verify Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-141-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T08:45:50.633Z",
+      "startedAt": "2026-11-24T09:05:41.159Z",
+      "completedAt": "2026-11-24T09:09:22.591Z"
+    },
+    {
+      "id": "BUG-110",
+      "type": "bug",
+      "title": "### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)",
+      "status": "done",
+      "plannedAt": "2026-11-24T08:45:50.666Z",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "docs/BACKLOG.md",
+        "docs/backlog.html",
+        "docs/backlog.json"
+      ],
+      "attachments": [],
+      "description": "### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)",
+      "spec": "### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)",
+        "Verify deterministic tests and lint checks for [BUG-110]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T08:45:50.666Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T09:05:41.191Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T09:09:22.677Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "BUG-110-ACT-1",
+          "text": "Complete implementation and verification for ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-110-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [BUG-110]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T08:45:50.668Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T09:05:41.191Z",
+      "completedAt": "2026-11-24T09:09:22.677Z"
+    },
+    {
+      "id": "FEAT-142",
+      "type": "bug",
+      "title": "Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors",
+      "status": "done",
+      "priority": "high",
+      "components": [],
+      "attachments": [],
+      "description": "Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors",
+      "spec": "Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors",
+      "acceptanceCriteria": [
+        "Implement and verify Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors",
+        "Add both a non-regression unit/component test and an E2E test verifying the fix"
+      ],
+      "planningStartedAt": "2026-11-24T09:03:38.923Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T09:03:38.923Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T09:05:00.479Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T09:05:41.222Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T09:09:22.634Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T09:05:00.482Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-142-ACT-1",
+          "text": "Implement and verify Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-142-ACT-2",
+          "text": "Add both a non-regression unit/component test and an E2E test verifying the fix",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T09:05:00.479Z",
+      "startedAt": "2026-11-24T09:05:41.222Z",
+      "completedAt": "2026-11-24T09:09:22.634Z"
     }
   ],
   "milestones": [

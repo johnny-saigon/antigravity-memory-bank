@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[FEAT-142] Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors** (`HIGH` · Status: `done`): Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+  - **[BUG-110] ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)** (`HIGH` · Status: `done`): ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
+  - **[FEAT-141] Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees** (`HIGH` · Status: `done`): Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
   - **[BUG-109] ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)** (`HIGH` · Status: `done`): ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)
-  - **[FEAT-140] ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)** (`HIGH` · Status: `done`): ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)
-  - **[FEAT-139] ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)** (`HIGH` · Status: `done`): ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
-  - **[FEAT-138] ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)** (`HIGH` · Status: `done`): ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -21,6 +21,35 @@
 > - **Package Whitelist (`"files"`)**: `package.json` strictly restricts published package contents to `bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, and `install.sh`, excluding dogfood files (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`).
 
 ## 3. Proposed Changes
+### [FEAT-142] Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors *(Completed & Verified Baseline)*
+- **Specification**: Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
+  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
+- **Acceptance Criteria**:
+  - Implement and verify Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+  - Add both a non-regression unit/component test and an E2E test verifying the fix
+
+### [BUG-110] ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH) *(Completed & Verified Baseline)*
+- **Specification**: ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+  - `[VERIFIED]` [BACKLOG.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG.md) (`docs/BACKLOG.md`)
+  - `[VERIFIED]` [backlog.html](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.html) (`docs/backlog.html`)
+  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
+- **Acceptance Criteria**:
+  - Complete implementation and verification for ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
+  - Verify deterministic tests and lint checks for [BUG-110]
+
+### [FEAT-141] Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees *(Completed & Verified Baseline)*
+- **Specification**: Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
+  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
+- **Acceptance Criteria**:
+  - Implement and verify Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
+  - Pass deterministic lint, typecheck, and automated test verification (npm test)
+
 ### [BUG-109] ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH) *(Completed & Verified Baseline)*
 - **Specification**: ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)
 - **Component Modifications (Dependencies First)**:
@@ -29,35 +58,6 @@
 - **Acceptance Criteria**:
   - Complete implementation and verification for ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)
   - Verify deterministic tests and lint checks for [BUG-109]
-
-### [FEAT-140] ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH) *(Completed & Verified Baseline)*
-- **Specification**: ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
-  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
-- **Acceptance Criteria**:
-  - Complete implementation and verification for ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)
-  - Verify deterministic tests and lint checks for [FEAT-140]
-
-### [FEAT-139] ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH) *(Completed & Verified Baseline)*
-- **Specification**: ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
-  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
-- **Acceptance Criteria**:
-  - Complete implementation and verification for ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH)
-  - Verify deterministic tests and lint checks for [FEAT-139]
-
-### [FEAT-138] ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH) *(Completed & Verified Baseline)*
-- **Specification**: ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [AvatarCropUploadModal.tsx](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx) (`bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`)
-  - `[VERIFIED]` [PLANNING_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/PLANNING_GUIDE.md) (`docs/PLANNING_GUIDE.md`)
-  - `[VERIFIED]` [implementation_plan.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md) (`docs/planning/implementation_plan.md`)
-  - `[VERIFIED]` [TEST_PLAN_AND_SUITES.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/quality/TEST_PLAN_AND_SUITES.md) (`docs/quality/TEST_PLAN_AND_SUITES.md`)
-- **Acceptance Criteria**:
-  - Complete implementation and verification for ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH)
-  - Verify deterministic tests and lint checks for [FEAT-138]
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

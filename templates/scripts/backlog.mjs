@@ -48,7 +48,8 @@ function detectGitWorktreeContext(rootDir = REPO_ROOT) {
     branch: 'main',
     isLinkedWorktree: false,
     worktreeName: path.basename(path.resolve(rootDir)),
-    hasGit: false
+    hasGit: false,
+    worktrees: []
   };
   try {
     const dotGitPath = path.join(rootDir, '.git');
@@ -82,6 +83,19 @@ function detectGitWorktreeContext(rootDir = REPO_ROOT) {
     if (brRes.status === 0 && brRes.stdout.trim()) {
       ctx.branch = brRes.stdout.trim();
       ctx.hasGit = true;
+    }
+    const wtListRes = spawnSync('git', ['worktree', 'list', '--porcelain'], { cwd: rootDir, encoding: 'utf8', timeout: 1500 });
+    if (wtListRes.status === 0 && wtListRes.stdout) {
+      let curWt = null;
+      for (const line of wtListRes.stdout.split('\n')) {
+        if (line.startsWith('worktree ')) {
+          if (curWt) ctx.worktrees.push(curWt);
+          curWt = { path: line.slice('worktree '.length).trim(), branch: 'detached', isMain: ctx.worktrees.length === 0 };
+        } else if (line.startsWith('branch refs/heads/') && curWt) {
+          curWt.branch = line.slice('branch refs/heads/'.length).trim();
+        }
+      }
+      if (curWt) ctx.worktrees.push(curWt);
     }
     const gitDirRes = spawnSync('git', ['rev-parse', '--git-dir'], { cwd: rootDir, encoding: 'utf8', timeout: 1500 });
     const commonDirRes = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd: rootDir, encoding: 'utf8', timeout: 1500 });
@@ -497,9 +511,9 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
     const unownedRecent = candidates.find(c => !c.ownsExisting && !c.ownedByOther && c.maxOther === 0);
     if (unownedRecent) return [unownedRecent.dirPath];
 
-    return [];
+    return fallbackDirs;
   } catch {
-    return [];
+    return fallbackDirs;
   }
 }
 
@@ -1656,7 +1670,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         <span class="text-xl">📅</span>
         <h1 class="text-xl font-bold tracking-tight text-[var(--foreground,#f8fafc)]">${displayProject} Local Backlog</h1>
         <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2 py-0.5 rounded-full font-medium">0 Tokens • Frugal Mode</span>
-        <span id="branchScopeBadge" class="bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 text-xs px-2 py-0.5 rounded-full font-mono" title="Only tickets created or run in this Git branch/worktree are displayed by default (FEAT-137)">🌿 ${escapeHtmlServer(branchCtx.branch || 'main')}${branchCtx.isLinkedWorktree ? ' · Worktree Isolated' : ''}</span>
+        <span id="branchScopeBadge" class="bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 text-xs px-2 py-0.5 rounded-full font-mono" title="${escapeHtmlServer(branchCtx.worktrees && branchCtx.worktrees.length > 1 ? 'Worktree Roster: ' + branchCtx.worktrees.map(w => (w.isMain ? 'Main' : 'Worktree') + ' [' + w.branch + '] ' + w.path).join(' | ') : 'Only tickets created or run in this Git branch/worktree are displayed by default (FEAT-137)')}">🌿 ${escapeHtmlServer(branchCtx.branch || 'main')}${branchCtx.isLinkedWorktree ? ' · Worktree Isolated' : ''}${branchCtx.worktrees && branchCtx.worktrees.length > 1 ? ` · 1 Main + ${branchCtx.worktrees.length - 1} Worktree${branchCtx.worktrees.length - 1 === 1 ? '' : 's'}` : ''}</span>
         <span id="bridgeStatusBadge" class="bg-slate-700/60 text-slate-300 border border-slate-600/40 text-xs px-2 py-0.5 rounded-full font-mono">Bridge: Ready</span>
       </div>
       <p class="text-xs text-[var(--muted-foreground,#94a3b8)] mt-1">

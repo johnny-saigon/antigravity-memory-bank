@@ -42,6 +42,11 @@ if (pkgRoot.includes('_npx')) {
 function parseCliArgs(argv) {
   const options = {
     command: 'init',
+    fleetAction: 'upgrade',
+    author: null,
+    acceptTicketId: null,
+    noWorktrees: false,
+    noTrickleUp: false,
     brickAction: null,
     brickName: null,
     withSchema: false,
@@ -93,6 +98,25 @@ function parseCliArgs(argv) {
       options.command = 'uninstall';
     } else if (a === 'upgrade' || a === 'update') {
       options.command = 'upgrade';
+    } else if (a === 'fleet') {
+      options.command = 'fleet';
+      const sub = args[i + 1];
+      if (sub && ['upgrade', 'update', 'status', 'list'].includes(sub)) {
+        options.fleetAction = (sub === 'update' ? 'upgrade' : sub === 'list' ? 'status' : sub);
+        i++;
+      }
+    } else if (a === 'trickle-up' || a === 'trickle') {
+      options.command = 'trickle-up';
+    } else if (a === '--author' && args[i + 1]) {
+      options.author = args[++i];
+    } else if (a === '--main-root' && args[i + 1]) {
+      options.mainRoot = path.resolve(args[++i]);
+    } else if (a === '--accept' && args[i + 1]) {
+      options.acceptTicketId = args[++i];
+    } else if (a === '--no-worktrees') {
+      options.noWorktrees = true;
+    } else if (a === '--no-trickle-up') {
+      options.noTrickleUp = true;
     } else if (a === 'organize' || a === 'reorganize' || a === 'organise') {
       options.command = 'organize';
     } else if (a === 'docs:sync' || a === 'docs' || a === 'harvest') {
@@ -1354,31 +1378,30 @@ Immediately after closing the previous session, initialize the new working cycle
     }
   }
 
-  // 8b. Propagate Memory Bank updates to all linked Git Worktrees automatically (FEAT-137)
+  // 8b. Propagate Memory Bank updates to all linked Git Worktrees automatically & report full Main + Worktree roster (FEAT-137 / FEAT-141)
   if (!opts.isWorktreeChild && !opts.noWorktrees && detected.hasGit) {
     try {
-      const wtOut = execSync('git worktree list --porcelain', { cwd: targetDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      const allWorktrees = listRepoWorktrees(targetDir);
       const resolvedMain = fsSync.realpathSync(path.resolve(targetDir));
-      const linkedWorktrees = [];
-      for (const line of wtOut.split('\n')) {
-        if (line.startsWith('worktree ')) {
-          const rawWt = line.slice('worktree '.length).trim();
-          const wtPath = fsSync.existsSync(rawWt) ? fsSync.realpathSync(rawWt) : path.resolve(rawWt);
-          if (wtPath && wtPath !== resolvedMain && fsSync.existsSync(wtPath)) {
-            linkedWorktrees.push(wtPath);
-          }
-        }
-      }
+      const linkedWorktrees = allWorktrees.filter(w => w.path !== resolvedMain && fsSync.existsSync(w.path));
       if (linkedWorktrees.length > 0) {
         console.log(`\n🌿 Detected ${linkedWorktrees.length} linked Git worktree(s) — propagating Memory Bank updates (preserving isolated branch backlogs)...`);
-        for (const wtDir of linkedWorktrees) {
+        for (const wt of linkedWorktrees) {
           try {
-            const wtDetected = await detectProjectContext(wtDir);
-            await upgradeMemory(wtDir, { ...opts, isWorktreeChild: true, yes: true, commit: false }, wtDetected);
-            console.log(`  ✓ Propagated Memory Bank update to worktree: ${wtDir}`);
+            if (!opts.noTrickleUp) {
+              await harvestTrickleUpFixes(wt.path, { mainRoot: pkgRoot, author: opts.author });
+            }
+            const wtDetected = await detectProjectContext(wt.path);
+            wtDetected.isSelfRepo = false; // Linked worktrees of antigravity-memory-bank must still receive updated scripts/skills/AGENTS.md!
+            await upgradeMemory(wt.path, { ...opts, isWorktreeChild: true, yes: true, commit: false, noTrickleUp: true }, wtDetected);
+            console.log(`  ✓ Propagated Memory Bank update to worktree [${wt.branch}]: ${wt.path}`);
           } catch (wtErr) {
-            console.warn(`  ⚠️ Worktree upgrade skipped for ${wtDir}: ${wtErr.message}`);
+            console.warn(`  ⚠️ Worktree upgrade skipped for ${wt.path}: ${wtErr.message}`);
           }
+        }
+        console.log(`\n📋 Explicit Main + Worktree Installation Roster (${allWorktrees.length} total: 1 Main + ${linkedWorktrees.length} Linked Worktrees):`);
+        for (const wt of allWorktrees) {
+          console.log(`   - ${wt.isMain ? '🏛️ Main    ' : '🌿 Worktree'} [${wt.branch}] -> ${wt.path}`);
         }
       }
     } catch {}
@@ -1451,6 +1474,372 @@ async function organizeRepo(targetDir, opts, detected) {
   return orgResult;
 }
 
+/**
+ * Enumerate Main + all Linked Git Worktrees for a repository (FEAT-141)
+ */
+function listRepoWorktrees(repoDir) {
+  const results = [];
+  try {
+    const resolvedRoot = fsSync.existsSync(repoDir) ? fsSync.realpathSync(path.resolve(repoDir)) : path.resolve(repoDir);
+    const wtOut = execSync('git worktree list --porcelain', {
+      cwd: resolvedRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    });
+    let current = null;
+    for (const line of wtOut.split('\n')) {
+      if (line.startsWith('worktree ')) {
+        if (current) results.push(current);
+        const rawPath = line.slice('worktree '.length).trim();
+        const realPath = fsSync.existsSync(rawPath) ? fsSync.realpathSync(rawPath) : path.resolve(rawPath);
+        current = {
+          path: realPath,
+          branch: 'detached',
+          head: '',
+          isMain: results.length === 0
+        };
+      } else if (line.startsWith('HEAD ') && current) {
+        current.head = line.slice('HEAD '.length).trim().slice(0, 7);
+      } else if (line.startsWith('branch refs/heads/') && current) {
+        current.branch = line.slice('branch refs/heads/'.length).trim();
+      }
+    }
+    if (current) results.push(current);
+  } catch {}
+  return results;
+}
+
+/**
+ * Shared Memory Bank files eligible for upstream Trickle-Up Fix Harvesting (FEAT-142)
+ */
+const TRICKLE_UP_FILE_MAP = [
+  { downstream: 'scripts/backlog.mjs', upstreamTargets: ['scripts/backlog.mjs', 'templates/scripts/backlog.mjs'] },
+  { downstream: 'scripts/sync-memory-context.mjs', upstreamTargets: ['scripts/sync-memory-context.mjs', 'templates/scripts/sync-memory-context.mjs'] },
+  { downstream: 'scripts/lint-memory.mjs', upstreamTargets: ['scripts/lint-memory.mjs'] },
+  { downstream: 'scripts/sync-living-docs.mjs', upstreamTargets: ['scripts/sync-living-docs.mjs', 'templates/scripts/sync-living-docs.mjs'] },
+  { downstream: '.agents/skills/start/SKILL.md', upstreamTargets: ['skills/start/SKILL.md', '.agents/skills/start/SKILL.md'] },
+  { downstream: '.agents/skills/backlog-add/SKILL.md', upstreamTargets: ['skills/backlog-add/SKILL.md', '.agents/skills/backlog-add/SKILL.md'] },
+  { downstream: '.agents/skills/backlog-plan/SKILL.md', upstreamTargets: ['skills/backlog-plan/SKILL.md', '.agents/skills/backlog-plan/SKILL.md'] },
+  { downstream: '.agents/skills/backlog-start/SKILL.md', upstreamTargets: ['skills/backlog-start/SKILL.md', '.agents/skills/backlog-start/SKILL.md'] },
+  { downstream: '.agents/rules/brick-governance.md', upstreamTargets: ['.agents/rules/brick-governance.md', 'templates/rules/brick-governance.md.tpl'] },
+  { downstream: '.agents/rules/docs-living-specs.md', upstreamTargets: ['.agents/rules/docs-living-specs.md', 'templates/rules/docs-living-specs.md.tpl'] }
+];
+
+function resolveDownstreamFixAuthor(projectDir, relFile, explicitAuthor = null) {
+  if (explicitAuthor && String(explicitAuthor).trim()) {
+    const handle = String(explicitAuthor).trim();
+    const isTrusted = /^(johnny-saigon|johnny_saigon|jbb(@.*)?|jbouquet@gmail\.com)$/i.test(handle);
+    return { author: handle, email: '', commitHash: '', commitMsg: '', isTrustedJohnnySaigon: isTrusted };
+  }
+  let authorName = '';
+  let authorEmail = '';
+  let commitHash = '';
+  let commitMsg = '';
+  let remoteUrl = '';
+  try {
+    const logOut = execSync(`git log -n 1 --format="%an|%ae|%h|%s" -- "${relFile}"`, {
+      cwd: projectDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim();
+    if (logOut) {
+      const parts = logOut.split('|');
+      authorName = (parts[0] || '').trim();
+      authorEmail = (parts[1] || '').trim();
+      commitHash = (parts[2] || '').trim();
+      commitMsg = (parts[3] || '').trim();
+    }
+  } catch {}
+  if (!authorName) {
+    try {
+      authorName = execSync('git config user.name', { cwd: projectDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+      authorEmail = execSync('git config user.email', { cwd: projectDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch {}
+  }
+  try {
+    remoteUrl = execSync('git remote get-url origin', { cwd: projectDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {}
+
+  const identityBlob = `${authorName} ${authorEmail} ${remoteUrl}`.toLowerCase();
+  const isTrustedJohnnySaigon =
+    identityBlob.includes('johnny-saigon') ||
+    identityBlob.includes('johnny_saigon') ||
+    identityBlob.includes('jbouquet@gmail.com') ||
+    /\bjbb@/.test(identityBlob);
+
+  return {
+    author: authorName || authorEmail || 'external-contributor',
+    email: authorEmail,
+    commitHash,
+    commitMsg,
+    isTrustedJohnnySaigon
+  };
+}
+
+/**
+ * Harvest trickled-up fixes from any downstream project or linked worktree (FEAT-142):
+ * - If author belongs to GitHub user `johnny-saigon` -> auto-accept into Main Memory Bank + template mirrors
+ * - If author is someone else -> hold & notify via a high-priority TO DO ticket in Main Memory Bank docs/backlog.json
+ */
+async function harvestTrickleUpFixes(projectDir, opts = {}) {
+  const mainRoot = path.resolve(opts.mainRoot || pkgRoot);
+  const resolvedSource = fsSync.existsSync(projectDir) ? fsSync.realpathSync(path.resolve(projectDir)) : path.resolve(projectDir);
+  const resolvedMain = fsSync.existsSync(mainRoot) ? fsSync.realpathSync(mainRoot) : mainRoot;
+  if (resolvedSource === resolvedMain) {
+    return { autoAccepted: [], notifiedTickets: [] };
+  }
+
+  const projectName = path.basename(resolvedSource);
+  const explicitMode = Boolean(opts.explicitTrickleUp);
+  const autoAccepted = [];
+  const notifiedTickets = [];
+
+  for (const mapping of TRICKLE_UP_FILE_MAP) {
+    const dsPath = path.join(resolvedSource, mapping.downstream);
+    const primaryUpPath = path.join(resolvedMain, mapping.upstreamTargets[0]);
+    if (!fsSync.existsSync(dsPath) || !fsSync.existsSync(primaryUpPath)) continue;
+
+    let dsBuf, upBuf, dsStat, upStat;
+    try {
+      dsBuf = fsSync.readFileSync(dsPath);
+      upBuf = fsSync.readFileSync(primaryUpPath);
+      if (dsBuf.equals(upBuf)) continue;
+      dsStat = fsSync.statSync(dsPath);
+      upStat = fsSync.statSync(primaryUpPath);
+    } catch {
+      continue;
+    }
+
+    // In passive mode (during upgrade), only harvest if downstream file is genuinely newer than Main
+    if (!explicitMode && dsStat.mtimeMs <= upStat.mtimeMs + 1000) {
+      continue;
+    }
+
+    const authorInfo = resolveDownstreamFixAuthor(resolvedSource, mapping.downstream, opts.author);
+    if (!explicitMode && /^chore\(memory(-bank)?\): upgrade/i.test(authorInfo.commitMsg || '')) {
+      continue;
+    }
+
+    if (authorInfo.isTrustedJohnnySaigon) {
+      // Auto-accept into Main Memory Bank + all template parity mirrors
+      for (const upRel of mapping.upstreamTargets) {
+        const upFull = path.join(resolvedMain, upRel);
+        fsSync.mkdirSync(path.dirname(upFull), { recursive: true });
+        fsSync.writeFileSync(upFull, dsBuf);
+      }
+      autoAccepted.push({
+        relFile: mapping.downstream,
+        project: projectName,
+        author: authorInfo.author,
+        targets: mapping.upstreamTargets
+      });
+      console.log(`  ⬆️  TRICKLE-UP AUTO-ACCEPTED (owner: johnny-saigon): ${mapping.downstream} from ${projectName} → Main Memory Bank (+ template parity)`);
+    } else {
+      // External author -> Hold & notify via a high-priority TO DO ticket in Main Memory Bank backlog!
+      const mainBacklogPath = path.join(resolvedMain, 'docs', 'backlog.json');
+      if (fsSync.existsSync(mainBacklogPath)) {
+        try {
+          const bj = JSON.parse(fsSync.readFileSync(mainBacklogPath, 'utf8'));
+          if (!Array.isArray(bj.tasks)) bj.tasks = [];
+          const notifTitle = `🔔 Review Trickled-Up Fix from @${authorInfo.author} in ${projectName}: ${mapping.downstream}`;
+          let ticket = bj.tasks.find(t => t.status !== 'done' && t.title === notifTitle);
+          if (!ticket) {
+            const maxNum = bj.tasks.reduce((max, t) => {
+              const m = String(t.id || '').match(/^FEAT-(\d+)$/i);
+              return m ? Math.max(max, parseInt(m[1], 10)) : max;
+            }, 100);
+            const newId = `FEAT-${maxNum + 1}`;
+            const attachDir = path.join(resolvedMain, 'docs', 'attachments', newId);
+            fsSync.mkdirSync(attachDir, { recursive: true });
+            const candidateCopy = path.join(attachDir, path.basename(mapping.downstream));
+            fsSync.writeFileSync(candidateCopy, dsBuf);
+            const patchPath = path.join(attachDir, 'proposed-fix.patch');
+            let diffText = '';
+            try {
+              const diffRes = execSync(`diff -u "${primaryUpPath}" "${dsPath}" || true`, { encoding: 'utf8', maxBuffer: 2 * 1024 * 1024 });
+              diffText = diffRes;
+            } catch {}
+            fsSync.writeFileSync(patchPath, diffText || `# Divergent file candidate from ${projectName}: ${mapping.downstream}\n`, 'utf8');
+
+            const relPatch = path.relative(resolvedMain, patchPath);
+            const relCand = path.relative(resolvedMain, candidateCopy);
+            ticket = {
+              id: newId,
+              type: 'feature',
+              title: notifTitle,
+              status: 'todo',
+              priority: 'high',
+              components: [...mapping.upstreamTargets],
+              attachments: [relPatch, relCand],
+              description: `External contributor @${authorInfo.author}${authorInfo.email ? ` (${authorInfo.email})` : ''} modified ${mapping.downstream} in ${projectName} (${resolvedSource}). Held for review (non-johnny-saigon author). Approve via: node bin/cli.mjs trickle-up --accept ${newId}`,
+              spec: `Review proposed patch at ${relPatch} and accept via node bin/cli.mjs trickle-up --accept ${newId}`,
+              acceptanceCriteria: [
+                `Inspect trickled-up diff from @${authorInfo.author} in ${relPatch}`,
+                `Approve via "node bin/cli.mjs trickle-up --accept ${newId}" or close if rejected`
+              ],
+              actionItems: [
+                {
+                  id: `${newId}-ACT-1`,
+                  text: `Review trickled-up fix from @${authorInfo.author} (${relPatch}) and approve or reject`,
+                  owner: 'user',
+                  done: false
+                }
+              ],
+              trickleUp: {
+                sourceProject: resolvedSource,
+                projectName,
+                relFile: mapping.downstream,
+                upstreamTargets: mapping.upstreamTargets,
+                author: authorInfo.author,
+                email: authorInfo.email,
+                candidatePath: relCand,
+                patchPath: relPatch,
+                detectedAt: new Date().toISOString()
+              },
+              createdAt: new Date().toISOString()
+            };
+            bj.tasks.push(ticket);
+            bj.lastUpdated = new Date().toISOString();
+            fsSync.writeFileSync(mainBacklogPath, JSON.stringify(bj, null, 2) + '\n', 'utf8');
+            try {
+              execSync('node scripts/backlog.mjs render', { cwd: resolvedMain, stdio: 'ignore' });
+            } catch {}
+          }
+          notifiedTickets.push(ticket);
+          console.log(`  🔔 TRICKLE-UP HELD FOR REVIEW (external author @${authorInfo.author}): Created TO DO notification ticket [${ticket.id}] in Main Memory Bank backlog!`);
+        } catch (err) {
+          console.warn(`  ⚠️ Failed to create trickle-up notification ticket: ${err.message}`);
+        }
+      }
+    }
+  }
+
+  // Record auto-accepted trickle-up audit log in Main docs/backlog.json
+  if (autoAccepted.length > 0) {
+    const mainBacklogPath = path.join(resolvedMain, 'docs', 'backlog.json');
+    if (fsSync.existsSync(mainBacklogPath)) {
+      try {
+        const bj = JSON.parse(fsSync.readFileSync(mainBacklogPath, 'utf8'));
+        if (!bj.meta) bj.meta = {};
+        if (!Array.isArray(bj.meta.trickleUpHistory)) bj.meta.trickleUpHistory = [];
+        for (const acc of autoAccepted) {
+          bj.meta.trickleUpHistory.push({ ...acc, acceptedAt: new Date().toISOString() });
+        }
+        bj.meta.trickleUpHistory = bj.meta.trickleUpHistory.slice(-50);
+        fsSync.writeFileSync(mainBacklogPath, JSON.stringify(bj, null, 2) + '\n', 'utf8');
+      } catch {}
+    }
+  }
+
+  return { autoAccepted, notifiedTickets };
+}
+
+async function acceptTrickleUpTicket(ticketId, mainRoot = pkgRoot) {
+  const resolvedMain = path.resolve(mainRoot);
+  const mainBacklogPath = path.join(resolvedMain, 'docs', 'backlog.json');
+  if (!fsSync.existsSync(mainBacklogPath)) {
+    console.error(`❌ Main Memory Bank backlog not found at ${mainBacklogPath}`);
+    process.exit(1);
+  }
+  const bj = JSON.parse(fsSync.readFileSync(mainBacklogPath, 'utf8'));
+  const ticket = (bj.tasks || []).find(t => String(t.id).toUpperCase() === String(ticketId).toUpperCase());
+  if (!ticket || !ticket.trickleUp) {
+    console.error(`❌ Trickle-up notification ticket [${ticketId}] not found in Main Memory Bank backlog.`);
+    process.exit(1);
+  }
+  const candAbs = path.join(resolvedMain, ticket.trickleUp.candidatePath);
+  if (!fsSync.existsSync(candAbs)) {
+    console.error(`❌ Candidate file missing at ${candAbs}`);
+    process.exit(1);
+  }
+  const buf = fsSync.readFileSync(candAbs);
+  for (const upRel of ticket.trickleUp.upstreamTargets || []) {
+    const upFull = path.join(resolvedMain, upRel);
+    fsSync.mkdirSync(path.dirname(upFull), { recursive: true });
+    fsSync.writeFileSync(upFull, buf);
+  }
+  ticket.status = 'done';
+  ticket.completedAt = new Date().toISOString();
+  if (Array.isArray(ticket.actionItems)) ticket.actionItems.forEach(a => { a.done = true; });
+  fsSync.writeFileSync(mainBacklogPath, JSON.stringify(bj, null, 2) + '\n', 'utf8');
+  try {
+    execSync('node scripts/backlog.mjs render', { cwd: resolvedMain, stdio: 'ignore' });
+  } catch {}
+  console.log(`\n✅ Accepted trickled-up fix [${ticket.id}] from @${ticket.trickleUp.author} into Main Memory Bank (+ template mirrors) and marked [${ticket.id}] DONE!\n`);
+}
+
+/**
+ * Worktree-Aware Fleet Command: Discovers & upgrades/reports ALL Main repositories AND ALL Linked Git Worktrees (FEAT-141)
+ */
+async function runFleetCommand(opts) {
+  const workspaceParent = path.dirname(pkgRoot);
+  const discoveredMains = [];
+  const seenRealMains = new Set();
+
+  const tryAddMain = (dirPath) => {
+    if (!fsSync.existsSync(dirPath)) return;
+    const real = fsSync.realpathSync(path.resolve(dirPath));
+    if (seenRealMains.has(real)) return;
+    if (fsSync.existsSync(path.join(real, 'memory-bank')) || fsSync.existsSync(path.join(real, 'AGENTS.md'))) {
+      seenRealMains.add(real);
+      discoveredMains.push(real);
+    }
+  };
+
+  tryAddMain(pkgRoot);
+  try {
+    for (const entry of fsSync.readdirSync(workspaceParent, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+      tryAddMain(path.join(workspaceParent, entry.name));
+    }
+  } catch {}
+
+  const reportRows = [];
+  console.log(`\n🚀 Antigravity Memory Bank — Worktree-Aware Fleet ${opts.fleetAction.toUpperCase()} (${discoveredMains.length} Main Repositories Discovered)\n`);
+
+  for (const mainDir of discoveredMains) {
+    const projectName = path.basename(mainDir);
+    const worktrees = listRepoWorktrees(mainDir);
+    const installations = worktrees.length > 0
+      ? worktrees
+      : [{ isMain: true, path: mainDir, branch: 'local', head: '' }];
+
+    for (const inst of installations) {
+      let statusLabel = '📋 Installed';
+      if (opts.fleetAction === 'upgrade') {
+        const isSelfMain = inst.isMain && path.resolve(inst.path) === path.resolve(pkgRoot);
+        if (!isSelfMain) {
+          if (!opts.noTrickleUp) {
+            await harvestTrickleUpFixes(inst.path, { mainRoot: pkgRoot, author: opts.author });
+          }
+          const instDetected = await detectProjectContext(inst.path);
+          await upgradeMemory(inst.path, { ...opts, isWorktreeChild: true, yes: true, noTrickleUp: true }, instDetected);
+          statusLabel = '✅ Upgraded';
+        } else {
+          statusLabel = '✅ Upstream Main';
+        }
+      }
+      reportRows.push({
+        project: projectName,
+        role: inst.isMain ? '🏛️ Main' : '🌿 Worktree',
+        branch: inst.branch,
+        path: inst.path,
+        status: statusLabel
+      });
+    }
+  }
+
+  const mainCount = reportRows.filter(r => r.role.includes('Main')).length;
+  const wtCount = reportRows.filter(r => r.role.includes('Worktree')).length;
+  console.log(`\n📊 Fleet Installation Summary (${reportRows.length} Total Installations: ${mainCount} Main + ${wtCount} Linked Worktrees):`);
+  console.log('='.repeat(110));
+  for (const row of reportRows) {
+    console.log(`  ${row.role.padEnd(13)} | ${row.project.padEnd(28)} | [${row.branch.padEnd(22)}] | ${row.status.padEnd(16)} | ${row.path}`);
+  }
+  console.log('='.repeat(110) + '\n');
+  return reportRows;
+}
+
 async function main() {
   const opts = parseCliArgs(process.argv);
   const targetDir = opts.targetDir || process.cwd();
@@ -1477,7 +1866,21 @@ async function main() {
     return;
   }
 
-  if (opts.command === 'export') {
+  if (opts.command === 'fleet') {
+    await runFleetCommand(opts);
+  } else if (opts.command === 'trickle-up') {
+    const effectiveMainRoot = opts.mainRoot || pkgRoot;
+    if (opts.acceptTicketId) {
+      await acceptTrickleUpTicket(opts.acceptTicketId, effectiveMainRoot);
+    } else {
+      const res = await harvestTrickleUpFixes(targetDir, {
+        mainRoot: effectiveMainRoot,
+        author: opts.author,
+        explicitTrickleUp: true
+      });
+      console.log(`\n⬆️  Trickle-Up Scan Complete: ${res.autoAccepted.length} auto-accepted (johnny-saigon), ${res.notifiedTickets.length} held for review as Main TO DO ticket(s).\n`);
+    }
+  } else if (opts.command === 'export') {
     await exportMemory(targetDir, opts.exportDir);
   } else if (opts.command === 'uninstall') {
     await uninstallMemory(targetDir, opts, detected);
@@ -1489,6 +1892,9 @@ async function main() {
     await syncCustomizationsToMemoryBank(targetDir, detected.name);
     await syncMemory(targetDir, opts);
   } else if (opts.command === 'upgrade' || (opts.command === 'init' && detected.memoryBankExists && !opts.force)) {
+    if (!opts.noTrickleUp && !detected.isSelfRepo) {
+      await harvestTrickleUpFixes(targetDir, { mainRoot: pkgRoot, author: opts.author });
+    }
     await upgradeMemory(targetDir, opts, detected);
   } else {
     await initMemory(targetDir, opts, detected);

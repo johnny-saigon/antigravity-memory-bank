@@ -552,6 +552,43 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-141: Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Description:** Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
+- **Technical Specification:**
+  Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
+- **Acceptance Criteria:**
+  - [x] Implement and verify Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
+### BUG-110: ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `docs/BACKLOG.md`, `docs/backlog.html`, `docs/backlog.json`
+- **Description:** ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
+- **Technical Specification:**
+  ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
+  - [x] Verify deterministic tests and lint checks for [BUG-110]
+
+---
+
+### FEAT-142: Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Description:** Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+- **Technical Specification:**
+  Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+- **Acceptance Criteria:**
+  - [x] Implement and verify Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+  - [x] Add both a non-regression unit/component test and an E2E test verifying the fix
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

@@ -962,6 +962,72 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     );
   });
 
+  test('3h. FEAT-141 / FEAT-142: explicit worktree upgrade reporting & trickle-up fixes (johnny-saigon auto-accept vs external TO DO ticket)', () => {
+    // Set up an isolated mock Main Memory Bank repo + downstream project
+    const mockMainDir = path.join(os.tmpdir(), `agy-main-mb-${Date.now()}`);
+    const mockDownstreamDir = path.join(os.tmpdir(), `agy-downstream-${Date.now()}`);
+    try {
+      fs.mkdirSync(path.join(mockMainDir, 'scripts'), { recursive: true });
+      fs.mkdirSync(path.join(mockMainDir, 'templates', 'scripts'), { recursive: true });
+      fs.mkdirSync(path.join(mockMainDir, 'docs'), { recursive: true });
+      fs.mkdirSync(path.join(mockDownstreamDir, 'scripts'), { recursive: true });
+
+      const baselineContent = '// baseline lint-memory v1\nconsole.log("ok");\n';
+      fs.writeFileSync(path.join(mockMainDir, 'scripts', 'lint-memory.mjs'), baselineContent, 'utf8');
+      fs.writeFileSync(path.join(mockMainDir, 'scripts', 'backlog.mjs'), '// backlog v1\n', 'utf8');
+      fs.writeFileSync(path.join(mockMainDir, 'templates', 'scripts', 'backlog.mjs'), '// backlog v1\n', 'utf8');
+      fs.writeFileSync(
+        path.join(mockMainDir, 'docs', 'backlog.json'),
+        JSON.stringify({ version: '1.0.0', project: 'antigravity_memory_bank', tasks: [], milestones: [] }, null, 2),
+        'utf8'
+      );
+
+      // Case 1: Fix from GitHub user `johnny-saigon` -> MUST auto-accept into Main + template mirror!
+      const ownerFix = '// backlog v2 fix by johnny-saigon\n';
+      fs.writeFileSync(path.join(mockDownstreamDir, 'scripts', 'backlog.mjs'), ownerFix, 'utf8');
+      const ownerOut = execFileSync(
+        process.execPath,
+        [CLI_PATH, 'trickle-up', mockDownstreamDir, '--main-root', mockMainDir, '--author', 'johnny-saigon'],
+        { cwd: mockDownstreamDir, env: testEnv, encoding: 'utf8' }
+      );
+      assert.match(ownerOut, /TRICKLE-UP AUTO-ACCEPTED \(owner: johnny-saigon\)/);
+      assert.equal(fs.readFileSync(path.join(mockMainDir, 'scripts', 'backlog.mjs'), 'utf8'), ownerFix);
+      assert.equal(fs.readFileSync(path.join(mockMainDir, 'templates', 'scripts', 'backlog.mjs'), 'utf8'), ownerFix);
+
+      // Case 2: Fix from someone else (`alice-dev`) -> MUST NOT overwrite Main, MUST create TO DO notification ticket in Main backlog!
+      const extFix = '// lint-memory external fix by alice-dev\n';
+      fs.writeFileSync(path.join(mockDownstreamDir, 'scripts', 'lint-memory.mjs'), extFix, 'utf8');
+      const extOut = execFileSync(
+        process.execPath,
+        [CLI_PATH, 'trickle-up', mockDownstreamDir, '--main-root', mockMainDir, '--author', 'alice-dev'],
+        { cwd: mockDownstreamDir, env: testEnv, encoding: 'utf8' }
+      );
+      assert.match(extOut, /TRICKLE-UP HELD FOR REVIEW \(external author @alice-dev\)/);
+      assert.equal(
+        fs.readFileSync(path.join(mockMainDir, 'scripts', 'lint-memory.mjs'), 'utf8'),
+        baselineContent,
+        'External contributor fix must NOT auto-overwrite Main Memory Bank'
+      );
+      const mainBacklog = JSON.parse(fs.readFileSync(path.join(mockMainDir, 'docs', 'backlog.json'), 'utf8'));
+      const notifTicket = mainBacklog.tasks.find((t) => t.title.includes('@alice-dev') && t.title.includes('scripts/lint-memory.mjs'));
+      assert.ok(notifTicket, 'External contributor fix must create a notification ticket in Main Memory Bank backlog');
+      assert.equal(notifTicket.status, 'todo', 'External contributor notification ticket must land in TO DO column');
+      assert.ok(notifTicket.trickleUp && notifTicket.trickleUp.patchPath, 'Notification ticket must attach proposed-fix.patch');
+
+      // Case 3: Accepting the reviewed external ticket via `--accept <ID>` applies the fix and marks ticket DONE
+      const acceptOut = execFileSync(
+        process.execPath,
+        [CLI_PATH, 'trickle-up', '--accept', notifTicket.id, '--main-root', mockMainDir],
+        { cwd: mockMainDir, env: testEnv, encoding: 'utf8' }
+      );
+      assert.match(acceptOut, /Accepted trickled-up fix/);
+      assert.equal(fs.readFileSync(path.join(mockMainDir, 'scripts', 'lint-memory.mjs'), 'utf8'), extFix);
+    } finally {
+      try { fs.rmSync(mockMainDir, { recursive: true, force: true }); } catch {}
+      try { fs.rmSync(mockDownstreamDir, { recursive: true, force: true }); } catch {}
+    }
+  });
+
   test('3i. backlog children: retrieves children tickets of non-completed parents only, supports --open-only and <PARENT_ID>, and renders parent/child badges', () => {
     const backlogScriptPath = path.join(tmpRepo, 'scripts', 'backlog.mjs');
 

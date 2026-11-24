@@ -612,6 +612,22 @@ function syncIntegrationsAndCustomizations(rootDir) {
     } catch {}
   }
 
+  // Discover Main + Linked Git Worktrees explicitly (FEAT-141)
+  const worktreeEntries = [];
+  try {
+    const wtRaw = execSync('git worktree list --porcelain', { cwd: resolvedRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    let cur = null;
+    for (const line of wtRaw.split('\n')) {
+      if (line.startsWith('worktree ')) {
+        if (cur) worktreeEntries.push(cur);
+        cur = { path: line.slice('worktree '.length).trim(), branch: 'detached', isMain: worktreeEntries.length === 0 };
+      } else if (line.startsWith('branch refs/heads/') && cur) {
+        cur.branch = line.slice('branch refs/heads/'.length).trim();
+      }
+    }
+    if (cur) worktreeEntries.push(cur);
+  } catch {}
+
   const isSelf = displayProject === 'antigravity-memory-bank';
   const authCount = mcpServers.filter(s => s.authenticated).length;
   const lines = [
@@ -623,6 +639,14 @@ function syncIntegrationsAndCustomizations(rootDir) {
     `- **Workspace Root**: \`${workspaceRootTilde}\` · **Git Remote**: \`${gitRemote}\` (\`${gitBranch}\`)`,
     `- **Directory Layout**: ${topDirs.join(', ') || '`/`'}`
   ];
+
+  if (worktreeEntries.length > 1) {
+    const linkedCount = worktreeEntries.length - 1;
+    const wtFormatted = worktreeEntries
+      .map(w => `${w.isMain ? 'Main' : 'Worktree'} \`[${w.branch}]\` (\`${toTildePath(w.path)}\`)`)
+      .join(' · ');
+    lines.push(`- **Git Worktree Installations (${worktreeEntries.length}: 1 Main + ${linkedCount} Linked)**: ${wtFormatted}`);
+  }
 
   if (!isSelf && siblingRepos.length > 0) {
     lines.push(`- **Colocated Sibling Repos**: ${siblingRepos.join(', ')}`);

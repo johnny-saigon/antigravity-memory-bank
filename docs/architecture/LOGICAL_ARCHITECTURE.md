@@ -34,8 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-121`** | Canonical Living Documentation Hierarchy & Deep Universal Harvester (docs/INDEX.md + 4 Pillars) | 🟢 DONE | `lib/docs-synthesizer.mjs`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs` |
-| **`FEAT-122`** | Mandatory Plan-to-Backlog Ticket Creation & Atomic Plan Decomposition (backlog split & plan --from-plan) | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `skills/backlog-plan/SKILL.md` |
 | **`FEAT-123`** | Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks | 🟢 DONE | `skills/start/SKILL.md`, `.agents/skills/start/SKILL.md`, `scripts/lint-memory.mjs` |
 | **`FEAT-124`** | Add per-column and global Sort (Oldest to Newest and vice versa) and manual drag-and-drop / up-down ticket reordering across all Backlog instances | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-125`** | Verbose AGY Model Roster, Quota-Pool & Ticket Quality-to-Credit ROI Engine | 🟢 DONE | `scripts/lint-memory.mjs`, `tests/cli-e2e.test.mjs` |
@@ -54,6 +52,8 @@ flowchart LR
 | **`FEAT-138`** | ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH) | 🟢 DONE | `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/PLANNING_GUIDE.md`, `docs/planning/implementation_plan.md` |
 | **`FEAT-139`** | ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH) | 🟢 DONE | — |
 | **`FEAT-140`** | ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH) | 🟢 DONE | — |
+| **`FEAT-141`** | Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees | 🟢 DONE | — |
+| **`FEAT-142`** | Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors | 🟢 DONE | — |
 <!-- ag-section:logical-features:end -->
 
 ---
