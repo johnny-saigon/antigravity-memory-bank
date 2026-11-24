@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(backlog): consistent -ACT-N child tickets, Proceed guard & locked READY planning UI (FEAT-147, BUG-113, BUG-114)** (`6b87730`)
 - [x] **feat(backlog): AGY Record Audio SVG branding (FEAT-144), universal PLAN NOW / CODE NOW + High Effort & fleet/brain sync (FEAT-145), and multi-ticket Orchestrator batching (FEAT-146)** (`f95fd3d`)
 - [x] **fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112)** (`c296aaf`)
 - [x] **fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112)** (`2d78b4b`)
