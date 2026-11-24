@@ -1971,61 +1971,22 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     </div>
   </div>
 
-  <!-- Isolated TO DO-Only /backlog-add Idea Modal (FEAT-143: 0 AI Tokens · Zero Disruption to Active Turn / WIP) -->
-  <div id="todoIdeaModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTodoIdeaModal()">
-    <div class="bg-[var(--card,#1e293b)] border border-amber-500/45 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-      <div class="p-4 border-b border-[var(--border,#334155)] flex items-start justify-between gap-3 bg-slate-900/75">
-        <div>
-          <div class="flex items-center gap-2 flex-wrap mb-1">
-            <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-2 py-0.5 text-[11px] font-bold">➕ TO DO ONLY · /backlog-add</span>
-            <span class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 rounded px-2 py-0.5 text-[11px]">🛡️ Isolated from Current Turn · 0 Tokens</span>
-          </div>
-          <h2 class="text-sm font-bold text-white leading-snug">Capture Idea into TO DO Without Disturbing Work in Progress</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5">Runs out-of-band via the local bridge — never interrupts your active agent turn or modifies IN PROGRESS / READY tickets.</p>
-        </div>
-        <button onclick="closeTodoIdeaModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-800 cursor-pointer">✕</button>
-      </div>
-      <div class="p-4 space-y-3 text-xs">
-        <div>
-          <label class="block text-xs font-semibold text-slate-200 mb-1">Idea Title <span class="text-slate-400 font-normal">(auto-annotated in TO DO)</span></label>
-          <input id="todoIdeaTitle" type="text" oninput="updateTodoIdeaRoiPreview()" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter') submitIsolatedTodoIdea()" placeholder="e.g. Add keyboard shortcut for quick theme switching..." class="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400">
-        </div>
-        <div class="grid grid-cols-2 gap-2.5">
-          <div>
-            <label class="block text-[11px] font-medium text-slate-400 mb-1">Type</label>
-            <select id="todoIdeaType" onchange="updateTodoIdeaRoiPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
-              <option value="feature">Feature (FEAT)</option>
-              <option value="ux">UX Improvement (UX)</option>
-              <option value="bug">Bug Fix (BUG)</option>
-              <option value="qa">QA / Validation (QA)</option>
-              <option value="refactor">Refactor</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[11px] font-medium text-slate-400 mb-1">Priority</label>
-            <select id="todoIdeaPriority" onchange="updateTodoIdeaRoiPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
-              <option value="high">High</option>
-              <option value="medium" selected>Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label class="block text-[11px] font-medium text-slate-400 mb-1">Optional Context / Notes</label>
-          <textarea id="todoIdeaDesc" rows="2" oninput="updateTodoIdeaRoiPreview()" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter') submitIsolatedTodoIdea()" placeholder="Optional details or acceptance criteria..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"></textarea>
-        </div>
-        <div id="todoIdeaRoiPreview" class="bg-emerald-950/35 border border-emerald-500/30 rounded-lg p-2.5 text-[11px] text-emerald-200 leading-relaxed">
-          🛡️ <strong>Isolated Zero-Token Capture:</strong> Saves &amp; auto-annotates strictly into <code>TO DO</code> while your active turn and <code>IN PROGRESS</code> work stay 100% untouched.
-        </div>
-      </div>
-      <div class="p-3.5 border-t border-[var(--border,#334155)] bg-slate-900/80 flex items-center justify-between gap-2 flex-wrap">
-        <button onclick="copyIsolatedBacklogAddCmd()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600/60 text-xs font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer" title="Copy /backlog-add command without sending to chat">
-          📋 Copy /backlog-add
-        </button>
+  <!-- Minimalist Isolated TO DO-Only /backlog-add Modal (FEAT-143: Single Text Field · Auto-Configured · 0 Tokens) -->
+  <div id="todoIdeaModal" class="hidden fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTodoIdeaModal()">
+    <div class="bg-[var(--card,#1e293b)] border border-amber-500/45 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onclick="event.stopPropagation()">
+      <div class="px-4 py-3 border-b border-[var(--border,#334155)] flex items-center justify-between gap-2 bg-slate-900/70">
         <div class="flex items-center gap-2">
-          <button onclick="closeTodoIdeaModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg cursor-pointer">Cancel</button>
+          <span class="text-xs font-bold text-amber-300">➕ /backlog-add</span>
+          <span class="text-[11px] text-slate-400">· Isolated · Auto-configured</span>
+        </div>
+        <button onclick="closeTodoIdeaModal()" class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 rounded hover:bg-slate-800 cursor-pointer">✕</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <textarea id="todoIdeaInput" rows="3" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitIsolatedTodoIdea();}else if(event.key==='Escape'){closeTodoIdeaModal();}" placeholder="Describe your idea... (ID, type, priority, files &amp; ROI are auto-configured)" class="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 resize-none"></textarea>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[11px] text-slate-500">Press <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Enter</kbd> to save · <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Esc</kbd> to cancel</span>
           <button onclick="submitIsolatedTodoIdea()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition cursor-pointer">
-            ➕ Add to TO DO (Isolated · 0 Tokens)
+            Add to TO DO
           </button>
         </div>
       </div>
@@ -2905,13 +2866,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
       const modal = document.getElementById('todoIdeaModal');
       if (!modal) return;
-      const titleInput = document.getElementById('todoIdeaTitle');
-      const descInput = document.getElementById('todoIdeaDesc');
-      if (titleInput) titleInput.value = '';
-      if (descInput) descInput.value = '';
-      updateTodoIdeaRoiPreview();
+      const ideaInput = document.getElementById('todoIdeaInput');
+      if (ideaInput) ideaInput.value = '';
       modal.classList.remove('hidden');
-      if (titleInput) setTimeout(() => titleInput.focus(), 20);
+      if (ideaInput) setTimeout(() => ideaInput.focus(), 20);
     }
 
     function closeTodoIdeaModal() {
@@ -2919,84 +2877,51 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       if (modal) modal.classList.add('hidden');
     }
 
-    function updateTodoIdeaRoiPreview() {
-      const box = document.getElementById('todoIdeaRoiPreview');
-      if (!box) return;
-      const title = (document.getElementById('todoIdeaTitle') && document.getElementById('todoIdeaTitle').value.trim()) || '';
-      const type = (document.getElementById('todoIdeaType') && document.getElementById('todoIdeaType').value) || 'feature';
-      const priority = (document.getElementById('todoIdeaPriority') && document.getElementById('todoIdeaPriority').value) || 'medium';
-      const desc = (document.getElementById('todoIdeaDesc') && document.getElementById('todoIdeaDesc').value.trim()) || '';
-      if (!title) {
-        box.innerHTML = '🛡️ <strong>Isolated Zero-Token Capture:</strong> Saves &amp; auto-annotates strictly into <code>TO DO</code> while your active turn and <code>IN PROGRESS</code> work stay 100% untouched.';
-        return;
-      }
-      const adv = computeTicketCreditAdvice({ id: 'NEW', title, type, priority, description: desc, components: [] });
-      box.innerHTML = '🛡️ <strong>Isolated TO DO Capture (0 Tokens):</strong> ' + escapeHtml(adv.planVerdict) + '<br>• <strong>Next-step AGY Model:</strong> ' + escapeHtml(adv.stageBGoogle);
-    }
-
-    function copyIsolatedBacklogAddCmd() {
-      const title = (document.getElementById('todoIdeaTitle') && document.getElementById('todoIdeaTitle').value.trim()) || '';
-      if (!title) {
-        showToast('⚠️ Enter an idea title first');
-        return;
-      }
-      const cmd = '/backlog-add ' + title;
-      copyTextToClipboard(cmd, false);
-      callLocalBridge('/api/clipboard', { text: cmd });
-      showToast('📋 Copied "' + cmd + '" (current turn undisturbed)');
-    }
-
     async function submitIsolatedTodoIdea() {
-      const titleEl = document.getElementById('todoIdeaTitle');
-      const descEl = document.getElementById('todoIdeaDesc');
-      const typeEl = document.getElementById('todoIdeaType');
-      const prioEl = document.getElementById('todoIdeaPriority');
-      const title = titleEl ? titleEl.value.trim() : '';
-      if (!title) {
-        showToast('⚠️ Please enter an idea title');
-        if (titleEl) titleEl.focus();
+      const ideaEl = document.getElementById('todoIdeaInput');
+      const rawIdea = ideaEl ? ideaEl.value.trim() : '';
+      if (!rawIdea) {
+        showToast('⚠️ Please type an idea first');
+        if (ideaEl) ideaEl.focus();
         return;
       }
-      const desc = descEl ? descEl.value.trim() : '';
-      const type = typeEl ? typeEl.value : 'feature';
-      const priority = prioEl ? prioEl.value : 'medium';
 
       closeTodoIdeaModal();
       const bridgeRes = await callLocalBridge('/api/backlog-add-isolated', {
         repoRoot: rawData.repoRoot,
-        title,
-        description: desc,
-        type,
-        priority
+        idea: rawIdea
       });
       if (bridgeRes && bridgeRes.ok && bridgeRes.task) {
         if (!rawData.tasks.some(t => t.id === bridgeRes.task.id)) {
           rawData.tasks.unshift(bridgeRes.task);
         }
         renderBoard();
-        showToast('✅ Captured [' + bridgeRes.task.id + '] in TO DO (0 tokens · active turn untouched)!');
+        showToast('✅ Added [' + bridgeRes.task.id + '] to TO DO (auto-configured · 0 tokens)!');
       } else {
-        const prefix = type === 'bug' ? 'BUG' : 'FEAT';
+        const isBug = /\\b(bug|fix|regression|crash|broken|error)\\b/i.test(rawIdea);
+        const prefix = isBug ? 'BUG' : 'FEAT';
         const maxNum = rawData.tasks.reduce((max, t) => {
           const m = String(t.id || '').match(new RegExp('^' + prefix + '-(\\\\d+)$', 'i'));
           return m ? Math.max(max, parseInt(m[1], 10)) : max;
         }, 100);
         const fallbackId = prefix + '-' + (maxNum + 1);
+        const firstLine = rawIdea.split(/\\r?\\n/)[0].trim();
+        const shortTitle = firstLine.length > 90 ? (firstLine.slice(0, 87).trim() + '...') : firstLine;
         rawData.tasks.unshift({
           id: fallbackId,
-          type,
-          title,
+          type: isBug ? 'bug' : 'feature',
+          title: shortTitle,
           status: 'todo',
-          priority,
+          priority: /\\b(p0|p1|urgent|critical|crash|security|oauth)\\b/i.test(rawIdea) ? 'high' : 'medium',
           components: [],
           attachments: [],
-          description: desc || title,
+          description: rawIdea,
           branch: (rawData.gitContext && rawData.gitContext.branch) || 'main'
         });
         renderBoard();
-        const cmd = '/backlog-add ' + title;
+        const cmd = '/backlog-add ' + rawIdea;
         copyTextToClipboard(cmd, false);
-        showToast('📋 Bridge offline — added locally & copied "' + cmd + '" (current turn untouched)');
+        showToast('📋 Bridge offline — added locally & copied "' + cmd + '"');
       }
     }
 
@@ -5038,13 +4963,17 @@ function startBridgeServer(port = DEFAULT_PORT) {
       }
 
       if (endpoint === '/api/backlog-add-isolated') {
-        const rawTitle = String(body.title || body.idea || '').trim();
-        if (!rawTitle) return { status: 400, payload: { ok: false, error: 'Idea title is required' } };
+        const rawInput = String(body.idea || body.title || '').trim();
+        if (!rawInput) return { status: 400, payload: { ok: false, error: 'Idea text is required' } };
         const data = loadBacklog(targetRoot, { skipSelfHeal: true });
-        const rawType = String(body.type || 'feature').toLowerCase();
-        const isBug = rawType === 'bug' || /\b(bug|fix|regression|crash|broken)\b/i.test(rawTitle);
-        const type = rawType === 'feat' ? 'feature' : (rawType === 'fix' ? 'bug' : (isBug && rawType === 'feature' ? 'bug' : rawType));
-        const prioRaw = String(body.priority || 'medium').toLowerCase();
+        const firstLine = rawInput.split(/\r?\n/)[0].trim();
+        const rawTitle = firstLine.length > 96 ? `${firstLine.slice(0, 93).trim()}...` : firstLine;
+        const explicitType = body.type ? String(body.type).toLowerCase() : '';
+        const isBug = explicitType === 'bug' || /\b(bug|fix|regression|crash|broken|error|fail)\b/i.test(rawInput);
+        const type = explicitType
+          ? (explicitType === 'feat' ? 'feature' : (explicitType === 'fix' ? 'bug' : explicitType))
+          : (isBug ? 'bug' : /\b(ux|ui|kanban|modal|button|layout|css|theme)\b/i.test(rawInput) ? 'ux' : /\b(qa|e2e|test suite|playwright)\b/i.test(rawInput) ? 'qa' : /\b(refactor|cleanup)\b/i.test(rawInput) ? 'refactor' : 'feature');
+        const prioRaw = body.priority ? String(body.priority).toLowerCase() : (/\b(p0|p1|urgent|critical|crash|security|oauth|auth|production)\b/i.test(rawInput) ? 'high' : /\b(typo|copy|spacing|padding|minor|low)\b/i.test(rawInput) ? 'low' : 'medium');
         const priority = (prioRaw === 'p0' || prioRaw === 'p1' || prioRaw === 'high') ? 'high' : (prioRaw === 'p3' || prioRaw === 'low' ? 'low' : 'medium');
         const prefix = type === 'bug' ? 'BUG' : 'FEAT';
         let id = body.id ? String(body.id).trim().toUpperCase() : '';
@@ -5056,7 +4985,7 @@ function startBridgeServer(port = DEFAULT_PORT) {
           }, 100);
           id = `${prefix}-${maxNum + 1}`;
         }
-        const desc = String(body.description || '').trim() || rawTitle;
+        const desc = String(body.description || '').trim() || rawInput;
         const newTask = {
           id,
           type,

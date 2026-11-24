@@ -1041,6 +1041,8 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.doesNotMatch(html, /id="wrap-in_progress"[^>]*handleTodoColumnClick/, '#wrap-in_progress must NOT trigger idea modal');
     assert.doesNotMatch(html, /id="wrap-done"[^>]*handleTodoColumnClick/, '#wrap-done must NOT trigger idea modal');
     assert.match(html, /id="todoIdeaModal"/, 'backlog.html must include dedicated isolated #todoIdeaModal');
+    assert.match(html, /id="todoIdeaInput"/, '#todoIdeaModal must use a single minimalist text input');
+    assert.doesNotMatch(html, /id="todoIdeaType"/, '#todoIdeaModal must not clutter UI with manual Type/Priority dropdowns');
 
     // 2. Verify live POST /api/backlog-add-isolated adds an annotated TO DO ticket while leaving activePlanTaskIds, WIP, and implementation_plan.md untouched
     const planPath = path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md');

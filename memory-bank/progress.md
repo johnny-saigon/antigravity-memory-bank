@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(backlog): isolated TO DO column click-to-add idea modal without disturbing active turn (FEAT-143)** (`d405624`)
 - [x] **feat(cli): worktree-aware fleet reporting (FEAT-141), trickle-up fix harvester (FEAT-142), sandbox brainDir fallback (BUG-110)** (`b77d120`)
 - [x] **fix(worktree): prevent cross-worktree brain implementation_plan.md bleed and harden sandboxed worktree branch detection** (`1881828`)
 - [x] **feat(backlog): retrieve children tickets of non-completed parent tickets across CLI, API, and Kanban** (`0f98f7a`)
