@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **docs: sync memory-bank context after BUG-111 resolution** (`7ee0802`)
 - [x] **fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111)** (`cfd803c`)
 - [x] **feat(backlog): add voice input dictation to isolated TO DO idea modal (FEAT-143)** (`b43d344`)
 - [x] **feat(backlog): isolated TO DO column click-to-add idea modal without disturbing active turn (FEAT-143)** (`d405624`)
