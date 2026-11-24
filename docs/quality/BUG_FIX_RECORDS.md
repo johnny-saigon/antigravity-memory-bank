@@ -19,6 +19,7 @@
 | **`BUG-109`** | ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH) — ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH) | DONE | `core` |
 | **`BUG-110`** | ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH) — ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH) | DONE | `scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json` |
 | **`FEAT-142`** | Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors — Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors | DONE | `core` |
+| **`COMMIT-cfd803c`** | fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111) — Git fix commit `cfd803c` | DONE | `git history` |
 | **`COMMIT-1881828`** | fix(worktree): prevent cross-worktree brain implementation_plan.md bleed and harden sandboxed worktree branch detection — Git fix commit `1881828` | DONE | `git history` |
 | **`COMMIT-079e448`** | fix(backlog): enforce identical canonical Backlog Kanban design across all projects & harden backlog-adapter (FEAT-129) [skip ci] — Git fix commit `079e448` | DONE | `git history` |
 | **`COMMIT-b9706b7`** | fix(docs): whitelist docs/CREDITS_CHEATSHEET.md in living-docs organizer & index in docs/INDEX.md [skip ci] — Git fix commit `b9706b7` | DONE | `git history` |
@@ -28,7 +29,6 @@
 | **`COMMIT-04218b1`** | fix(cli): untrack docs/backlog.html from git index during commit [skip ci] — Git fix commit `04218b1` | DONE | `git history` |
 | **`COMMIT-611658d`** | fix(customizations): ensure <24KB rule shard balance and pre-auth mandate across all repos [skip ci] — Git fix commit `611658d` | DONE | `git history` |
 | **`COMMIT-9557d87`** | fix(backlog): auto-render Review Pane artifacts in lifecycle hooks and add live /api/backlog auto-sync — Git fix commit `9557d87` | DONE | `git history` |
-| **`COMMIT-6673fc2`** | fix(customizations): resolve BUG-107 by pulling API keys, MCP configs & customizations into memory-bank — Git fix commit `6673fc2` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

@@ -1,6 +1,8 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111)** (`cfd803c`)
+- [x] **feat(backlog): add voice input dictation to isolated TO DO idea modal (FEAT-143)** (`b43d344`)
 - [x] **feat(backlog): isolated TO DO column click-to-add idea modal without disturbing active turn (FEAT-143)** (`d405624`)
 - [x] **feat(cli): worktree-aware fleet reporting (FEAT-141), trickle-up fix harvester (FEAT-142), sandbox brainDir fallback (BUG-110)** (`b77d120`)
 - [x] **fix(worktree): prevent cross-worktree brain implementation_plan.md bleed and harden sandboxed worktree branch detection** (`1881828`)
