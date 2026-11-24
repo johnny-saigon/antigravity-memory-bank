@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(backlog): worktree isolation & auto-upgrade (FEAT-137), READY plan examination modal (FEAT-138), residual children a/b/c (FEAT-139)** (`13d146e`)
 - [x] **feat(backlog): auto-register ad-hoc /plan into READY on review display & move READY -> IN PROGRESS on Proceed (FEAT-136)** (`0c33828`)
 - [x] **feat(kanban): add /backlog-add skill, autoAnnotateTicket, interactive PLAN/CODE model selectors & drag-and-drop triggers (FEAT-133..135) [skip ci]** (`11fcb37`)
 - [x] **feat(kanban): add 4th READY (Planned) column & integrate Two-Stage Credit Savings workflow (FEAT-130..132) [skip ci]** (`3baa2d6`)

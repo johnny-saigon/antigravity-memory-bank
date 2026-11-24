@@ -897,6 +897,71 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     }
   });
 
+  test('3g. FEAT-140 / BUG-109: zero-skip 4-state live Kanban transitions TO DO (planning) -> READY (awaiting_approval) -> IN PROGRESS (coding) -> DONE', () => {
+    // Stage 1: stage-plan places ticket in TO DO with liveActivity: 'planning' and renders pulsing badge
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'stage-plan', 'Zero Skip Live Feature', '--id', 'FEAT-810'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const s1Json = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const s1Task = s1Json.tasks.find((t) => t.id === 'FEAT-810');
+    assert.equal(s1Task.status, 'todo', 'stage-plan must place ticket in TO DO first');
+    assert.equal(s1Task.liveActivity, 'planning', 'stage-plan must set liveActivity to planning');
+    const s1Html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(s1Html, /🧠 Planning\.\.\./, 'backlog.html must render pulsing Planning badge in TO DO');
+
+    // Stage 2: writing implementation_plan.md promotes TO DO -> READY with awaiting_approval
+    fs.writeFileSync(
+      path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md'),
+      '# Implementation Plan\n\n### [FEAT-810] Zero Skip Live Feature\nImplement live state transitions.\n',
+      'utf8'
+    );
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'render'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const s2Json = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const s2Task = s2Json.tasks.find((t) => t.id === 'FEAT-810');
+    assert.equal(s2Task.status, 'ready', 'Finalizing implementation_plan.md must promote TO DO -> READY');
+    assert.equal(s2Task.liveActivity, 'awaiting_approval', 'READY ticket must show awaiting_approval');
+    const s2Html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(s2Html, /⏳ READY · Awaiting Proceed/, 'backlog.html must render Awaiting Proceed badge in READY');
+
+    // Stage 3: modifying a code file + sync-memory-context.mjs auto-proceeds READY -> IN PROGRESS (coding)
+    fs.mkdirSync(path.join(tmpRepo, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(tmpRepo, 'src', 'live-state.js'), 'export const live = true;\n', 'utf8');
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'sync-memory-context.mjs'), '--quiet'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const s3Json = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const s3Task = s3Json.tasks.find((t) => t.id === 'FEAT-810');
+    assert.equal(s3Task.status, 'in_progress', 'Dirty code file must auto-proceed READY -> IN PROGRESS');
+    assert.equal(s3Task.liveActivity, 'coding', 'IN PROGRESS ticket must show liveActivity: coding');
+    const s3Html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(s3Html, /⚡ Coding Live\.\.\./, 'backlog.html must render pulsing Coding Live badge in IN PROGRESS');
+
+    // Stage 4: done clears liveActivity and preserves full 4-state audit trail in stateHistory
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'done', 'FEAT-810', '--force'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const s4Json = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const s4Task = s4Json.tasks.find((t) => t.id === 'FEAT-810');
+    assert.equal(s4Task.status, 'done');
+    assert.equal(s4Task.liveActivity, undefined);
+    const historyStatuses = (s4Task.stateHistory || []).map((h) => h.status);
+    assert.deepEqual(
+      historyStatuses,
+      ['todo', 'ready', 'in_progress', 'done'],
+      'stateHistory must record exact 4-stage progression without skipping any column'
+    );
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

@@ -528,6 +528,30 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-140: ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Description:** ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)
+- **Technical Specification:**
+  ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)
+  - [x] Verify deterministic tests and lint checks for [FEAT-140]
+
+---
+
+### BUG-109: ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Description:** ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)
+- **Technical Specification:**
+  ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)
+  - [x] Verify deterministic tests and lint checks for [BUG-109]
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

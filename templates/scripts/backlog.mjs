@@ -104,6 +104,42 @@ function isTaskVisibleInBranch(task, branchCtx) {
 }
 
 /**
+ * Record every Kanban state transition with timestamp & liveActivity badge (FEAT-140 / BUG-109)
+ * Guarantees an auditable TO DO (planning) -> READY (awaiting_approval) -> IN PROGRESS (coding) -> DONE trail.
+ */
+function recordTaskStateTransition(task, newStatus, liveActivity = null) {
+  if (!task || typeof task !== 'object') return task;
+  const nowIso = new Date().toISOString();
+  task.status = newStatus;
+  if (liveActivity) {
+    task.liveActivity = liveActivity;
+  } else {
+    delete task.liveActivity;
+  }
+  if (newStatus === 'todo' && liveActivity === 'planning' && !task.planningStartedAt) {
+    task.planningStartedAt = nowIso;
+  }
+  if (newStatus === 'ready' && !task.plannedAt) {
+    task.plannedAt = nowIso;
+  }
+  if (newStatus === 'in_progress' && !task.startedAt) {
+    task.startedAt = nowIso;
+  }
+  if (newStatus === 'done') {
+    task.completedAt = nowIso;
+  }
+  if (!Array.isArray(task.stateHistory)) task.stateHistory = [];
+  const last = task.stateHistory[task.stateHistory.length - 1];
+  if (!last || last.status !== newStatus || last.activity !== (liveActivity || null)) {
+    task.stateHistory.push({ status: newStatus, activity: liveActivity || null, at: nowIso });
+    if (task.stateHistory.length > 20) {
+      task.stateHistory = task.stateHistory.slice(-20);
+    }
+  }
+  return task;
+}
+
+/**
  * Load active implementation_plan.md & extract per-ticket blueprint sections for READY examination modal (FEAT-138)
  */
 function loadActiveImplementationPlanData(rootDir = REPO_ROOT, data = null) {
@@ -285,7 +321,14 @@ function countWorkspaceMentions(text, targetPath) {
 function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
   const homeDir = process.env.HOME || process.env.USERPROFILE || '';
   const brainBase = path.join(homeDir, '.gemini', 'antigravity', 'brain');
-  if (!fs.existsSync(brainBase)) return [];
+  const fallbackDirs = [];
+  if (process.env.ANTIGRAVITY_BRAIN_DIR && fs.existsSync(process.env.ANTIGRAVITY_BRAIN_DIR)) {
+    fallbackDirs.push(process.env.ANTIGRAVITY_BRAIN_DIR);
+  }
+  if (data && data.meta && data.meta.lastBrainDir && fs.existsSync(data.meta.lastBrainDir) && !fallbackDirs.includes(data.meta.lastBrainDir)) {
+    fallbackDirs.push(data.meta.lastBrainDir);
+  }
+  if (!fs.existsSync(brainBase)) return fallbackDirs;
 
   try {
     const entries = fs.readdirSync(brainBase, { withFileTypes: true });
@@ -761,6 +804,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             type: item.type || 'feature',
             title: item.title,
             status: 'ready',
+            liveActivity: 'awaiting_approval',
             plannedAt: new Date().toISOString(),
             priority: item.priority || 'medium',
             components: item.components || [],
@@ -772,6 +816,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
               `Verify deterministic tests and lint checks for [${item.id}]`
             ]
           };
+          recordTaskStateTransition(newTask, 'ready', 'awaiting_approval');
           ensureTaskActionItems(newTask);
           autoAnnotateTicket(newTask, rootDir);
           stampTaskBranch(newTask, rootDir);
@@ -788,8 +833,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             changed = true;
           }
           if (isPrimaryActivePlan && existing.status === 'todo') {
-            existing.status = 'ready';
-            existing.plannedAt = existing.plannedAt || new Date().toISOString();
+            recordTaskStateTransition(existing, 'ready', 'awaiting_approval');
             changed = true;
           }
           if (changed) {
@@ -1403,8 +1447,10 @@ function renderCardServer(task, allTasks = []) {
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">${typeBadge}</span>
               ${task.coreCompleted && hasChildren ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Primary work done; tracking residual child tickets">🧩 Main Done · ${childTasks.length} Residual</span>` : ''}
               ${task.isResidualChild ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task ${escapeHtmlServer(task.residualLetter || '')}</span>` : ''}
+              ${!isReady && !isInProgress && !isDone && task.liveActivity === 'planning' ? `<span class="badge bg-amber-500/25 text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket (FEAT-140)">🧠 Planning...</span>` : ''}
               ${!isReady && !isInProgress && !isDone && task.annotations ? `<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>` : ''}
-              ${isReady ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">📐 READY</span>` : ''}
+              ${isReady ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>` : ''}
+              ${isInProgress && task.liveActivity === 'coding' ? `<span class="badge bg-blue-500/25 text-blue-200 border border-blue-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively coding this ticket right now (FEAT-140)">⚡ Coding Live...</span>` : ''}
               ${isInProgress && !isCollapsed ? `<span onclick="openTaskInspector('${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ ${pendingActions.length} Action${pendingActions.length === 1 ? '' : 's'}</span>` : ''}
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
@@ -3707,8 +3753,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">\${typeBadge}</span>
               \${task.coreCompleted && hasChildren ? \`<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Primary work done; tracking residual child tickets">🧩 Main Done · \${childTasks.length} Residual</span>\` : ''}
               \${task.isResidualChild ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task \${escapeHtml(task.residualLetter || '')}</span>\` : ''}
+              \${!isReady && !isInProgress && !isDone && task.liveActivity === 'planning' ? \`<span class="badge bg-amber-500/25 text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket (FEAT-140)">🧠 Planning...</span>\` : ''}
               \${!isReady && !isInProgress && !isDone && task.annotations ? \`<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>\` : ''}
-              \${isReady ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">📐 READY</span>\` : ''}
+              \${isReady ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">\${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>\` : ''}
+              \${isInProgress && task.liveActivity === 'coding' ? \`<span class="badge bg-blue-500/25 text-blue-200 border border-blue-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively coding this ticket right now (FEAT-140)">⚡ Coding Live...</span>\` : ''}
               \${isInProgress && !isCollapsed ? \`<span onclick="openTaskInspector('\${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ \${pendingActions.length} Action\${pendingActions.length === 1 ? '' : 's'}</span>\` : ''}
             </div>
             
@@ -3847,7 +3895,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       document.getElementById('count-done').textContent = doneTasks.length;
     }
 
-    let lastTaskSignature = JSON.stringify((rawData.tasks || []).map(t => t.id + ':' + t.status + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
+    let lastTaskSignature = JSON.stringify((rawData.tasks || []).map(t => t.id + ':' + t.status + ':' + (t.liveActivity || '') + ':' + Boolean(t.collapsed) + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
 
     async function syncLiveBacklogFromBridge(showNotification = false) {
       try {
@@ -3859,9 +3907,11 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           const live = await res.json();
           if (live && Array.isArray(live.tasks)) {
             setBridgeBadge(true);
-            const nextSig = JSON.stringify(live.tasks.map(t => t.id + ':' + t.status + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
+            const nextSig = JSON.stringify(live.tasks.map(t => t.id + ':' + t.status + ':' + (t.liveActivity || '') + ':' + Boolean(t.collapsed) + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
             if (nextSig !== lastTaskSignature || showNotification) {
               rawData.tasks = live.tasks;
+              if (live.gitContext) rawData.gitContext = live.gitContext;
+              if (typeof live.implementationPlanMd === 'string') rawData.implementationPlanMd = live.implementationPlanMd;
               if (Array.isArray(live.milestones)) rawData.milestones = live.milestones;
               lastTaskSignature = nextSig;
               renderBoard();
@@ -3886,11 +3936,11 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
     }
 
-    // Initial render + local bridge probe + live auto-sync every 2.5s and on window focus
+    // Initial render + local bridge probe + fast live auto-sync every 1.5s and on window focus (FEAT-140)
     renderBoard();
     probeBridge();
     syncLiveBacklogFromBridge(false);
-    setInterval(() => syncLiveBacklogFromBridge(false), 2500);
+    setInterval(() => syncLiveBacklogFromBridge(false), 1500);
     window.addEventListener('focus', () => syncLiveBacklogFromBridge(false));
   </script>
 </body>
@@ -4509,6 +4559,15 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 
   const brainDirs = findTargetBrainDirs(data, rootDir);
+  if (brainDirs.length > 0) {
+    if (!data.meta) data.meta = {};
+    if (data.meta.lastBrainDir !== brainDirs[0]) {
+      data.meta.lastBrainDir = brainDirs[0];
+      try {
+        fs.writeFileSync(path.join(rootDir, 'docs', 'backlog.json'), JSON.stringify(data, null, 2) + '\n', 'utf8');
+      } catch {}
+    }
+  }
   writePlanningArtifacts(data, rootDir, brainDirs, forceOverwriteBrainPlan);
 
   if (brainDirs.length === 0) {
@@ -5422,7 +5481,8 @@ function main() {
     for (const rawId of rawIds) {
       const task = data.tasks.find(t => t.id.toLowerCase() === rawId.toLowerCase());
       if (task) {
-        task.status = 'in_progress';
+        recordTaskStateTransition(task, 'in_progress', 'coding');
+        stampTaskBranch(task, REPO_ROOT);
         matchedTasks.push(task);
       } else {
         console.warn(`⚠️  Task ${rawId} not found in backlog.`);
@@ -5501,8 +5561,7 @@ function main() {
         residualResults.push({ parent: task, children: spawned });
         matchedTasks.push(task);
       } else {
-        task.status = 'done';
-        task.completedAt = new Date().toISOString();
+        recordTaskStateTransition(task, 'done', null);
         if (Array.isArray(task.actionItems)) {
           task.actionItems.forEach(item => { item.done = true; });
         }
@@ -6051,6 +6110,74 @@ function main() {
     return;
   }
 
+  if (command === 'stage-plan') {
+    let explicitId = null;
+    let priority = 'high';
+    let type = 'feature';
+    const titles = [];
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '--id' && args[i + 1]) explicitId = args[++i];
+      else if (args[i] === '--priority' && args[i + 1]) priority = args[++i];
+      else if (args[i] === '--type' && args[i + 1]) type = args[++i];
+      else if (!args[i].startsWith('--')) titles.push(args[i]);
+    }
+    if (titles.length === 0) {
+      console.error('❌ Usage: npm run backlog stage-plan "<Title 1>" ["<Title 2>" ...] [--id <ID>] [--priority <high|medium|low>]');
+      process.exit(1);
+    }
+
+    const stagedTasks = [];
+    const nextIdFor = (prefix) => {
+      const re = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+      const maxNum = data.tasks.reduce((max, t) => {
+        const m = String(t.id || '').match(re);
+        return m ? Math.max(max, parseInt(m[1], 10)) : max;
+      }, 100);
+      return `${prefix}-${maxNum + 1}`;
+    };
+
+    for (let idx = 0; idx < titles.length; idx++) {
+      const rawTitle = String(titles[idx] || '').trim();
+      if (!rawTitle) continue;
+      let task = null;
+      if (explicitId && idx === 0) {
+        task = data.tasks.find(t => String(t.id).toLowerCase() === explicitId.toLowerCase());
+      }
+      if (!task) {
+        task = data.tasks.find(t => t.status !== 'done' && String(t.title || '').toLowerCase() === rawTitle.toLowerCase());
+      }
+      if (!task) {
+        const isBug = type === 'bug' || /\b(bug|fix|regression|crash|broken)\b/i.test(rawTitle);
+        const newId = (explicitId && idx === 0) ? explicitId.toUpperCase() : nextIdFor(isBug ? 'BUG' : 'FEAT');
+        task = {
+          id: newId,
+          type: isBug ? 'bug' : type,
+          title: rawTitle,
+          status: 'todo',
+          priority,
+          components: [],
+          attachments: [],
+          description: rawTitle,
+          spec: rawTitle,
+          acceptanceCriteria: []
+        };
+        data.tasks.push(task);
+      }
+      recordTaskStateTransition(task, 'todo', 'planning');
+      autoAnnotateTicket(task, REPO_ROOT);
+      stampTaskBranch(task, REPO_ROOT);
+      stagedTasks.push(task);
+    }
+
+    data.activePlanTaskIds = stagedTasks.map(t => t.id);
+    saveBacklog(data);
+    renderMigrationBoard(data);
+    writeReviewPaneArtifacts(data, REPO_ROOT, false);
+    ensureDaemonRunning();
+    console.log(`\n🧠 STAGED FOR PLANNING: ${stagedTasks.map(t => `[${t.id}]`).join(', ')} in TO DO (🧠 Planning...)!`);
+    return;
+  }
+
   if (command === 'proceed') {
     const quietMode = args.includes('--quiet') || args.includes('-q');
     const rawPositional = args.slice(1).filter(a => !a.startsWith('--') && a !== '-q').join(' ').split(/[\s,]+/).filter(Boolean);
@@ -6080,8 +6207,8 @@ function main() {
     for (const tid of targetIds) {
       const task = data.tasks.find(t => String(t.id).toUpperCase() === tid);
       if (!task || task.status === 'done' || task.status === 'in_progress') continue;
-      task.status = 'in_progress';
-      task.startedAt = new Date().toISOString();
+      recordTaskStateTransition(task, 'in_progress', 'coding');
+      stampTaskBranch(task, REPO_ROOT);
       ensureTaskActionItems(task);
       const manifest = unpackTaskAttachments(task, REPO_ROOT);
       if (!quietMode) printUnpackedManifest(manifest, REPO_ROOT);

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T08:33:29.006Z",
+  "lastUpdated": "2026-11-24T08:42:02.933Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1557,6 +1557,108 @@
         "main"
       ],
       "completedAt": "2026-11-24T08:33:28.109Z"
+    },
+    {
+      "id": "FEAT-140",
+      "type": "ux",
+      "title": "### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)",
+      "status": "done",
+      "plannedAt": "2026-11-24T08:38:01.030Z",
+      "priority": "high",
+      "components": [],
+      "attachments": [],
+      "description": "### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)",
+      "spec": "### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)",
+        "Verify deterministic tests and lint checks for [FEAT-140]"
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-140-ACT-1",
+          "text": "Complete implementation and verification for ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-140-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-140]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T08:38:01.032Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T08:38:40.383Z",
+      "completedAt": "2026-11-24T08:42:02.012Z",
+      "stateHistory": [
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T08:42:02.012Z"
+        }
+      ]
+    },
+    {
+      "id": "BUG-109",
+      "type": "bug",
+      "title": "### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)",
+      "status": "done",
+      "plannedAt": "2026-11-24T08:38:01.062Z",
+      "priority": "high",
+      "components": [],
+      "attachments": [],
+      "description": "### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)",
+      "spec": "### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)",
+        "Verify deterministic tests and lint checks for [BUG-109]"
+      ],
+      "actionItems": [
+        {
+          "id": "BUG-109-ACT-1",
+          "text": "Complete implementation and verification for ### [BUG-109] Zero-Skip Proceed Hook (git status Fallback) & Mandatory Turn-1 State Transition Rules (HIGH)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-109-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [BUG-109]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T08:38:01.063Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T08:38:40.384Z",
+      "completedAt": "2026-11-24T08:42:02.043Z",
+      "stateHistory": [
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T08:42:02.043Z"
+        }
+      ]
     }
   ],
   "milestones": [
@@ -1578,7 +1680,8 @@
   ],
   "meta": {
     "effortLevel": "low",
-    "effortUpdatedAt": "2026-10-31T01:38:26.918Z"
+    "effortUpdatedAt": "2026-10-31T01:38:26.918Z",
+    "lastBrainDir": "/Users/jbb/.gemini/antigravity/brain/d222142b-b47b-4025-801b-a66363a5c9ab"
   },
   "activePlanTaskIds": []
 }

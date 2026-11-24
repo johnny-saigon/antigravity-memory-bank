@@ -791,10 +791,33 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
   try {
     const statusOut = execSync('git status --porcelain', { cwd: rootDir, stdio: 'pipe' }).toString().trim();
     if (statusOut) {
+      let hasDirtyCodeFile = false;
       for (const line of statusOut.split('\n')) {
         const rel = line.slice(3).trim().replace(/^"|"$/g, '');
         if (rel && !rel.startsWith('memory-bank/') && !rel.startsWith('docs/backlog.html') && !rel.startsWith('??')) {
           touchedFiles.add(rel);
+        }
+        if (
+          rel &&
+          /^(src|scripts|lib|bin|skills|tests|templates|apps|server|bricks|packages)\//.test(rel)
+        ) {
+          hasDirtyCodeFile = true;
+        }
+      }
+      // Zero-Skip Proceed Safety Net (BUG-109): If any workspace code file is dirty while activePlanTaskIds has READY tickets,
+      // auto-transition READY -> IN PROGRESS (⚡ Coding Live...) so coding NEVER happens while a ticket sits in READY!
+      if (hasDirtyCodeFile) {
+        const backlogPath = path.join(rootDir, 'docs', 'backlog.json');
+        const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
+        if (fsSync.existsSync(backlogPath) && fsSync.existsSync(backlogScriptPath)) {
+          const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
+          const activeIds = Array.isArray(bj.activePlanTaskIds) ? bj.activePlanTaskIds : [];
+          const hasReadyActivePlan = activeIds.some(id =>
+            (bj.tasks || []).some(t => String(t.id).toUpperCase() === String(id).toUpperCase() && t.status === 'ready')
+          );
+          if (hasReadyActivePlan) {
+            execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+          }
         }
       }
     }
