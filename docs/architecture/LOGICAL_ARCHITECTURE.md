@@ -34,11 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-128`** | Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects | 🟢 DONE | `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `bin/cli.mjs` |
-| **`FEAT-129`** | Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization | 🟢 DONE | `lib/backlog-adapter.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
-| **`FEAT-130`** | Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
-| **`FEAT-131`** | Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
-| **`FEAT-132`** | Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects | 🟢 DONE | `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `docs/BACKLOG_GUIDE.md` |
 | **`FEAT-133`** | Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant | 🟢 DONE | `skills/backlog-add/SKILL.md`, `scripts/backlog.mjs`, `bin/cli.mjs` |
 | **`FEAT-134`** | Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-135`** | Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects | 🟢 DONE | `skills/backlog-plan/SKILL.md`, `skills/backlog-start/SKILL.md`, `docs/CREDITS_CHEATSHEET.md` |
@@ -54,6 +49,11 @@ flowchart LR
 | **`FEAT-145`** | Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync | 🟢 DONE | `scripts/sync-living-docs.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx` |
 | **`FEAT-146`** | Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution | 🟢 DONE | `bricks/user-profile/core/oauth/google.verifier.ts` |
 | **`FEAT-147`** | Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets | 🟢 DONE | — |
+| **`FEAT-148`** | Native Antigravity Memory Bank MCP App Plugin (SEP-1865) & 5-Tab Control Plane | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift` |
+| **`FEAT-148-ACT-1`** | 1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core | 🟢 DONE | — |
+| **`FEAT-148-ACT-2`** | 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills | 🟢 DONE | `scripts/sync-memory-context.mjs`, `lib/context-scraper.mjs`, `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift` |
+| **`FEAT-148-ACT-3`** | 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/brick.json` |
+| **`FEAT-148-ACT-4`** | 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification | 🟢 DONE | `scripts/sync-living-docs.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/adapters/templates/theme.adapter.template.ts` |
 <!-- ag-section:logical-features:end -->
 
 ---

@@ -1,17 +1,18 @@
 {
   "name": "memory-bank",
   "displayName": "Antigravity Memory Bank",
-  "version": "1.6.0",
-  "description": "Three-Tier Memory Bank system with Progressive Disclosure rules, Decoupled Zero-Token Backlog Engine, 3-Artifact Planning Mode, and Credit/Token Optimization skills (/context, /clear, /effort, /credits, /usage).",
+  "version": "2.0.0",
+  "description": "Three-Tier Memory Bank, Zero-Permission MCP App Kanban Board (app.sendMessage), Credit & Context Telemetry, Fleet Worktree Manager, and Hexagonal Brick Catalog.",
+  "logo": "assets/logo.svg",
+  "author": {
+    "name": "johnny-saigon",
+    "url": "https://github.com/johnny-saigon"
+  },
+  "homepage": "https://github.com/johnny-saigon/antigravity-memory-bank",
+  "repository": "https://github.com/johnny-saigon/antigravity-memory-bank",
   "suggestedPrompts": [
     "/start",
     "/backlog-plan",
-    "/backlog-start",
-    "/update-memory",
-    "/context",
-    "/effort",
-    "/credits",
-    "/usage",
-    "/clear"
+    "/credits"
   ]
 }

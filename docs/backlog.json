@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T11:57:33.317Z",
+  "lastUpdated": "2026-11-24T12:27:32.579Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -2468,6 +2468,373 @@
         }
       ],
       "completedAt": "2026-11-24T11:57:14.700Z"
+    },
+    {
+      "id": "FEAT-148",
+      "type": "feature",
+      "title": "Native Antigravity Memory Bank MCP App Plugin (SEP-1865) & 5-Tab Control Plane",
+      "status": "done",
+      "plannedAt": "2026-11-24T12:09:19.162Z",
+      "priority": "high",
+      "components": [
+        "scripts/lint-memory.mjs",
+        "scripts/sync-memory-context.mjs",
+        "bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift"
+      ],
+      "attachments": [],
+      "description": "Proposed Changes (FEAT-148 & Atomic Child Tickets FEAT-148-ACT-1..4)",
+      "spec": "Proposed Changes (FEAT-148 & Atomic Child Tickets FEAT-148-ACT-1..4)",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for Proposed Changes (FEAT-148 & Atomic Child Tickets FEAT-148-ACT-1..4)",
+        "Verify deterministic tests and lint checks for [FEAT-148]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T12:09:19.167Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T12:12:49.631Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T12:26:35.252Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-148-ACT-1",
+          "text": "Complete implementation and verification for Proposed Changes (FEAT-148 & Atomic Child Tickets FEAT-148-ACT-1..4)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-148]",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-1",
+          "childTicketId": "FEAT-148-ACT-1",
+          "text": "[FEAT-148-ACT-1] 1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-2",
+          "childTicketId": "FEAT-148-ACT-2",
+          "text": "[FEAT-148-ACT-2] 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-3",
+          "childTicketId": "FEAT-148-ACT-3",
+          "text": "[FEAT-148-ACT-3] 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-4",
+          "childTicketId": "FEAT-148-ACT-4",
+          "text": "[FEAT-148-ACT-4] 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T12:12:44.889Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "childTicketIds": [
+        "FEAT-148-ACT-1",
+        "FEAT-148-ACT-2",
+        "FEAT-148-ACT-3",
+        "FEAT-148-ACT-4"
+      ],
+      "startedAt": "2026-11-24T12:12:49.631Z",
+      "completedAt": "2026-11-24T12:26:35.289Z"
+    },
+    {
+      "id": "FEAT-148-ACT-1",
+      "parentId": "FEAT-148",
+      "isActionChild": true,
+      "actionIndex": 1,
+      "type": "feature",
+      "title": "1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core",
+      "status": "done",
+      "plannedAt": "2026-11-24T12:09:19.211Z",
+      "priority": "medium",
+      "components": [],
+      "attachments": [],
+      "description": "1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core",
+      "spec": "1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core",
+        "Verify deterministic tests and lint checks for [FEAT-148-ACT-1]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T12:09:19.211Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T12:12:49.672Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T12:26:35.134Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-148-ACT-1-ACT-1",
+          "text": "Complete implementation and verification for 1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-1-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-148-ACT-1]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T12:09:19.212Z",
+        "complexityTier": "tier2_standard",
+        "recommendedPlanModel": "Gemini 4 Neon (Medium)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "45%–65% via Workhorse Execution"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T12:12:49.672Z",
+      "completedAt": "2026-11-24T12:26:35.134Z"
+    },
+    {
+      "id": "FEAT-148-ACT-2",
+      "parentId": "FEAT-148",
+      "isActionChild": true,
+      "actionIndex": 2,
+      "type": "ux",
+      "title": "2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills",
+      "status": "done",
+      "plannedAt": "2026-11-24T12:09:19.254Z",
+      "priority": "medium",
+      "components": [
+        "scripts/sync-memory-context.mjs",
+        "lib/context-scraper.mjs",
+        "bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift"
+      ],
+      "attachments": [],
+      "description": "2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills",
+      "spec": "2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills",
+        "Verify deterministic tests and lint checks for [FEAT-148-ACT-2]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T12:09:19.254Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T12:12:49.713Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T12:26:35.174Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-148-ACT-2-ACT-1",
+          "text": "Complete implementation and verification for 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-2-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-148-ACT-2]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T12:09:19.255Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T12:12:49.713Z",
+      "completedAt": "2026-11-24T12:26:35.174Z"
+    },
+    {
+      "id": "FEAT-148-ACT-3",
+      "parentId": "FEAT-148",
+      "isActionChild": true,
+      "actionIndex": 3,
+      "type": "feature",
+      "title": "3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs",
+      "status": "done",
+      "plannedAt": "2026-11-24T12:09:19.299Z",
+      "priority": "medium",
+      "components": [
+        "scripts/lint-memory.mjs",
+        "scripts/sync-memory-context.mjs",
+        "bricks/user-profile/brick.json"
+      ],
+      "attachments": [],
+      "description": "3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs",
+      "spec": "3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs",
+        "Verify deterministic tests and lint checks for [FEAT-148-ACT-3]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T12:09:19.299Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T12:12:49.750Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T12:26:35.209Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-148-ACT-3-ACT-1",
+          "text": "Complete implementation and verification for 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-3-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-148-ACT-3]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T12:09:19.299Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T12:12:49.750Z",
+      "completedAt": "2026-11-24T12:26:35.209Z"
+    },
+    {
+      "id": "FEAT-148-ACT-4",
+      "parentId": "FEAT-148",
+      "isActionChild": true,
+      "actionIndex": 4,
+      "type": "qa",
+      "title": "4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification",
+      "status": "done",
+      "plannedAt": "2026-11-24T12:09:19.340Z",
+      "priority": "medium",
+      "components": [
+        "scripts/sync-living-docs.mjs",
+        "scripts/sync-memory-context.mjs",
+        "bricks/user-profile/adapters/templates/theme.adapter.template.ts"
+      ],
+      "attachments": [],
+      "description": "4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification",
+      "spec": "4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification",
+        "Verify deterministic tests and lint checks for [FEAT-148-ACT-4]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T12:09:19.340Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T12:12:49.787Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T12:26:35.251Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-148-ACT-4-ACT-1",
+          "text": "Complete implementation and verification for 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-148-ACT-4-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-148-ACT-4]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T12:09:19.341Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T12:12:49.787Z",
+      "completedAt": "2026-11-24T12:26:35.251Z"
     }
   ],
   "milestones": [

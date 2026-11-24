@@ -922,6 +922,66 @@ if (fsSync.existsSync(backlogJsonFull)) {
   }
 }
 
+// MCP App Plugin Bundle & CSP Hygiene Audit (FEAT-148): runs in upstream repo when mcp/src/server.mjs exists
+const mcpSrcServer = path.resolve(process.cwd(), 'mcp/src/server.mjs');
+if (fsSync.existsSync(mcpSrcServer)) {
+  const distServer = path.resolve(process.cwd(), 'mcp/dist/server.mjs');
+  const distHtml = path.resolve(process.cwd(), 'mcp/dist/app.html');
+  const pluginManifest = path.resolve(process.cwd(), 'plugin.json');
+  const mcpConfig = path.resolve(process.cwd(), 'mcp_config.json');
+  let mcpViolations = 0;
+
+  if (!fsSync.existsSync(distServer) || !fsSync.existsSync(distHtml)) {
+    console.error('❌ MCP App Plugin bundle missing (mcp/dist/server.mjs or mcp/dist/app.html). Run `npm run build:mcp`.');
+    violations++;
+    mcpViolations++;
+  } else {
+    const htmlStat = fsSync.statSync(distHtml);
+    if (htmlStat.size >= 10 * 1024 * 1024) {
+      console.error(`❌ mcp/dist/app.html exceeds 10 MiB SEP-1865 limit (${(htmlStat.size / (1024 * 1024)).toFixed(2)} MiB)`);
+      violations++;
+      mcpViolations++;
+    }
+    const htmlRaw = await fs.readFile(distHtml, 'utf8');
+    if (/<script[^>]+src=["']https?:\/\//i.test(htmlRaw) || /<link[^>]+href=["']https?:\/\//i.test(htmlRaw)) {
+      console.error('❌ mcp/dist/app.html violates default-src none CSP: contains external <script src> or <link href> URL');
+      violations++;
+      mcpViolations++;
+    }
+  }
+
+  if (fsSync.existsSync(pluginManifest)) {
+    try {
+      const pj = JSON.parse(await fs.readFile(pluginManifest, 'utf8'));
+      if (Array.isArray(pj.suggestedPrompts) && pj.suggestedPrompts.length > 3) {
+        console.error(`❌ plugin.json: suggestedPrompts has ${pj.suggestedPrompts.length} items (max 3 allowed)`);
+        violations++;
+        mcpViolations++;
+      }
+    } catch (err) {
+      console.error(`❌ plugin.json: Invalid JSON (${err.message})`);
+      violations++;
+      mcpViolations++;
+    }
+  } else {
+    console.error('❌ plugin.json missing for MCP App Plugin');
+    violations++;
+    mcpViolations++;
+  }
+
+  if (!fsSync.existsSync(mcpConfig)) {
+    console.error('❌ mcp_config.json missing for MCP App Plugin');
+    violations++;
+    mcpViolations++;
+  }
+
+  if (mcpViolations === 0) {
+    const htmlKb = (fsSync.statSync(distHtml).size / 1024).toFixed(1);
+    const srvKb = (fsSync.statSync(distServer).size / 1024).toFixed(1);
+    console.log(`✅ MCP App Plugin bundle verified: server.mjs (${srvKb} KB) + CSP-safe app.html (${htmlKb} KB, < 10 MiB)`);
+  }
+}
+
 if (totalFilesChecked === 0 && parityChecked === 0) {
   console.log('ℹ️ No markdown memory files found to audit.');
   process.exit(0);

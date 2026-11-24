@@ -701,6 +701,57 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-148: Native Antigravity Memory Bank MCP App Plugin (SEP-1865) & 5-Tab Control Plane
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift`
+- **Description:** Proposed Changes (FEAT-148 & Atomic Child Tickets FEAT-148-ACT-1..4)
+- **Technical Specification:**
+  Proposed Changes (FEAT-148 & Atomic Child Tickets FEAT-148-ACT-1..4)
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for Proposed Changes (FEAT-148 & Atomic Child Tickets FEAT-148-ACT-1..4)
+  - [x] Verify deterministic tests and lint checks for [FEAT-148]
+
+---
+
+### FEAT-148-ACT-1: 1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Description:** 1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core
+- **Technical Specification:**
+  1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 1. [FEAT-148-ACT-1] Plugin Bundle, Build Pipeline & MCP Server Core
+  - [x] Verify deterministic tests and lint checks for [FEAT-148-ACT-1]
+
+---
+
+### FEAT-148-ACT-2: 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `scripts/sync-memory-context.mjs`, `lib/context-scraper.mjs`, `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift`
+- **Description:** 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills
+- **Technical Specification:**
+  2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills
+  - [x] Verify deterministic tests and lint checks for [FEAT-148-ACT-2]
+
+---
+
+### FEAT-148-ACT-3: 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/brick.json`
+- **Description:** 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs
+- **Technical Specification:**
+  3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs
+  - [x] Verify deterministic tests and lint checks for [FEAT-148-ACT-3]
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)
@@ -722,6 +773,17 @@ This board tracks active development tickets, feature backlogs, architecture ini
   Ensure upstream bug fixes to scripts/backlog.mjs never drift from templates/scripts/backlog.mjs distributed to downstream projects.
 - **Acceptance Criteria:**
   - [x] npm test fails if scripts/backlog.mjs and templates/scripts/backlog.mjs diverge.
+
+---
+
+### FEAT-148-ACT-4: 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification
+- **Status:** Completed (`DONE`)
+- **Platform:** scripts/sync-living-docs.mjs, scripts/sync-memory-context.mjs, bricks/user-profile/adapters/templates/theme.adapter.template.ts
+- **Scope:**
+  4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification
+  - [x] Verify deterministic tests and lint checks for [FEAT-148-ACT-4]
 
 ---
 

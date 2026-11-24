@@ -1560,6 +1560,186 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     }
   });
 
+  test('3n. FEAT-148: native Antigravity MCP App plugin (SEP-1865) bundle, stdio tools, BUG-115 guards, and CLI plugin install', async () => {
+    const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
+    const distHtml = path.join(REPO_ROOT, 'mcp', 'dist', 'app.html');
+    const pluginManifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'plugin.json'), 'utf8'));
+    const mcpCfg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'mcp_config.json'), 'utf8'));
+
+    assert.equal(fs.existsSync(distServer), true, 'mcp/dist/server.mjs must exist');
+    assert.equal(fs.existsSync(distHtml), true, 'mcp/dist/app.html must exist');
+    assert.ok(fs.statSync(distHtml).size < 10 * 1024 * 1024, 'mcp/dist/app.html must be < 10 MiB');
+    const htmlContent = fs.readFileSync(distHtml, 'utf8');
+    assert.equal(/<script[^>]+src=["']https?:\/\//i.test(htmlContent), false, 'app.html must not contain external script tags');
+    assert.equal(/<link[^>]+href=["']https?:\/\//i.test(htmlContent), false, 'app.html must not contain external link tags');
+    assert.ok((pluginManifest.suggestedPrompts || []).length <= 3, 'plugin.json must declare <= 3 suggestedPrompts');
+    assert.ok(mcpCfg.mcpServers?.['memory-bank'], 'mcp_config.json must configure memory-bank server');
+
+    // Test CLI plugin install into isolated fake HOME
+    const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-plugin-home-'));
+    const mcpRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-mcp-repo-'));
+    let mcpProc = null;
+    try {
+      execFileSync('git', ['init', '-b', 'main'], { cwd: mcpRepo, stdio: 'ignore' });
+      execFileSync(process.execPath, [CLI_PATH, 'init', mcpRepo, '-y', '--name', 'McpTestApp'], {
+        cwd: mcpRepo,
+        env: testEnv,
+        stdio: 'ignore'
+      });
+
+      const installOut = execFileSync(process.execPath, [CLI_PATH, 'plugin', 'install'], {
+        cwd: REPO_ROOT,
+        env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_SKIP_LS_REFRESH: '1' },
+        encoding: 'utf8'
+      });
+      assert.match(installOut, /Installed Antigravity Memory Bank MCP App Plugin/i);
+
+      const installedDir = path.join(fakeHome, '.gemini', 'config', 'plugins', 'memory-bank');
+      const installedServer = path.join(installedDir, 'mcp', 'dist', 'server.mjs');
+      assert.equal(fs.existsSync(path.join(installedDir, 'plugin.json')), true);
+      assert.equal(fs.existsSync(path.join(installedDir, 'mcp_config.json')), true);
+      assert.equal(fs.existsSync(path.join(installedDir, 'assets', 'logo.svg')), true);
+      assert.equal(fs.existsSync(installedServer), true);
+      assert.equal(fs.existsSync(path.join(installedDir, 'mcp', 'dist', 'app.html')), true);
+      assert.equal(fs.existsSync(path.join(installedDir, 'skills', 'start', 'SKILL.md')), true);
+      assert.equal(fs.existsSync(path.join(installedDir, 'skills', 'backlog-plan', 'SKILL.md')), true);
+
+      // Spawn the installed standalone bundle from os.tmpdir() (zero node_modules!)
+      mcpProc = spawn(process.execPath, [installedServer, `--data-dir=${fakeHome}`], {
+        cwd: os.tmpdir(),
+        env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      const pending = new Map();
+      let buf = '';
+      let nextId = 1;
+      mcpProc.stdout.on('data', (chunk) => {
+        buf += chunk.toString();
+        let nl;
+        while ((nl = buf.indexOf('\n')) !== -1) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          const msg = JSON.parse(line);
+          if (msg.id && pending.has(msg.id)) {
+            const { resolve } = pending.get(msg.id);
+            pending.delete(msg.id);
+            resolve(msg);
+          }
+        }
+      });
+
+      const rpc = (method, params = {}) =>
+        new Promise((resolve, reject) => {
+          const id = nextId++;
+          const timer = setTimeout(() => {
+            pending.delete(id);
+            reject(new Error(`MCP RPC timeout on ${method}`));
+          }, 15000);
+          pending.set(id, {
+            resolve: (msg) => {
+              clearTimeout(timer);
+              resolve(msg);
+            }
+          });
+          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
+        });
+
+      const initRes = await rpc('initialize', {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: { name: 'cli-e2e', version: '1.0.0' }
+      });
+      assert.equal(initRes.result?.serverInfo?.name, 'antigravity-memory-bank');
+      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+
+      // 1. Tool visibility: strictly 2 model-visible + 14 app-only (0 model prompt bloat)
+      const listRes = await rpc('tools/list');
+      const tools = listRes.result?.tools || [];
+      assert.equal(tools.length, 16, 'Expected 16 total MCP tools (2 model + 14 app-only)');
+      const modelTools = tools.filter((t) => !(t._meta?.ui?.visibility || []).includes('app')).map((t) => t.name).sort();
+      const appTools = tools.filter((t) => (t._meta?.ui?.visibility || []).includes('app'));
+      assert.deepEqual(modelTools, ['memory_bank_dashboard', 'memory_bank_inline_status']);
+      assert.equal(appTools.length, 14, 'All 14 UI backend tools must carry visibility: ["app"]');
+      const dash = tools.find((t) => t.name === 'memory_bank_dashboard');
+      const entryTypes = (dash?._meta?.['com.google.antigravity/ui']?.entrypoints || []).map((e) => e.type).sort();
+      assert.deepEqual(entryTypes, ['aux_pane', 'global']);
+
+      // 2. Resource read: ui://memory-bank/app.html returns SEP-1865 MIME
+      const resRead = await rpc('resources/read', { uri: 'ui://memory-bank/app.html' });
+      const resContent = resRead.result?.contents?.[0];
+      assert.equal(resContent?.mimeType, 'text/html;profile=mcp-app');
+      assert.ok((resContent?.text || '').length > 50000);
+
+      // 3. Add ticket isolated into TO DO -> Plan -> Unlock -> Kickoff -> Reject re-plan on IN PROGRESS (BUG-115)
+      const addRes = await rpc('tools/call', {
+        name: 'app_add_ticket_isolated',
+        arguments: { repoRoot: mcpRepo, title: 'MCP E2E Smoke Ticket', priority: 'high', type: 'feature' }
+      });
+      const createdId = addRes.result?.structuredContent?.task?.id;
+      assert.ok(createdId && /^FEAT-\d+$/.test(createdId), `Expected FEAT-* id, got ${createdId}`);
+
+      const snapRes = await rpc('tools/call', {
+        name: 'app_get_workspace_snapshot',
+        arguments: { repoRoot: mcpRepo }
+      });
+      assert.ok(snapRes.result?.structuredContent?.project, 'Workspace snapshot must include project name');
+      assert.ok(snapRes.result?.structuredContent?.tasks?.some((t) => t.id === createdId));
+
+      const planRes = await rpc('tools/call', {
+        name: 'app_plan_tickets',
+        arguments: { repoRoot: mcpRepo, ids: [createdId], modelId: 'gemini-4-argon-high', effort: 'high' }
+      });
+      assert.equal(planRes.result?.isError, undefined);
+      assert.match(planRes.result?.structuredContent?.prompt || '', new RegExp(`/backlog-plan ${createdId}`));
+      let taskState = planRes.result?.structuredContent?.snapshot?.tasks?.find((t) => t.id === createdId);
+      assert.equal(taskState?.status, 'ready');
+      assert.equal(taskState?.planningLocked, true);
+
+      const unlockRes = await rpc('tools/call', {
+        name: 'app_unlock_plan',
+        arguments: { repoRoot: mcpRepo, id: createdId }
+      });
+      assert.equal(unlockRes.result?.structuredContent?.status, 'todo');
+
+      const kickRes = await rpc('tools/call', {
+        name: 'app_kickoff_tickets',
+        arguments: { repoRoot: mcpRepo, ids: [createdId], modelId: 'gemini-4-neon-medium', effort: 'medium' }
+      });
+      assert.match(kickRes.result?.structuredContent?.prompt || '', new RegExp(`/backlog-start ${createdId}`));
+      taskState = kickRes.result?.structuredContent?.snapshot?.tasks?.find((t) => t.id === createdId);
+      assert.equal(taskState?.status, 'in_progress');
+      assert.equal(taskState?.liveActivity, 'coding');
+
+      const blockedPlan = await rpc('tools/call', {
+        name: 'app_plan_tickets',
+        arguments: { repoRoot: mcpRepo, ids: [createdId] }
+      });
+      assert.equal(blockedPlan.result?.isError, true, 'BUG-115: MCP app_plan_tickets must block IN PROGRESS tickets');
+      assert.match(blockedPlan.result?.content?.[0]?.text || '', /back to TO DO/i);
+
+      // 4. Memory Audit + Brick Catalog + Fleet Discovery
+      const lintRes = await rpc('tools/call', {
+        name: 'app_run_memory_audit',
+        arguments: { repoRoot: mcpRepo, action: 'lint' }
+      });
+      assert.equal(lintRes.result?.structuredContent?.ok, true);
+
+      const brickRes = await rpc('tools/call', {
+        name: 'app_brick_manage',
+        arguments: { repoRoot: mcpRepo, action: 'list' }
+      });
+      assert.ok((brickRes.result?.structuredContent?.bricks || []).some((b) => b.name === 'user-profile'));
+    } finally {
+      if (mcpProc && !mcpProc.killed) {
+        try { mcpProc.kill('SIGKILL'); } catch {}
+      }
+      try { fs.rmSync(fakeHome, { recursive: true, force: true }); } catch {}
+      try { fs.rmSync(mcpRepo, { recursive: true, force: true }); } catch {}
+    }
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,
