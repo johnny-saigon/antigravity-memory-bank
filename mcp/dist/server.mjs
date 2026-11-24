@@ -37043,14 +37043,30 @@ function loadImplementationPlanSummary(rootDir) {
 }
 function loadBacklogData(rootDir) {
   const jsonPath = path.join(rootDir, "docs", "backlog.json");
-  const data = readJsonSafe(jsonPath, {
+  const empty = {
     version: "1.0.0",
     project: path.basename(rootDir),
     tasks: [],
     milestones: []
-  });
-  if (!Array.isArray(data.tasks)) data.tasks = [];
-  return data;
+  };
+  if (fs.existsSync(jsonPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+      if (parsed && Array.isArray(parsed.tasks)) return parsed;
+    } catch (err) {
+      logErr(`Invalid JSON in ${jsonPath} (${err.message}); falling back to git HEAD:docs/backlog.json`);
+      try {
+        const headRaw = execSync("git show HEAD:docs/backlog.json", {
+          cwd: rootDir,
+          stdio: ["ignore", "pipe", "ignore"]
+        }).toString("utf8");
+        const headParsed = JSON.parse(headRaw);
+        if (headParsed && Array.isArray(headParsed.tasks)) return headParsed;
+      } catch {
+      }
+    }
+  }
+  return empty;
 }
 function saveBacklogAndRender(rootDir, data) {
   const jsonPath = path.join(rootDir, "docs", "backlog.json");
