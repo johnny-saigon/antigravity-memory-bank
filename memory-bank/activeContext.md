@@ -1,7 +1,7 @@
 # antigravity-memory-bank — Active Context & Sprint State
 
 ## 1. Current Phase & Sprint Objective
-- **Last Synchronized Commit**: `11fcb37` — "feat(kanban): add /backlog-add skill, autoAnnotateTicket, interactive PLAN/CODE model selectors & drag-and-drop triggers (FEAT-133..135) [skip ci]" (2026-11-24)
+- **Last Synchronized Commit**: `0c33828` — "feat(backlog): auto-register ad-hoc /plan into READY on review display & move READY -> IN PROGRESS on Proceed (FEAT-136)" (2026-11-24)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Goal**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 
