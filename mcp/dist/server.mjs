@@ -36847,27 +36847,77 @@ function discoverFleetInstallations() {
   }
   return installations;
 }
+function getPluginDataDir() {
+  const arg = process.argv.find((a) => a.startsWith("--data-dir="));
+  if (arg) return path.resolve(arg.slice("--data-dir=".length));
+  return path.join(process.env.HOME || os.homedir(), ".gemini", "antigravity", "plugin_data", "memory-bank");
+}
+function fileUriToPath(uriOrPath) {
+  if (!uriOrPath || typeof uriOrPath !== "string") return null;
+  const trimmed = uriOrPath.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("file://")) {
+    try {
+      return decodeURIComponent(new URL(trimmed).pathname);
+    } catch {
+      return trimmed.replace(/^file:\/\//, "");
+    }
+  }
+  return trimmed;
+}
+function extractRootFromExtra(extra) {
+  const meta3 = extra && typeof extra === "object" ? extra._meta || extra.meta || extra : null;
+  if (!meta3 || typeof meta3 !== "object") return null;
+  const keys = ["repoRoot", "workspaceRoot", "workspaceUri", "workspacePath", "projectRoot", "cwd", "uri"];
+  for (const k of keys) {
+    const p = fileUriToPath(meta3[k]);
+    if (p && fs.existsSync(p) && !p.includes("/.gemini/config/plugins/")) {
+      return path.resolve(p);
+    }
+  }
+  return null;
+}
 function resolveWorkspaceRoot(requestedRoot) {
   if (requestedRoot && fs.existsSync(requestedRoot)) {
     return path.resolve(requestedRoot);
   }
   const cwd = process.cwd();
-  if (cwd && cwd !== "/" && cwd !== os.homedir() && (fs.existsSync(path.join(cwd, "docs", "backlog.json")) || fs.existsSync(path.join(cwd, "memory-bank")))) {
+  if (cwd && cwd !== "/" && cwd !== os.homedir() && !cwd.includes("/.gemini/config/plugins/") && (fs.existsSync(path.join(cwd, "docs", "backlog.json")) || fs.existsSync(path.join(cwd, "memory-bank")))) {
     return cwd;
   }
+  const homePrefix = process.env.HOME || os.homedir();
+  const isAllowedWorkspacePath = (rr) => Boolean(rr && fs.existsSync(rr) && (!rr.includes("/var/folders/") || rr.startsWith(homePrefix)));
   try {
-    const brainBase = path.join(os.homedir(), ".gemini", "antigravity", "brain");
+    const markerPath = path.join(getPluginDataDir(), "last_active_workspace.json");
+    if (fs.existsSync(markerPath)) {
+      const marker = JSON.parse(fs.readFileSync(markerPath, "utf8"));
+      const rr = marker?.repoRoot;
+      if (isAllowedWorkspacePath(rr)) {
+        return path.resolve(rr);
+      }
+    }
+  } catch {
+  }
+  try {
+    const brainBase = path.join(homePrefix, ".gemini", "antigravity", "brain");
     if (fs.existsSync(brainBase)) {
       const candidates = fs.readdirSync(brainBase, { withFileTypes: true }).filter((d) => d.isDirectory() && !d.name.startsWith(".")).map((d) => {
-        const p = path.join(brainBase, d.name, "backlog.html");
-        return fs.existsSync(p) ? { p, mtimeMs: fs.statSync(p).mtimeMs } : null;
-      }).filter(Boolean).sort((a, b) => b.mtimeMs - a.mtimeMs);
+        const full = path.join(brainBase, d.name);
+        const htmlPath = path.join(full, "backlog.html");
+        const transcriptPath = path.join(full, ".system_generated", "logs", "transcript.jsonl");
+        if (!fs.existsSync(htmlPath)) return null;
+        const mtimeMs = fs.existsSync(transcriptPath) ? fs.statSync(transcriptPath).mtimeMs : fs.statSync(htmlPath).mtimeMs;
+        return { p: htmlPath, mtimeMs, hasTranscript: fs.existsSync(transcriptPath) };
+      }).filter(Boolean).sort((a, b) => {
+        if (a.hasTranscript !== b.hasTranscript) return a.hasTranscript ? -1 : 1;
+        return b.mtimeMs - a.mtimeMs;
+      });
       for (const c of candidates) {
         const txt = fs.readFileSync(c.p, "utf8");
         const m = txt.match(/"repoRoot":("(?:[^"\\]|\\.)*")/);
         if (m) {
           const rr = JSON.parse(m[1]);
-          if (fs.existsSync(rr) && !rr.includes("/var/folders/")) return rr;
+          if (isAllowedWorkspacePath(rr)) return rr;
         }
       }
     }
@@ -36876,6 +36926,33 @@ function resolveWorkspaceRoot(requestedRoot) {
   const fleet = discoverFleetInstallations();
   if (fleet.length > 0) return fleet[0].path;
   return resolveUpstreamRepoRoot();
+}
+async function resolveActiveWorkspace(requestedRoot, extra, mcpServer) {
+  if (requestedRoot && fs.existsSync(requestedRoot)) {
+    return { repoRoot: path.resolve(requestedRoot), boundByHost: true };
+  }
+  const fromMeta = extractRootFromExtra(extra);
+  if (fromMeta) {
+    return { repoRoot: fromMeta, boundByHost: true };
+  }
+  try {
+    const clientCaps = mcpServer?.server?.getClientCapabilities?.();
+    if (clientCaps?.roots && typeof mcpServer?.server?.listRoots === "function") {
+      const rootsRes = await mcpServer.server.listRoots();
+      for (const r of rootsRes?.roots || []) {
+        const p = fileUriToPath(r?.uri);
+        if (p && fs.existsSync(p) && !p.includes("/.gemini/config/plugins/")) {
+          return { repoRoot: path.resolve(p), boundByHost: true };
+        }
+      }
+    }
+  } catch {
+  }
+  const cwd = process.cwd();
+  if (cwd && cwd !== "/" && cwd !== os.homedir() && !cwd.includes("/.gemini/config/plugins/") && (fs.existsSync(path.join(cwd, "docs", "backlog.json")) || fs.existsSync(path.join(cwd, "memory-bank")))) {
+    return { repoRoot: cwd, boundByHost: true };
+  }
+  return { repoRoot: resolveWorkspaceRoot(null), boundByHost: false };
 }
 function readBrainCreditTelemetry() {
   const brainRoot = path.join(os.homedir(), ".gemini", "antigravity", "brain");
@@ -37120,7 +37197,7 @@ function isTaskVisibleInBranch(task, gitCtx) {
   }
   return !task.branch && activeBranches.length === 0;
 }
-function buildWorkspaceSnapshot(requestedRoot) {
+function buildWorkspaceSnapshot(requestedRoot, boundByHost = Boolean(requestedRoot)) {
   const rootDir = resolveWorkspaceRoot(requestedRoot);
   const gitCtx = detectGitContext(rootDir);
   const backlog = loadBacklogData(rootDir);
@@ -37131,6 +37208,7 @@ function buildWorkspaceSnapshot(requestedRoot) {
   const plan = loadImplementationPlanSummary(rootDir);
   return {
     repoRoot: rootDir,
+    boundByHost,
     project: backlog.project || path.basename(rootDir),
     gitContext: gitCtx,
     branchScope: "branch",
@@ -37287,8 +37365,8 @@ function createServer() {
         }
       }
     },
-    async (args = {}) => {
-      const rootDir = resolveWorkspaceRoot(args.repoRoot);
+    async (args = {}, extra) => {
+      const { repoRoot: rootDir, boundByHost } = await resolveActiveWorkspace(args.repoRoot, extra, server);
       const counts = summarizeBacklogCounts(rootDir);
       const fleet = discoverFleetInstallations();
       const activeTab = args.tab || "kanban";
@@ -37303,6 +37381,7 @@ function createServer() {
           mode: "dashboard",
           activeTab,
           repoRoot: rootDir,
+          boundByHost,
           project: counts.project,
           counts,
           fleetCount: fleet.length
@@ -37363,8 +37442,9 @@ function createServer() {
       }),
       _meta: APP_ONLY_META
     },
-    async (args = {}) => {
-      const snap = buildWorkspaceSnapshot(args.repoRoot, args.branchScope || "branch");
+    async (args = {}, extra) => {
+      const { repoRoot: rootDir, boundByHost } = await resolveActiveWorkspace(args.repoRoot, extra, server);
+      const snap = buildWorkspaceSnapshot(rootDir, boundByHost);
       return {
         content: [{ type: "text", text: `Loaded ${snap.project} (${snap.tasks.length} tasks)` }],
         structuredContent: snap

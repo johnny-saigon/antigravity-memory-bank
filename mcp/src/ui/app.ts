@@ -42,6 +42,8 @@ const state: {
     | { kind: 'add'; recording: boolean; hostRecordingId: string | null; draftTitle: string; draftDesc: string };
   draggedId: string | null;
   busy: boolean;
+  userBoundWorkspace: boolean;
+  pickingWorkspace: boolean;
 } = {
   mode: 'dashboard',
   inlineView: 'sprint',
@@ -61,7 +63,9 @@ const state: {
   toastTimer: null,
   modal: null,
   draggedId: null,
-  busy: false
+  busy: false,
+  userBoundWorkspace: false,
+  pickingWorkspace: false
 };
 
 let mediaRecorder: MediaRecorder | null = null;
@@ -424,8 +428,19 @@ function render() {
     state.activeTab = 'kanban';
   }
 
+  const showBindPicker = isConversationBound && state.pickingWorkspace;
+  const showBindBtn = isConversationBound && !state.pickingWorkspace && !snap?.boundByHost && !state.userBoundWorkspace;
   const workspaceControl = isConversationBound
-    ? `<span id="workspaceBadge" class="mb-badge mb-badge-cyan" title="Strictly locked to active workspace &amp; Git branch (FEAT-151)">${snap?.gitContext.isWorktree ? '🌿' : '🏛️'} ${esc(snap?.project || 'Workspace')} [${esc(snap?.gitContext.branch || 'main')}]</span>`
+    ? showBindPicker
+      ? `<select id="workspaceSwitcher" class="mb-select" title="Pin this Side Pane to the current window's project &amp; branch">
+           ${(state.fleet.length > 0 ? state.fleet : snap ? [{ project: snap.project, role: snap.gitContext.isWorktree ? 'worktree' : 'main', branch: snap.gitContext.branch, path: snap.repoRoot }] : [])
+             .map(
+               (f) => `<option value="${esc(f.path)}" ${f.path === state.repoRoot ? 'selected' : ''}>${f.role === 'worktree' ? '🌿' : '🏛️'} ${esc(f.project)} [${esc(f.branch)}]</option>`
+             )
+             .join('')}
+         </select>
+         <button class="mb-btn mb-btn-sm" data-action="close-bind-picker" title="Cancel">✕</button>`
+      : `<span id="workspaceBadge" class="mb-badge mb-badge-cyan" title="Strictly locked to active workspace &amp; Git branch (FEAT-151)">${snap?.gitContext.isWorktree ? '🌿' : '🏛️'} ${esc(snap?.project || 'Workspace')} [${esc(snap?.gitContext.branch || 'main')}]</span>${showBindBtn ? `<button class="mb-btn mb-btn-sm" data-action="open-bind-picker" title="Wrong project detected? Pin this Side Pane to this window's workspace">⇄</button>` : ''}`
     : `<select id="workspaceSwitcher" class="mb-select">
           ${(state.fleet.length > 0 ? state.fleet : snap ? [{ project: snap.project, role: snap.gitContext.isWorktree ? 'worktree' : 'main', branch: snap.gitContext.branch, path: snap.repoRoot }] : [])
             .map(
@@ -563,6 +578,8 @@ document.addEventListener('change', async (e) => {
   if (target.id === 'workspaceSwitcher') {
     const nextRoot = (target as HTMLSelectElement).value;
     state.selectedIds.clear();
+    state.pickingWorkspace = false;
+    state.userBoundWorkspace = true;
     await refreshSnapshot(nextRoot);
     if (state.activeTab === 'bricks') await refreshBricks();
     return;
@@ -605,6 +622,17 @@ document.addEventListener('click', async (e) => {
   if (action === 'close-modal') {
     if (e.target !== el && el.classList.contains('mb-modal-backdrop')) return;
     state.modal = null;
+    render();
+    return;
+  }
+  if (action === 'open-bind-picker') {
+    state.pickingWorkspace = true;
+    render();
+    if (state.fleet.length === 0) await refreshFleet();
+    return;
+  }
+  if (action === 'close-bind-picker') {
+    state.pickingWorkspace = false;
     render();
     return;
   }

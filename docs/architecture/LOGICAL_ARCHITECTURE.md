@@ -34,7 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-141`** | Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees | 🟢 DONE | — |
 | **`FEAT-142`** | Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors | 🟢 DONE | — |
 | **`FEAT-143`** | Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) | 🟢 DONE | `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md` |
 | **`FEAT-144`** | AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI | 🟢 DONE | `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/archive/BUG_FIX_RECORDS.md` |
@@ -54,6 +53,7 @@ flowchart LR
 | **`FEAT-151-ACT-1`** | 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server | 🟢 DONE | — |
 | **`FEAT-151-ACT-2`** | 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html | 🟢 DONE | `scripts/backlog.mjs`, `docs/BACKLOG.md`, `docs/backlog.html` |
 | **`FEAT-151-ACT-3`** | 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout | 🟢 DONE | `docs/quality/TEST_PLAN_AND_SUITES.md` |
+| **`FEAT-152`** | Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) | 🟢 DONE | `mcp/src/server.mjs`, `mcp/src/ui/app.ts`, `mcp/src/ui/types.ts` |
 <!-- ag-section:logical-features:end -->
 
 ---

@@ -1960,6 +1960,89 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     }
   });
 
+  test('3q. FEAT-152 / BUG-116: MCP workspace resolution prioritizes last_active_workspace & transcript.jsonl mtime over fleet-clobbered backlog.html', async () => {
+    const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-b116-home-'));
+    const repoA = path.join(fakeHome, 'Binaryday');
+    const repoB = path.join(fakeHome, 'JBB.PM CV');
+    let mcpProc = null;
+    try {
+      for (const [dir, name] of [[repoA, 'Binaryday'], [repoB, 'JBB.PM CV']]) {
+        fs.mkdirSync(path.join(dir, 'docs'), { recursive: true });
+        fs.mkdirSync(path.join(dir, 'memory-bank'), { recursive: true });
+        fs.writeFileSync(path.join(dir, 'docs', 'backlog.json'), JSON.stringify({ project: name, tasks: [{ id: 'FEAT-101', type: 'feature', title: `${name} task`, status: 'todo', priority: 'medium' }] }, null, 2));
+      }
+
+      // Simulate brain dirs: repoA has NEWER transcript.jsonl, but repoB has NEWER backlog.html (fleet upgrade clobber!)
+      const brainA = path.join(fakeHome, '.gemini', 'antigravity', 'brain', 'conv-a');
+      const brainB = path.join(fakeHome, '.gemini', 'antigravity', 'brain', 'conv-b');
+      fs.mkdirSync(path.join(brainA, '.system_generated', 'logs'), { recursive: true });
+      fs.mkdirSync(path.join(brainB, '.system_generated', 'logs'), { recursive: true });
+      const tA = path.join(brainA, '.system_generated', 'logs', 'transcript.jsonl');
+      const tB = path.join(brainB, '.system_generated', 'logs', 'transcript.jsonl');
+      const hA = path.join(brainA, 'backlog.html');
+      const hB = path.join(brainB, 'backlog.html');
+      fs.writeFileSync(hA, `<script>const rawData = {"repoRoot":${JSON.stringify(repoA)}};</script>`);
+      fs.writeFileSync(hB, `<script>const rawData = {"repoRoot":${JSON.stringify(repoB)}};</script>`);
+      fs.writeFileSync(tA, '{"step":1}\n');
+      fs.writeFileSync(tB, '{"step":1}\n');
+      const now = Date.now() / 1000;
+      fs.utimesSync(tA, now, now);            // repoA transcript is NEWEST
+      fs.utimesSync(tB, now - 3600, now - 3600); // repoB transcript is 1h OLDER
+      fs.utimesSync(hA, now - 600, now - 600);
+      fs.utimesSync(hB, now + 10, now + 10);  // repoB backlog.html is NEWEST (fleet upgrade!)
+
+      const dataDir = path.join(fakeHome, '.gemini', 'antigravity', 'plugin_data', 'memory-bank');
+      fs.mkdirSync(dataDir, { recursive: true });
+
+      const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
+      mcpProc = spawn(process.execPath, [distServer, `--data-dir=${dataDir}`], {
+        cwd: os.tmpdir(),
+        env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      const pending = new Map();
+      let buf = '';
+      let nextId = 1;
+      mcpProc.stdout.on('data', (chunk) => {
+        buf += chunk.toString();
+        let nl;
+        while ((nl = buf.indexOf('\n')) !== -1) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          const msg = JSON.parse(line);
+          if (msg.id && pending.has(msg.id)) {
+            const { resolve } = pending.get(msg.id);
+            pending.delete(msg.id);
+            resolve(msg);
+          }
+        }
+      });
+      const rpc = (method, params = {}) =>
+        new Promise((resolve, reject) => {
+          const id = nextId++;
+          const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout on ${method}`)); }, 15000);
+          pending.set(id, { resolve: (m) => { clearTimeout(timer); resolve(m); } });
+          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
+        });
+      await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'b116-e2e', version: '1.0' } });
+      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+
+      // 1. Without last_active_workspace.json, MUST pick repoA (newest transcript.jsonl) NOT repoB (newest backlog.html)
+      const snap1 = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: {} });
+      assert.equal(snap1.result?.structuredContent?.project, 'Binaryday', 'Must pick newest transcript.jsonl (Binaryday), not fleet-clobbered backlog.html (JBB.PM CV)');
+      assert.equal(snap1.result?.structuredContent?.boundByHost, false);
+
+      // 2. With last_active_workspace.json pointing to repoB, MUST honor it
+      fs.writeFileSync(path.join(dataDir, 'last_active_workspace.json'), JSON.stringify({ repoRoot: repoB, updatedAt: new Date().toISOString() }));
+      const snap2 = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: {} });
+      assert.equal(snap2.result?.structuredContent?.project, 'JBB.PM CV');
+    } finally {
+      if (mcpProc && !mcpProc.killed) { try { mcpProc.kill('SIGKILL'); } catch {} }
+      try { fs.rmSync(fakeHome, { recursive: true, force: true }); } catch {}
+    }
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

@@ -829,6 +829,16 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-152: Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `mcp/src/server.mjs`, `mcp/src/ui/app.ts`, `mcp/src/ui/types.ts`, `scripts/backlog.mjs`, `bin/cli.mjs`, `tests/cli-e2e.test.mjs`
+- **Acceptance Criteria:**
+  - [x] Implement and verify Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) across mcp/src/server.mjs, mcp/src/ui/app.ts, mcp/src/ui/types.ts, scripts/backlog.mjs, bin/cli.mjs, tests/cli-e2e.test.mjs
+  - [x] Add both a non-regression unit/component test and an E2E test verifying the fix
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

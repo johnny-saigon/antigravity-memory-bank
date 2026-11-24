@@ -1846,6 +1846,11 @@ async function runFleetCommand(opts) {
   const reportRows = [];
   console.log(`\n🚀 Antigravity Memory Bank — Worktree-Aware Fleet ${opts.fleetAction.toUpperCase()} (${discoveredMains.length} Main Repositories Discovered)\n`);
 
+  const prevFleetEnv = process.env.ANTIGRAVITY_FLEET_UPGRADE;
+  if (opts.fleetAction === 'upgrade') {
+    process.env.ANTIGRAVITY_FLEET_UPGRADE = '1';
+  }
+  try {
   for (const mainDir of discoveredMains) {
     const projectName = path.basename(mainDir);
     const worktrees = listRepoWorktrees(mainDir);
@@ -1877,6 +1882,10 @@ async function runFleetCommand(opts) {
         status: statusLabel
       });
     }
+  }
+  } finally {
+    if (prevFleetEnv === undefined) delete process.env.ANTIGRAVITY_FLEET_UPGRADE;
+    else process.env.ANTIGRAVITY_FLEET_UPGRADE = prevFleetEnv;
   }
 
   const mainCount = reportRows.filter(r => r.role.includes('Main')).length;

@@ -23,6 +23,7 @@
 | **`BUG-113`** | Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) — Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) | DONE | `core` |
 | **`BUG-114`** | Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning — Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning | DONE | `docs/PLANNING_GUIDE.md` |
 | **`BUG-115`** | Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan — Recorded in backlog.json | DONE | `scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json` |
+| **`FEAT-152`** | Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) — Recorded in backlog.json | DONE | `mcp/src/server.mjs, mcp/src/ui/app.ts, mcp/src/ui/types.ts, scripts/backlog.mjs, bin/cli.mjs, tests/cli-e2e.test.mjs` |
 | **`COMMIT-6884f9d`** | fix(mcp-app): gracefully fall back to git HEAD when docs/backlog.json has conflict markers — Git fix commit `6884f9d` | DONE | `git history` |
 | **`COMMIT-8216efd`** | fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115) — Git fix commit `8216efd` | DONE | `git history` |
 | **`COMMIT-c296aaf`** | fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112) — Git fix commit `c296aaf` | DONE | `git history` |
@@ -32,7 +33,6 @@
 | **`COMMIT-b9706b7`** | fix(docs): whitelist docs/CREDITS_CHEATSHEET.md in living-docs organizer & index in docs/INDEX.md [skip ci] — Git fix commit `b9706b7` | DONE | `git history` |
 | **`COMMIT-c9b5ee9`** | fix(backlog): enforce exact repoRoot ownership in findTargetBrainDirs to prevent sibling repo collision — Git fix commit `c9b5ee9` | DONE | `git history` |
 | **`COMMIT-f3e143e`** | fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight) — Git fix commit `f3e143e` | DONE | `git history` |
-| **`COMMIT-86d8f52`** | fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci] — Git fix commit `86d8f52` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

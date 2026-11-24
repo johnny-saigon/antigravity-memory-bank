@@ -95,6 +95,7 @@ export interface CreditTelemetry {
 
 export interface WorkspaceSnapshot {
   repoRoot: string;
+  boundByHost?: boolean;
   project: string;
   gitContext: {
     branch: string;
