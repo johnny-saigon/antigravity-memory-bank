@@ -904,27 +904,40 @@ function computeTicketCreditAdviceServer(task) {
   const compCount = task && Array.isArray(task.components) ? task.components.length : 0;
   const prio = String((task && task.priority) || 'medium').toLowerCase();
   const type = String((task && task.type) || 'feature').toLowerCase();
+  const status = String((task && task.status) || 'todo').toLowerCase();
 
   const isSwarm = /\b(swarm|multi-repo|all repos|parallel|migration across|5 repositories|cross-repo)\b/.test(text) || compCount >= 6;
   const isHighRisk = /\b(oauth|auth|security|schema|migration|concurrency|race|webgl|worker|stripe|billing|brick|architect|p0|production)\b/.test(text);
   const isMicro = /\b(copy|typo|label|css|color|badge|sort|readme|comment|spacing|padding|icon)\b/.test(text) && compCount <= 1 && prio !== 'high';
 
+  if (status === 'ready') {
+    if (isMicro || prio === 'low') {
+      return {
+        pillClass: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/50 hover:border-emerald-300',
+        shortBadge: '🎯 READY · Run Direct on Flash (Low/Med) · Skip Argon!'
+      };
+    }
+    return {
+      pillClass: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/50 hover:border-emerald-300',
+      shortBadge: '🎯 READY · Switch DOWN → Neon (Med) / Sonnet 5.5 (Save 65%)'
+    };
+  }
   if (isSwarm) {
     return {
       pillClass: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/35 hover:border-fuchsia-400',
-      shortBadge: '🎛️ Orchestrator (Carbon/Neon) · Plan & Split First'
+      shortBadge: '🎛️ Orchestrator (Carbon/Neon) · Plan & Move to READY'
     };
   }
   if (compCount >= 3 || prio === 'high' || isHighRisk || type === 'refactor') {
     return {
       pillClass: 'bg-purple-500/15 text-purple-300 border-purple-500/35 hover:border-purple-400',
-      shortBadge: '🧠 Plan: Argon/Opus → Exec: Neon/Sonnet (Saves ~65%)'
+      shortBadge: '📐 Needs Plan First · Argon/Opus → Moves to READY'
     };
   }
   if (isMicro || prio === 'low') {
     return {
       pillClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/35 hover:border-emerald-400',
-      shortBadge: '⚡ Gemini 3.8 Flash (Low) · Direct Start (Skip /plan)'
+      shortBadge: '⚡ Skip /plan → Mark READY or Direct on Flash (Low)'
     };
   }
   return {
@@ -936,7 +949,8 @@ function computeTicketCreditAdviceServer(task) {
 function renderCardServer(task) {
   const isDone = task.status === 'done';
   const isInProgress = task.status === 'in_progress' || task.status === 'testing';
-  const colKey = isDone ? 'done' : isInProgress ? 'in_progress' : 'todo';
+  const isReady = task.status === 'ready';
+  const colKey = isDone ? 'done' : isInProgress ? 'in_progress' : isReady ? 'ready' : 'todo';
   const safeIdAttr = escapeAttrServer(task.id);
   const safeIdHtml = escapeHtmlServer(task.id);
   const safeTitleHtml = escapeHtmlServer(task.title);
@@ -961,7 +975,9 @@ function renderCardServer(task) {
 
   const cardBorder = isInProgress
     ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
-    : 'border-[var(--border,#334155)] hover:border-slate-500';
+    : isReady
+      ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
+      : 'border-[var(--border,#334155)] hover:border-slate-500';
 
   const actionItemsPreviewHtml = isInProgress
     ? `<div class="mb-2.5 bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 rounded-lg p-2 transition cursor-pointer" onclick="openTaskInspector('${safeIdAttr}', event)" title="Click to inspect &amp; assign Action Items being waited on">
@@ -994,6 +1010,7 @@ function renderCardServer(task) {
               <span class="font-mono text-xs font-bold text-blue-400">${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 ${prioColor}">${escapeHtmlServer(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">${typeBadge}</span>
+              ${isReady ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Planned &amp; ready for workhorse execution">📐 READY</span>` : ''}
               ${isInProgress ? `<span onclick="openTaskInspector('${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ ${pendingActions.length} Action${pendingActions.length === 1 ? '' : 's'}</span>` : ''}
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
@@ -1002,6 +1019,7 @@ function renderCardServer(task) {
               <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
               ${!isDone
                 ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
+                   ${!isReady && !isInProgress ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>` : ''}
                    <button onclick="updateTaskStatus('${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>`
                 : `<button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>`}
               ${!isInProgress && !isDone
@@ -1050,12 +1068,14 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   const savedSorts = (data.meta && data.meta.columnSorts) || {};
 
   const initialTodo = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'todo'), savedSorts.todo || 'custom');
+  const initialReady = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'ready'), savedSorts.ready || 'custom');
   const initialInProg = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'in_progress' || t.status === 'testing'), savedSorts.in_progress || 'custom');
   const initialDone = sortColumnTasksServer((data.tasks || []).filter(t => t.status === 'done'), savedSorts.done || 'custom');
 
-  const todoHtml = initialTodo.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No to-do tasks</div>';
-  const inProgHtml = initialInProg.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress</div>';
-  const doneHtml = initialDone.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks</div>';
+  const todoHtml = initialTodo.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks — drag a ticket here</div>';
+  const readyHtml = initialReady.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready yet — click 📐 Plan or drag here</div>';
+  const inProgHtml = initialInProg.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress — drag a ticket here</div>';
+  const doneHtml = initialDone.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks — drag a ticket here</div>';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1224,6 +1244,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     <div class="flex flex-wrap items-center gap-1.5">
       <button onclick="setFilter('all', this)" class="filter-btn active bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-blue-500 text-white font-bold">All</button>
       <button onclick="setFilter('todo', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-[var(--muted-foreground,#94a3b8)]">To-Do</button>
+      <button onclick="setFilter('ready', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-purple-500 text-purple-300">📐 Ready</button>
       <button onclick="setFilter('in_progress', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-[var(--muted-foreground,#94a3b8)]">In Progress</button>
       <button onclick="setFilter('high', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-rose-400">🔥 High Priority</button>
       <button onclick="setFilter('done', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-emerald-400">Done</button>
@@ -1354,10 +1375,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     </div>
   </div>
 
-  <!-- Kanban Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <!-- Kanban Grid (4-Column Lifecycle: To-Do -> Ready (Planned) -> In Progress -> Done) -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
     
-    <!-- Column: Backlog / To-Do -->
+    <!-- Column 1: Backlog / To-Do (Needs Planning) -->
     <div id="wrap-todo" ondragover="handleColumnDragOver(event, 'todo')" ondragleave="handleColumnDragLeave(event, 'todo')" ondrop="handleColumnDrop(event, 'todo')" class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col transition-colors">
       <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)] gap-1">
         <div class="flex items-center gap-1.5">
@@ -1370,6 +1391,21 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         </div>
       </div>
       <div id="col-todo" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1 min-h-[120px]">${todoHtml}</div>
+    </div>
+
+    <!-- Column 2: Ready (Planned — Switch Model Down & Execute) -->
+    <div id="wrap-ready" ondragover="handleColumnDragOver(event, 'ready')" ondragleave="handleColumnDragLeave(event, 'ready')" ondrop="handleColumnDrop(event, 'ready')" class="bg-[var(--card,#1e293b)]/40 border border-purple-500/35 rounded-xl p-3 flex flex-col transition-colors">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-purple-500/30 gap-1">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-purple-200" title="Planned or /backlog-plan tickets ready for low-cost workhorse execution">Ready (Planned)</h2>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="sort-btn-ready" onclick="cycleColumnSort('ready')" class="text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Click to toggle column sort: Newest → Oldest / Oldest → Newest / Manual Order">✋ Manual</button>
+          <span id="count-ready" class="text-xs bg-purple-500/20 text-purple-200 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">${initialReady.length}</span>
+        </div>
+      </div>
+      <div id="col-ready" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1 min-h-[120px]">${readyHtml}</div>
     </div>
 
     <!-- Column: In Progress & Testing -->
@@ -1416,6 +1452,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     const initialMetaSorts = (rawData.meta && rawData.meta.columnSorts) || {};
     let columnSorts = {
       todo: initialMetaSorts.todo || 'custom',
+      ready: initialMetaSorts.ready || 'custom',
       in_progress: initialMetaSorts.in_progress || 'custom',
       done: initialMetaSorts.done || 'custom'
     };
@@ -2038,11 +2075,42 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const compCount = task && Array.isArray(task.components) ? task.components.length : 0;
       const prio = String((task && task.priority) || 'medium').toLowerCase();
       const type = String((task && task.type) || 'feature').toLowerCase();
+      const status = String((task && task.status) || 'todo').toLowerCase();
 
       const isSwarm = /\\b(swarm|multi-repo|all repos|parallel|migration across|5 repositories|cross-repo)\\b/.test(text) || compCount >= 6;
       const isHighRisk = /\\b(oauth|auth|security|schema|migration|concurrency|race|webgl|worker|stripe|billing|brick|architect|p0|production)\\b/.test(text);
       const isMicro = /\\b(copy|typo|label|css|color|badge|sort|readme|comment|spacing|padding|icon)\\b/.test(text) && compCount <= 1 && prio !== 'high';
 
+      if (status === 'ready') {
+        if (isMicro || prio === 'low') {
+          return {
+            tier: 'low',
+            pillClass: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/50 hover:border-emerald-300',
+            shortBadge: '🎯 READY · Run Direct on Flash (Low/Med) · Skip Argon!',
+            planVerdict: '🎯 TICKET IS READY (PLANNED) → Execute Directly on Low-Cost Model!',
+            savings: '55%–80% fewer credits by keeping Stage B on Flash/Neon',
+            stageA: '✅ Stage A Planning COMPLETE (Ticket is already in the READY column).',
+            stageBGoogle: 'Gemini 3.8 Flash (Low or Medium) — or Gemini 4 Hydrogen (Low)',
+            stageBExternal: 'GPT-OSS 120B (Medium) — or Claude Sonnet 5.5 (Low)',
+            orchestratorNote: '🚫 NEVER use Google Orchestrators or Argon/Opus to execute a single READY ticket!',
+            whyPlan: 'This ticket has already reached the READY (Planned) column. Switch your AGY model picker down to Flash/Hydrogen and execute directly with /backlog-start.',
+            effortPrefix: '/effort low'
+          };
+        }
+        return {
+          tier: 'medium',
+          pillClass: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/50 hover:border-emerald-300',
+          shortBadge: '🎯 READY · Switch DOWN → Neon (Med) / Sonnet 5.5 (Save 65%)',
+          planVerdict: '🎯 TICKET IS READY (PLANNED) → Switch Model DOWN & Execute Stage B!',
+          savings: '55%–80% fewer credits vs. leaving Argon/Opus active during implementation',
+          stageA: '✅ Stage A Planning COMPLETE (Blueprint locked — ticket is in the READY column).',
+          stageBGoogle: 'SWITCH DOWN NOW → Gemini 4 Neon (Medium/High) or Gemini 4 Carbon (Medium)',
+          stageBExternal: 'SWITCH DOWN NOW → Claude Sonnet 5.5 (Medium)',
+          orchestratorNote: '⚠️ Only use Orchestrator (Neon/Carbon) if executing 3+ independent READY sub-tickets in parallel.',
+          whyPlan: 'Because planning credits were already invested to move this ticket into READY, switching your AGY model picker down to Gemini 4 Neon or Claude Sonnet 5.5 captures the full Two-Stage Split Routing credit savings!',
+          effortPrefix: '/effort medium'
+        };
+      }
       if (isSwarm) {
         return {
           tier: 'xhigh',
@@ -2170,6 +2238,16 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           \${task ? \`<div class="flex flex-wrap gap-2 pt-1">\${planBtn}\${execBtn}</div>\` : ''}
         </div>
 
+        <div class="bg-purple-950/35 border border-purple-500/35 rounded-xl p-3 space-y-1.5">
+          <div class="text-xs font-bold text-purple-200">📐 4-Column Kanban Credit-Saving Workflow (To-Do → Ready → In Progress → Done)</div>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[11px]">
+            <div class="bg-slate-950/70 border border-amber-500/30 rounded-lg p-2"><strong class="text-amber-300">1. To-Do (Unplanned)</strong><br>Capture offline (0 credits). Complex tickets need Stage A <code>/backlog-plan</code> on Argon/Opus.</div>
+            <div class="bg-slate-950/70 border border-purple-500/40 rounded-lg p-2"><strong class="text-purple-300">2. Ready (Planned)</strong><br>Blueprint locked! <strong>Switch model DOWN</strong> to Neon/Sonnet/Flash before starting (saves 55%–80%).</div>
+            <div class="bg-slate-950/70 border border-blue-500/30 rounded-lg p-2"><strong class="text-blue-300">3. In Progress</strong><br>Execute atomic ticket via <code>/backlog-start</code> on workhorse model (≤ 6–8 turns).</div>
+            <div class="bg-slate-950/70 border border-emerald-500/30 rounded-lg p-2"><strong class="text-emerald-300">4. Done</strong><br>Verified &amp; closed. Run <code>/start</code> to reset active context delta to 0.0 KB!</div>
+          </div>
+        </div>
+
         <div class="bg-slate-900/75 border border-slate-700/80 rounded-xl p-3.5 space-y-2">
           <h3 class="text-xs font-bold text-white uppercase tracking-wider">⚖️ Complete Deployed AGY Model Matrix &amp; Dual Quota-Pool Balancing</h3>
           <p class="text-slate-400">Google Gemini &amp; Google Orchestrators share <strong>Quota Pool 1</strong>, while Claude 5.5 &amp; GPT-OSS 120B share <strong>Quota Pool 2</strong> (independent 4h reset clocks). Switch across pools before hitting a limit!</p>
@@ -2208,9 +2286,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
     async function kickoffTask(id) {
       const task = rawData.tasks.find(t => t.id === id);
+      const wasReady = task && task.status === 'ready';
       const adv = computeTicketCreditAdvice(task);
       const prompt = adv.effortPrefix + ' /backlog-start ' + id;
-      if (task && task.status === 'todo') {
+      if (task && (task.status === 'todo' || task.status === 'ready')) {
         task.status = 'in_progress';
         renderBoard();
       }
@@ -2223,7 +2302,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl && task) {
-        titleEl.textContent = '🚀 Ready to Kick Off [' + task.id + '] · Optimal Model: ' + adv.stageBGoogle + attachSuffix;
+        titleEl.textContent = wasReady
+          ? ('🎯 READY Ticket [' + task.id + '] → Switch Model DOWN to ' + adv.stageBGoogle + attachSuffix)
+          : ('🚀 Ready to Kick Off [' + task.id + '] · Optimal Model: ' + adv.stageBGoogle + attachSuffix);
       }
 
       // Also invoke local native bridge (runs OS pbcopy + persists in_progress + unpacks .zip attachments)
@@ -2234,7 +2315,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       });
 
       if (bridgeRes && bridgeRes.ok) {
-        showToast('🚀 Copied "' + prompt + '" (Best Model: ' + adv.stageBGoogle + ')! Paste (⌘V) in chat.');
+        showToast((wasReady ? '🎯 READY → Switch model DOWN to ' + adv.stageBGoogle + '! ' : '🚀 ') + 'Copied "' + prompt + '" & marked ' + id + ' IN_PROGRESS!');
       } else {
         showToast('📋 Ready: "' + prompt + '" copied — Best Model: ' + adv.stageBGoogle);
       }
@@ -2245,12 +2326,18 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const adv = computeTicketCreditAdvice(task);
       const prompt = id ? ('/effort high /backlog-plan ' + id) : '/effort high /backlog-plan';
 
+      if (task && task.status === 'todo') {
+        task.status = 'ready';
+        task.plannedAt = new Date().toISOString();
+        renderBoard();
+      }
+
       copyTextToClipboard(prompt, true, id || '');
 
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl) {
         titleEl.textContent = task
-          ? ('📐 Separate Planning Mode for [' + task.id + '] · Plan on: ' + adv.stageA)
+          ? ('📐 Planned [' + task.id + '] → Moved to READY · Plan on: ' + adv.stageA)
           : '📐 Planning Mode Ready (task.md, implementation_plan.md & walkthrough.md synced)';
       }
 
@@ -2261,7 +2348,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       });
 
       if (bridgeRes && bridgeRes.ok) {
-        showToast('📐 Synced plan & copied "' + prompt + '"! Plan on Argon/Carbon/Opus, then switch down to Neon/Sonnet.');
+        showToast('📐 Moved [' + (id || 'plan') + '] to READY & copied "' + prompt + '"! Plan on Argon/Opus, then switch down to Neon/Sonnet.');
       } else {
         showToast('📐 Copied "' + prompt + '" — press ⌘V in Antigravity chat!');
       }
@@ -2404,7 +2491,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     }
 
     function updateSortButtonsUI() {
-      ['todo', 'in_progress', 'done'].forEach(col => {
+      ['todo', 'ready', 'in_progress', 'done'].forEach(col => {
         const btn = document.getElementById('sort-btn-' + col);
         if (!btn) return;
         const mode = columnSorts[col] || 'custom';
@@ -2416,7 +2503,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         }
       });
 
-      const allSame = columnSorts.todo === columnSorts.in_progress && columnSorts.in_progress === columnSorts.done ? columnSorts.todo : '';
+      const allSame = columnSorts.todo === columnSorts.ready && columnSorts.ready === columnSorts.in_progress && columnSorts.in_progress === columnSorts.done ? columnSorts.todo : '';
       const gNew = document.getElementById('globalSortNewest');
       const gOld = document.getElementById('globalSortOldest');
       const gCus = document.getElementById('globalSortCustom');
@@ -2433,7 +2520,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       columnSorts[col] = next;
       saveColumnSortsState();
       renderBoard();
-      const colTitle = col === 'todo' ? 'To-Do' : col === 'in_progress' ? 'In Progress' : 'Done';
+      const colTitle = col === 'todo' ? 'To-Do' : col === 'ready' ? 'Ready (Planned)' : col === 'in_progress' ? 'In Progress' : 'Done';
       showToast('⇅ Sorted ' + colTitle + ': ' + getSortLabel(next));
       await callLocalBridge('/api/reorder', {
         repoRoot: rawData.repoRoot,
@@ -2444,6 +2531,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
     async function setAllColumnsSort(mode) {
       columnSorts.todo = mode;
+      columnSorts.ready = mode;
       columnSorts.in_progress = mode;
       columnSorts.done = mode;
       saveColumnSortsState();
@@ -2459,6 +2547,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     function getColumnKeyForTask(t) {
       if (t.status === 'done') return 'done';
       if (t.status === 'in_progress' || t.status === 'testing') return 'in_progress';
+      if (t.status === 'ready') return 'ready';
       return 'todo';
     }
 
@@ -2581,6 +2670,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       if (targetColKey === 'done') sourceTask.status = 'done';
       else if (targetColKey === 'in_progress') {
         if (sourceTask.status !== 'testing') sourceTask.status = 'in_progress';
+      } else if (targetColKey === 'ready') {
+        sourceTask.status = 'ready';
+        if (!sourceTask.plannedAt) sourceTask.plannedAt = new Date().toISOString();
       } else {
         sourceTask.status = 'todo';
       }
@@ -2624,6 +2716,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       if (colKey === 'done') sourceTask.status = 'done';
       else if (colKey === 'in_progress') {
         if (sourceTask.status !== 'testing') sourceTask.status = 'in_progress';
+      } else if (colKey === 'ready') {
+        sourceTask.status = 'ready';
+        if (!sourceTask.plannedAt) sourceTask.plannedAt = new Date().toISOString();
       } else {
         sourceTask.status = 'todo';
       }
@@ -2631,7 +2726,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       rawData.tasks = rawData.tasks.filter(t => t.id !== sourceId);
       rawData.tasks.push(sourceTask);
 
-      const colLabel = colKey === 'todo' ? 'To-Do' : colKey === 'in_progress' ? 'In Progress' : 'Done';
+      const colLabel = colKey === 'todo' ? 'To-Do' : colKey === 'ready' ? 'Ready (Planned)' : colKey === 'in_progress' ? 'In Progress' : 'Done';
       await persistTaskOrderAndStatus(
         sourceTask,
         '✋ Moved [' + sourceId + '] to ' + colLabel + (prevStatus !== sourceTask.status ? ' (' + sourceTask.status.toUpperCase() + ')' : '')
@@ -2641,7 +2736,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     function renderCard(task) {
       const isDone = task.status === 'done';
       const isInProgress = task.status === 'in_progress' || task.status === 'testing';
-      const colKey = isDone ? 'done' : isInProgress ? 'in_progress' : 'todo';
+      const isReady = task.status === 'ready';
+      const colKey = isDone ? 'done' : isInProgress ? 'in_progress' : isReady ? 'ready' : 'todo';
       const safeIdAttr = escapeAttr(task.id);
       const safeIdHtml = escapeHtml(task.id);
       const safeTitleHtml = escapeHtml(task.title);
@@ -2666,7 +2762,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       const cardBorder = isInProgress
         ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
-        : 'border-[var(--border,#334155)] hover:border-slate-500';
+        : isReady
+          ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
+          : 'border-[var(--border,#334155)] hover:border-slate-500';
 
       const actionItemsPreviewHtml = isInProgress ? \`
         <div class="mb-2.5 bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 rounded-lg p-2 transition cursor-pointer" onclick="openTaskInspector('\${safeIdAttr}', event)" title="Click to inspect &amp; assign Action Items being waited on">
@@ -2699,6 +2797,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
               <span class="font-mono text-xs font-bold text-blue-400">\${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 \${prioColor}">\${escapeHtml(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">\${typeBadge}</span>
+              \${isReady ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Planned &amp; ready for workhorse execution">📐 READY</span>\` : ''}
               \${isInProgress ? \`<span onclick="openTaskInspector('\${safeIdAttr}', event)" class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 cursor-pointer" title="Click to inspect Action Items">⏳ \${pendingActions.length} Action\${pendingActions.length === 1 ? '' : 's'}</span>\` : ''}
             </div>
             
@@ -2709,6 +2808,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
               <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Inspect &amp; Assign Action Items">🎯</button>
               \${!isDone ? \`
                 <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
+                \${!isReady && !isInProgress ? \`<button onclick="updateTaskStatus('\${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>\` : ''}
                 <button onclick="updateTaskStatus('\${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>
               \` : \`
                 <button onclick="updateTaskStatus('\${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>
@@ -2792,6 +2892,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         if (!matchesQuery) return false;
         if (currentFilter === 'all') return true;
         if (currentFilter === 'todo') return t.status === 'todo';
+        if (currentFilter === 'ready') return t.status === 'ready';
         if (currentFilter === 'in_progress') return t.status === 'in_progress' || t.status === 'testing';
         if (currentFilter === 'done') return t.status === 'done';
         if (currentFilter === 'high') return t.priority === 'high';
@@ -2799,14 +2900,17 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       };
 
       const todoTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'todo' && filterTask(t)), columnSorts.todo);
+      const readyTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'ready' && filterTask(t)), columnSorts.ready);
       const inProgressTasks = sortColumnTasks(rawData.tasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && filterTask(t)), columnSorts.in_progress);
       const doneTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'done' && filterTask(t)), columnSorts.done);
 
-      document.getElementById('col-todo').innerHTML = todoTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No to-do tasks — drag a ticket here</div>';
+      document.getElementById('col-todo').innerHTML = todoTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks — drag a ticket here</div>';
+      document.getElementById('col-ready').innerHTML = readyTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready yet — click 📐 Plan or drag here</div>';
       document.getElementById('col-inprogress').innerHTML = inProgressTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress — drag a ticket here</div>';
       document.getElementById('col-done').innerHTML = doneTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks — drag a ticket here</div>';
 
       document.getElementById('count-todo').textContent = todoTasks.length;
+      document.getElementById('count-ready').textContent = readyTasks.length;
       document.getElementById('count-inprogress').textContent = inProgressTasks.length;
       document.getElementById('count-done').textContent = doneTasks.length;
     }
@@ -3658,7 +3762,7 @@ function startBridgeServer(port = DEFAULT_PORT) {
           const data = loadBacklog(targetRoot);
           const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
           if (task) {
-            if (task.status === 'todo') {
+            if (task.status === 'todo' || task.status === 'ready') {
               task.status = 'in_progress';
               saveBacklog(data, targetRoot);
               renderMigrationBoard(data, targetRoot);
@@ -3679,6 +3783,10 @@ function startBridgeServer(port = DEFAULT_PORT) {
         if (id) {
           const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
           if (task) {
+            if (task.status === 'todo') {
+              task.status = 'ready';
+              task.plannedAt = new Date().toISOString();
+            }
             data.activePlanTaskIds = [task.id];
             unpackTaskAttachments(task, targetRoot);
           }
@@ -3707,6 +3815,9 @@ function startBridgeServer(port = DEFAULT_PORT) {
           return { status: 404, payload: { ok: false, error: 'Task not found' } };
         }
         task.status = newStatus;
+        if (newStatus === 'ready' && !task.plannedAt) {
+          task.plannedAt = new Date().toISOString();
+        }
         if (newStatus === 'done' && !task.completedAt) {
           task.completedAt = new Date().toISOString();
         }
@@ -4196,7 +4307,7 @@ function main() {
     const id = args[1];
     const newStatus = args[2];
     if (!id || !newStatus) {
-      console.error('❌ Usage: npm run backlog status <id> <todo|in_progress|testing|done>');
+      console.error('❌ Usage: npm run backlog status <id> <todo|ready|in_progress|testing|done>');
       process.exit(1);
     }
 
@@ -4207,6 +4318,9 @@ function main() {
     }
 
     task.status = newStatus.toLowerCase();
+    if (task.status === 'ready' && !task.plannedAt) {
+      task.plannedAt = new Date().toISOString();
+    }
     saveBacklog(data);
     renderMigrationBoard(data);
     writeReviewPaneArtifacts(data);
@@ -4217,6 +4331,37 @@ function main() {
       const manifest = unpackTaskAttachments(task, REPO_ROOT);
       printUnpackedManifest(manifest, REPO_ROOT);
     }
+    return;
+  }
+
+  if (command === 'ready') {
+    const rawIds = args.slice(1).join(' ').split(/[\s,]+/).filter(Boolean);
+    if (rawIds.length === 0) {
+      console.error('❌ Usage: npm run backlog ready <id> [, <id2> ...]');
+      process.exit(1);
+    }
+    const matchedTasks = [];
+    for (const rawId of rawIds) {
+      const task = data.tasks.find(t => t.id.toLowerCase() === rawId.toLowerCase());
+      if (task) {
+        task.status = 'ready';
+        if (!task.plannedAt) task.plannedAt = new Date().toISOString();
+        matchedTasks.push(task);
+      } else {
+        console.warn(`⚠️  Task ${rawId} not found in backlog.`);
+      }
+    }
+    if (matchedTasks.length === 0) {
+      console.error('❌ No matching tasks found.');
+      process.exit(1);
+    }
+    saveBacklog(data);
+    renderMigrationBoard(data);
+    writeReviewPaneArtifacts(data);
+    ensureDaemonRunning();
+    const idList = matchedTasks.map(t => t.id).join(', ');
+    console.log(`\n📐 Moved [${idList}] to READY (Planned)!`);
+    console.log(`💰 Save Credits Tip: Switch your AGY model picker DOWN to Gemini 4 Neon (Med) or Claude Sonnet 5.5 (Med), then run: /effort medium /backlog-start ${idList}\n`);
     return;
   }
 
@@ -4233,7 +4378,7 @@ function main() {
       process.exit(1);
     }
     const task = data.tasks[idx];
-    const colOf = (t) => (t.status === 'done' ? 'done' : (t.status === 'in_progress' || t.status === 'testing') ? 'in_progress' : 'todo');
+    const colOf = (t) => (t.status === 'done' ? 'done' : (t.status === 'in_progress' || t.status === 'testing') ? 'in_progress' : t.status === 'ready' ? 'ready' : 'todo');
     const colKey = colOf(task);
     if (!data.meta) data.meta = {};
     if (!data.meta.columnSorts) data.meta.columnSorts = {};
@@ -4287,11 +4432,11 @@ function main() {
       : 'newest';
 
     if (!data.meta) data.meta = {};
-    if (!data.meta.columnSorts) data.meta.columnSorts = { todo: 'custom', in_progress: 'custom', done: 'custom' };
+    if (!data.meta.columnSorts) data.meta.columnSorts = { todo: 'custom', ready: 'custom', in_progress: 'custom', done: 'custom' };
 
-    const cols = colArg === 'all' ? ['todo', 'in_progress', 'done'] : [colArg === 'inprogress' ? 'in_progress' : colArg];
+    const cols = colArg === 'all' ? ['todo', 'ready', 'in_progress', 'done'] : [colArg === 'inprogress' ? 'in_progress' : colArg];
     for (const c of cols) {
-      if (['todo', 'in_progress', 'done'].includes(c)) {
+      if (['todo', 'ready', 'in_progress', 'done'].includes(c)) {
         data.meta.columnSorts[c] = mode;
       }
     }
@@ -4737,6 +4882,10 @@ function main() {
     if (matchedTasks.length > 0) {
       data.activePlanTaskIds = matchedTasks.map(t => t.id);
       for (const task of matchedTasks) {
+        if (task.status === 'todo') {
+          task.status = 'ready';
+          task.plannedAt = new Date().toISOString();
+        }
         const manifest = unpackTaskAttachments(task, REPO_ROOT);
         printUnpackedManifest(manifest, REPO_ROOT);
       }
@@ -4815,7 +4964,8 @@ function main() {
         parentId: parentTask.id,
         type: splitType,
         title: subTitle,
-        status: 'todo',
+        status: 'ready',
+        plannedAt: new Date().toISOString(),
         priority: splitPrio,
         components: Array.isArray(parentTask.components) ? [...parentTask.components] : [],
         attachments: [],

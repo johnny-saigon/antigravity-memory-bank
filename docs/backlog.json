@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-23T15:57:01.206Z",
+  "lastUpdated": "2026-11-24T06:39:05.461Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1165,6 +1165,102 @@
       "acceptanceCriteria": [],
       "actionItems": [],
       "completedAt": "2026-11-23T15:57:01.205Z"
+    },
+    {
+      "id": "FEAT-130",
+      "type": "feature",
+      "title": "Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs"
+      ],
+      "attachments": [],
+      "description": "Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.",
+      "spec": "Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-130-ACT-1",
+          "text": "Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-130-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-130 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-24T06:39:05.086Z"
+    },
+    {
+      "id": "FEAT-131",
+      "type": "feature",
+      "title": "Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/lint-memory.mjs",
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs"
+      ],
+      "attachments": [],
+      "description": "Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.",
+      "spec": "Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-131-ACT-1",
+          "text": "Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-131-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-131 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-24T06:39:05.191Z"
+    },
+    {
+      "id": "FEAT-132",
+      "type": "feature",
+      "title": "Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "docs/CREDITS_CHEATSHEET.md",
+        "templates/docs/CREDITS_CHEATSHEET.md",
+        "docs/BACKLOG_GUIDE.md",
+        "docs/PLANNING_GUIDE.md",
+        "skills/backlog-plan/SKILL.md",
+        "skills/backlog-start/SKILL.md",
+        "tests/cli-e2e.test.mjs"
+      ],
+      "attachments": [],
+      "description": "Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.",
+      "spec": "Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-132-ACT-1",
+          "text": "Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-132-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-132 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-24T06:39:05.294Z"
     }
   ],
   "milestones": [

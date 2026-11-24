@@ -4,7 +4,7 @@
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
 > - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-> - **Backlog Progress**: `36/36` tickets completed (`0` in progress, `0` queued).
+> - **Backlog Progress**: `39/39` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline
 - [x] Ingest Three-Tier Memory Hierarchy (`~/.gemini/GEMINI.md`, `.agents/rules/infra.md`, `memory-bank/*.md`)
@@ -55,3 +55,6 @@
 - [x] **[FEAT-127]** Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout
 - [x] **[FEAT-128]** Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects
 - [x] **[FEAT-129]** Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization
+- [x] **[FEAT-130]** Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split
+- [x] **[FEAT-131]** Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine
+- [x] **[FEAT-132]** Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects

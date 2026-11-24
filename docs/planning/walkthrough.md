@@ -7,7 +7,7 @@
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-- **Backlog Completion**: **36 / 36** tickets verified `DONE` (0 in progress, 0 queued).
+- **Backlog Completion**: **39 / 39** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
 - **feat(docs): unify `FEAT-121` Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/design/DESIGN.md`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `.agents/rules/docs-living-specs.md`, `README.md`) and roll out `upgrade` across `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `wiro` (`10/10` canonical docs active, custom/nested docs classified & archived with repo-wide link rewriting, `10/10` ingestion checklist passed)**
@@ -17,6 +17,18 @@
 - **feat(organize): implement `FEAT-117` AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
+### ✅ [FEAT-132]: Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects *(Verified 2026-11-24)*
+- **Summary**: Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.
+- **Verified Components**: [CREDITS_CHEATSHEET.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/CREDITS_CHEATSHEET.md), [CREDITS_CHEATSHEET.md](file:///Users/jbb/Documents/antigravity-memory-bank/templates/docs/CREDITS_CHEATSHEET.md), [BACKLOG_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG_GUIDE.md), [PLANNING_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/PLANNING_GUIDE.md), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md), [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-start/SKILL.md), [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs)
+
+### ✅ [FEAT-131]: Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine *(Verified 2026-11-24)*
+- **Summary**: Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.
+- **Verified Components**: [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs)
+
+### ✅ [FEAT-130]: Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split *(Verified 2026-11-24)*
+- **Summary**: Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.
+- **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs)
+
 ### ✅ [FEAT-129]: Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization *(Verified 2026-11-23)*
 - **Summary**: Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before rendering backlog.html in SnapMail and Design Engineering Website), unify SSR/client card ROI rendering in scripts/backlog.mjs, auto-prune duplicate non-canonical backlog_kanban.html/root backlog.html artifacts, and re-render identical Kanban boards across all 10 projects.
 - **Verified Components**: [backlog-adapter.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/backlog-adapter.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs), [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs), [BUG_FIX_RECORDS.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/quality/BUG_FIX_RECORDS.md)
@@ -219,7 +231,7 @@
 | :--- | :--- | :--- |
 | **Memory Bank Line Budget (`< 150 lines`)** | `npm run lint:memory` | ✅ Verified (`0` violations) |
 | **10-Point Baseline Ingestion Checklist** | `npx antigravity-memory-bank upgrade` | ✅ `10/10` Passed |
-| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (36/36 Done) |
+| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (39/39 Done) |
 | **Automated Verification Command** | `npm run lint:memory` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm test` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm run test:e2e` | ✅ Configured & Active |

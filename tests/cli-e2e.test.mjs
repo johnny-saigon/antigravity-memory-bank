@@ -649,6 +649,22 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     const canonicalHtml = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
     assert.match(canonicalHtml, /openCreditAdvisor/);
     assert.match(canonicalHtml, /Save Credits &amp; Models/);
+    assert.match(canonicalHtml, /id="col-ready"/);
+    assert.match(canonicalHtml, /id="sort-btn-ready"/);
+
+    // 1d. FEAT-130 / FEAT-131: ready status transition & Stage B model-downgrade Credit ROI advice
+    execFileSync(process.execPath, [backlogScriptPath, 'ready', 'FEAT-901'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    const readyAdviseOut = execFileSync(process.execPath, [lintScriptPath, '--advise', 'FEAT-901'], {
+      cwd: tmpRepo,
+      env: testEnv,
+      encoding: 'utf8'
+    });
+    assert.match(readyAdviseOut, /READY \(PLANNED\)/);
+    assert.match(readyAdviseOut, /SWITCH DOWN NOW/);
 
     // Re-add FEAT-244 for step 2
     execFileSync(

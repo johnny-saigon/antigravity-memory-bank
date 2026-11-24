@@ -239,13 +239,16 @@ function analyzeTicketCreditStrategy(task, requestedTier = null) {
   const attachCount = task && Array.isArray(task.attachments) ? task.attachments.length : 0;
   const prio = String(task?.priority || 'medium').toLowerCase();
   const type = String(task?.type || 'feature').toLowerCase();
+  const status = String(task?.status || 'todo').toLowerCase();
 
   const isParallelSwarm = /\b(swarm|multi-repo|all repos|parallel|migration across|5 repositories|cross-repo)\b/.test(text) || compCount >= 6;
   const isHighRisk = /\b(oauth|auth|security|schema|migration|concurrency|race|webgl|worker|stripe|billing|brick|architect|p0|production)\b/.test(text);
   const isMicro = /\b(copy|typo|label|css|color|badge|sort|readme|comment|spacing|padding|icon)\b/.test(text) && compCount <= 1 && prio !== 'high';
 
   let strategyKey = 'standard_direct';
-  if (requestedTier === 'low' || (!requestedTier && isMicro)) {
+  if (status === 'ready' && !requestedTier) {
+    strategyKey = isMicro ? 'micro_direct' : 'ready_stage_b';
+  } else if (requestedTier === 'low' || (!requestedTier && isMicro)) {
     strategyKey = 'micro_direct';
   } else if (requestedTier === 'xhigh' || (!requestedTier && isParallelSwarm)) {
     strategyKey = isParallelSwarm ? 'parallel_orchestrator' : 'complex_split_plan';
@@ -258,6 +261,21 @@ function analyzeTicketCreditStrategy(task, requestedTier = null) {
   const tid = task?.id || '<TICKET_ID>';
 
   const strategies = {
+    ready_stage_b: {
+      tier: 'medium',
+      badge: '🎯 READY (PLANNED) — Stage B Workhorse Execution (Switch Model DOWN & Save 55%–80%!)',
+      turnBudget: '≤ 6 Tool Turns (Blueprint already locked — execute directly!)',
+      planningEconomics:
+        '✅ STAGE A PLANNING COMPLETE (Ticket is in the READY column): Do NOT burn 5x–9x frontier credits (Argon/Opus) executing a READY ticket! Switch your AGY model picker DOWN to Gemini 4 Neon (Medium) or Claude Sonnet 5.5 (Medium) and run `/effort medium /backlog-start` immediately.',
+      stageAPlan: '✅ Already Completed — Ticket promoted to READY (Planned) column with locked spec/plan.',
+      stageBGoogle: 'SWITCH DOWN NOW -> Gemini 4 Neon (Medium/High) or Gemini 4 Carbon (Medium)',
+      stageBExternal: 'SWITCH DOWN NOW -> Claude Sonnet 5.5 (Medium)',
+      stageCVerify: 'Gemini 3.8 Flash (Low/Medium) for test/lint/docs verification',
+      orchestratorRule: '⚠️ Only use Orchestrator (Neon/Carbon) if executing 3+ independent READY sub-tickets in parallel.',
+      estimatedSavings: '55%–80% fewer credits vs. leaving Argon/Opus active during Stage B execution',
+      promptPlan: null,
+      promptExec: `/effort medium /backlog-start ${tid}`
+    },
     micro_direct: {
       tier: 'low',
       badge: '⚡ TIER 1 · MICRO / BOILERPLATE — Direct Execution (Skip Separate /plan)',
@@ -350,6 +368,7 @@ function getOrSetEffortProfile(requestedTier = null, explicitTaskId = null) {
   if (!activeTask) {
     activeTask =
       (bj.tasks || []).find((t) => t.status === 'in_progress') ||
+      (bj.tasks || []).find((t) => t.status === 'ready') ||
       (bj.tasks || []).find((t) => t.status === 'todo') ||
       null;
   }
@@ -813,7 +832,7 @@ if (fsSync.existsSync(backlogJsonFull)) {
       let backlogViolations = 0;
       const seenIds = new Set();
       const validPriorities = new Set(['high', 'medium', 'low']);
-      const validStatuses = new Set(['todo', 'in_progress', 'testing', 'done']);
+      const validStatuses = new Set(['todo', 'ready', 'in_progress', 'testing', 'done']);
 
       for (const task of backlog.tasks) {
         const tid = String(task?.id || '').trim();

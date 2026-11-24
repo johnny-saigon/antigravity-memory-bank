@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(backlog): enforce identical canonical Backlog Kanban design across all projects & harden backlog-adapter (FEAT-129) [skip ci]** (`079e448`)
 - [x] **fix(docs): whitelist docs/CREDITS_CHEATSHEET.md in living-docs organizer & index in docs/INDEX.md [skip ci]** (`b9706b7`)
 - [x] **feat(docs): add UX-polished Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) & wire into Memory Bank upgrade (FEAT-128) [skip ci]** (`5170bca`)
 - [x] **feat(credits): evolve Save Credits paradigm for full AGY 3-family model roster & ticket Q/C ROI (FEAT-125..127) [skip ci]** (`d34c754`)

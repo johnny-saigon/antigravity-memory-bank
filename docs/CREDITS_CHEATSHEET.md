@@ -6,19 +6,19 @@
 
 ---
 
-## 🧭 1. 10-Second Decision Flowchart (Before You Type a Prompt)
+## 🧭 1. 4-Column Kanban Credit-Saving Flowchart (`To-Do` → `Ready` → `In Progress` → `Done`)
 
 ```mermaid
 flowchart LR
-  A["New Task / Bug"] --> B["1. Capture Ticket Offline\n(0 AI Credits)\nbacklog.html or npm run backlog add"]
-  B --> C{"Scope & Risk?"}
+  A["1. To-Do / Backlog\n(Unplanned · 0 AI Credits)\nbacklog.html or npm run backlog add"] --> C{"Needs Thinking\nor Planning?"}
 
-  C -- "1 file · Copy / CSS / Docs\nSimple CRUD" --> T1["⚡ Skip /plan (Saves ~50%)\n/effort low · /backlog-start\nGemini 3.8 Flash (Low/Med)\nor GPT-OSS 120B (Med)"]
-  C -- "1–2 files · Clear Spec\nStandard Feature / Bug" --> T2["⚙️ Direct Ticket Sprint\n/effort medium · /backlog-start\nGemini 4 Neon (Med/High)\nor Claude Sonnet 5.5 (Med)"]
-  C -- "3+ files · OAuth / Schema\nArchitecture / P0 Bug" --> T3["🧠 Two-Stage Split Routing\n(Saves 55%–80% Credits!)\nStage A: /backlog-plan on Argon/Opus\nStage B: Switch DOWN to Neon/Sonnet"]
-  C -- "5+ Parallel Modules\nCross-Repo Swarm" --> T4["🎛️ Orchestrator Swarm\nOrchestrator (Neon/Carbon/Argon)\nPin workers to Flash/Neon\nSwitch BACK after swarm!"]
+  C -- "No (1–2 files · Copy / CSS / CRUD)" --> R1["📐 Mark READY Directly\n(Skip paid /plan — Saves ~50%)\nExecute on Flash (Low/Med) or Neon (Med)"]
+  C -- "Yes (3+ files · Schema / OAuth / P0)" --> P1["🧠 Stage A: /effort high /backlog-plan\nGemini 4 Argon/Carbon or Claude Opus 5.5\n(1–2 turns -> Auto-moves ticket to READY)"]
+  P1 --> R2["2. Ready (Planned) Column\n🎯 Blueprint Locked!\nSWITCH MODEL DOWN NOW:\nGemini 4 Neon (Med) or Claude Sonnet 5.5 (Med)\n(Saves 55%–80% Execution Credits!)"]
+  C -- "5+ Parallel Modules / Swarm" --> T4["🎛️ Orchestrator Swarm\nOrchestrator (Neon/Carbon/Argon)\nPin workers to Flash/Neon · Switch BACK after!"]
 
-  T1 & T2 & T3 & T4 --> Z["🧹 Run /start After Ticket\n(0.0 KB active delta · 100% archive kept)"]
+  R1 & R2 & T4 --> IP["3. In Progress / QA\n/backlog-start <ID> on Workhorse Model"]
+  IP --> Z["4. Done -> Run /start Reset\n(0.0 KB active delta · 100% archive kept)"]
 ```
 
 ---
@@ -72,11 +72,9 @@ flowchart LR
 1. **Always Create a Backlog Ticket Offline First (`0 AI Tokens`)**:
    - Use the Review pane (`backlog.html` → **➕ Quick Capture Task**) or CLI (`npm run backlog add "<Title>" --components "<files>"`).
    - Pre-defining target files and `.zip`/spec attachments offline eliminates `2–4` exploratory chat turns (**`~15k–30k` tokens saved immediately**).
-2. **Know When to Skip `/plan` vs. Spend Separate Planning Credits**:
-   - **Skip Separate `/plan` (`1–2` files, low ambiguity)**: A formal planning turn (`~4k` tokens) costs as much as the fix itself. Jump straight to `/effort low /backlog-start <ID>` or `/effort medium /backlog-start <ID>`.
-   - **Use Two-Stage Split Model Routing (`3+` files, OAuth/DB, P0 bugs)**:
-     - **Stage A — Plan (`1–2` turns on Frontier):** Select **Gemini 4 Argon/Carbon (High)** or **Claude Opus 5.5 (Med/High)** and run `/effort high /backlog-plan <ID>` to lock `implementation_plan.md` and split atomic sub-tickets (`npm run backlog split`).
-     - **Stage B — Execute (Switch Model DOWN):** Before clicking **Proceed**, switch to **Gemini 4 Neon (Medium)** or **Claude Sonnet 5.5 (Medium)** (or **Gemini 3.8 Flash** for simple sub-tickets) to execute each atomic ticket — delivering frontier architecture at workhorse credit cost!
+2. **Use the `Ready (Planned)` Column to Trigger Your Model Downgrade (`55%–80%` Credit Savings)**:
+   - **Column 1 (`To-Do / Backlog` — Unplanned)**: Holds raw ideas and tickets that still need architectural thinking. For `1–2` file low-ambiguity tasks, skip a paid `/plan` turn and click `📐` (`npm run backlog ready <ID>`) or start directly on `Gemini 3.8 Flash` / `Gemini 4 Neon`.
+   - **Column 2 (`Ready (Planned)` — Blueprint Locked)**: Running `/backlog-plan <ID>`, `npm run backlog plan <ID>`, or `npm run backlog split` automatically promotes planned tickets here. Whenever you pick up a ticket from **`Ready (Planned)`**, **Stage A planning is already paid for** — immediately **switch your AGY model picker DOWN** (from Argon/Opus to **Gemini 4 Neon (Medium)** or **Claude Sonnet 5.5 (Medium)**) before running `/backlog-start <ID>`!
 
 ---
 

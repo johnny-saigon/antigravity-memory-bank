@@ -16,6 +16,7 @@
 | **`BUG-106`** | Fix Stale _npx Cache, Workspace-Dominance Brain Matching & Sandboxed Kickoff Prompt Clipboard/Bridge — Resolved 3 root causes preventing 100% reliable backlog.html generation on upgrade/init and blocking Kickoff Prompt clipboard copy in sandbo | DONE | `scripts/backlog.mjs, templates/scripts/backlog.mjs, bin/cli.mjs` |
 | **`BUG-107`** | Pull API Keys, Env Contracts, MCP Server Configs & Customizations into Memory Bank on Init/Upgrade/Sync — API keys (.env*, eas.json, credentials/*.p8, host token files), MCP server configs (~/.gemini/config/mcp_config.json, .mcp.json), and Antigr | DONE | `lib/customizations-scraper.mjs, bin/cli.mjs, scripts/sync-memory-context.mjs, templates/memory-bank/integrationsAndCustomizations.md.tpl, templates/AGENTS.md.tpl, skills/start/SKILL.md` |
 | **`FEAT-129`** | Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization — Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before  | DONE | `lib/backlog-adapter.mjs, scripts/backlog.mjs, templates/scripts/backlog.mjs, tests/cli-e2e.test.mjs, docs/quality/BUG_FIX_RECORDS.md` |
+| **`COMMIT-079e448`** | fix(backlog): enforce identical canonical Backlog Kanban design across all projects & harden backlog-adapter (FEAT-129) [skip ci] — Git fix commit `079e448` | DONE | `git history` |
 | **`COMMIT-b9706b7`** | fix(docs): whitelist docs/CREDITS_CHEATSHEET.md in living-docs organizer & index in docs/INDEX.md [skip ci] — Git fix commit `b9706b7` | DONE | `git history` |
 | **`COMMIT-c9b5ee9`** | fix(backlog): enforce exact repoRoot ownership in findTargetBrainDirs to prevent sibling repo collision — Git fix commit `c9b5ee9` | DONE | `git history` |
 | **`COMMIT-f3e143e`** | fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight) — Git fix commit `f3e143e` | DONE | `git history` |
@@ -25,7 +26,6 @@
 | **`COMMIT-9557d87`** | fix(backlog): auto-render Review Pane artifacts in lifecycle hooks and add live /api/backlog auto-sync — Git fix commit `9557d87` | DONE | `git history` |
 | **`COMMIT-6673fc2`** | fix(customizations): resolve BUG-107 by pulling API keys, MCP configs & customizations into memory-bank — Git fix commit `6673fc2` | DONE | `git history` |
 | **`COMMIT-5c62ad9`** | fix(backlog): enforce strict 1-to-1 workspace dominance and home-relative path isolation in findTargetBrainDirs — Git fix commit `5c62ad9` | DONE | `git history` |
-| **`COMMIT-3796852`** | fix(backlog): guard brain directory fallback against cross-workspace pollution — Git fix commit `3796852` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

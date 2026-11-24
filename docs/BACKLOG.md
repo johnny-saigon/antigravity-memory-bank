@@ -417,6 +417,36 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-130: Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`
+- **Description:** Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.
+- **Technical Specification:**
+  Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.
+
+---
+
+### FEAT-131: Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/lint-memory.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`
+- **Description:** Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.
+- **Technical Specification:**
+  Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.
+
+---
+
+### FEAT-132: Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `docs/BACKLOG_GUIDE.md`, `docs/PLANNING_GUIDE.md`, `skills/backlog-plan/SKILL.md`, `skills/backlog-start/SKILL.md`, `tests/cli-e2e.test.mjs`
+- **Description:** Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.
+- **Technical Specification:**
+  Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

@@ -34,9 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-110`** | Dogfooding & Strict Upstream Package Isolation Architecture | 🟢 DONE | `package.json`, `bin/cli.mjs`, `.gitignore` |
-| **`FEAT-111`** | Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall) | 🟢 DONE | `bin/cli.mjs`, `scripts/lint-memory.mjs` |
-| **`FEAT-112`** | Automated Byte-Parity Check Between scripts/backlog.mjs and templates/scripts/backlog.mjs | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-113`** | Automatic Context & UX/UI .zip Bundle Ingestion in /backlog-start & Backlog Engine | 🟢 DONE | `skills/backlog-start/SKILL.md`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-114`** | On-the-Fly Lifecycle Hooks (.agents/hooks.json), Zero-Manual-Step Memory Registration & 10-Point Mandatory Ingestion Checklist | 🟢 DONE | `lib/ingestion-checklist.mjs`, `lib/customizations-scraper.mjs`, `scripts/sync-memory-context.mjs` |
 | **`FEAT-115`** | Enforce Strict Live End-to-End Verification Before Ticket Closure Across AGENTS.md & /backlog-start | 🟢 DONE | `AGENTS.md`, `templates/AGENTS.md.tpl`, `rules/AGENTS.md` |
@@ -54,6 +51,9 @@ flowchart LR
 | **`FEAT-127`** | Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout | 🟢 DONE | `skills/effort/SKILL.md`, `skills/credits/SKILL.md`, `skills/usage/SKILL.md` |
 | **`FEAT-128`** | Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects | 🟢 DONE | `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `bin/cli.mjs` |
 | **`FEAT-129`** | Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization | 🟢 DONE | `lib/backlog-adapter.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
+| **`FEAT-130`** | Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
+| **`FEAT-131`** | Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
+| **`FEAT-132`** | Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects | 🟢 DONE | `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `docs/BACKLOG_GUIDE.md` |
 <!-- ag-section:logical-features:end -->
 
 ---
