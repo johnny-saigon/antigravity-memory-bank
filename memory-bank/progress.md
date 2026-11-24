@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(kanban): enforce strict single-branch & single-workspace isolation in Memory Bank board (FEAT-151)** (`c99287b`)
 - [x] **fix(mcp-app): gracefully fall back to git HEAD when docs/backlog.json has conflict markers** (`6884f9d`)
 - [x] **feat(kanban): delete ticket from any column across CLI, HTTP bridge, HTML & MCP App (FEAT-150)** (`43f367c`)
 - [x] **feat(kanban): delete ticket from any column across CLI, HTTP bridge, HTML & MCP App (FEAT-150)** (`18f0710`)
