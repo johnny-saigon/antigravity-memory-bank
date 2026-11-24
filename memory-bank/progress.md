@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(mcp-app): native Antigravity Memory Bank MCP App plugin (SEP-1865) & 5-tab Control Plane (FEAT-148)** (`1a195d9`)
 - [x] **fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115)** (`8216efd`)
 - [x] **fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115)** (`85403fb`)
 - [x] **feat(backlog): consistent -ACT-N child tickets, Proceed guard & locked READY planning UI (FEAT-147, BUG-113, BUG-114)** (`6b87730`)
