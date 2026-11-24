@@ -275,6 +275,46 @@ function rollupParentIfAllChildrenDone(childTask, data) {
 }
 
 /**
+ * Retrieve children tickets of non-completed parent tickets (status !== 'done').
+ * Supports optional parentId filtering and openOnly (exclude done children).
+ */
+function getChildrenOfIncompleteParents(tasks, options = {}) {
+  const list = Array.isArray(tasks) ? tasks : [];
+  const targetParentId = options.parentId ? String(options.parentId).toUpperCase() : null;
+  const openOnly = Boolean(options.openOnly);
+
+  const incompleteParentsById = new Map();
+  for (const t of list) {
+    if (!t || !t.id || t.status === 'done') continue;
+    const idKey = String(t.id).toUpperCase();
+    if (targetParentId && idKey !== targetParentId) continue;
+    incompleteParentsById.set(idKey, t);
+  }
+
+  const childrenByParent = new Map();
+  const flatChildren = [];
+  for (const t of list) {
+    if (!t || !t.parentId) continue;
+    const parentKey = String(t.parentId).toUpperCase();
+    if (!incompleteParentsById.has(parentKey)) continue;
+    if (openOnly && t.status === 'done') continue;
+    if (!childrenByParent.has(parentKey)) childrenByParent.set(parentKey, []);
+    childrenByParent.get(parentKey).push(t);
+    flatChildren.push(t);
+  }
+
+  const parents = [];
+  for (const [parentKey, parent] of incompleteParentsById.entries()) {
+    const children = childrenByParent.get(parentKey) || [];
+    if (children.length > 0 || targetParentId) {
+      parents.push({ parent, children });
+    }
+  }
+
+  return { parents, children: flatChildren };
+}
+
+/**
  * Copy text directly to the native OS clipboard (pbcopy on macOS, clip on Windows, xclip/xsel on Linux)
  */
 function copyToNativeOsClipboard(text) {
@@ -1428,25 +1468,26 @@ function renderCardServer(task, allTasks = []) {
     : '';
 
   const isCollapsed = Boolean(task.collapsed);
-  const childTasks = Array.isArray(allTasks)
-    ? allTasks.filter(c => c.parentId === task.id && (c.status === 'in_progress' || c.status === 'testing'))
+  const childTasks = !isDone && Array.isArray(allTasks)
+    ? allTasks.filter(c => String(c.parentId || '').toUpperCase() === String(task.id || '').toUpperCase())
     : [];
+  const openChildCount = childTasks.filter(c => c.status !== 'done').length;
   const hasChildren = childTasks.length > 0;
-  const collapseBtnHtml = (hasChildren || task.isResidualChild || isInProgress)
+  const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress)
     ? `<button onclick="toggleCardCollapse('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">${isCollapsed ? '▸' : '▾'}</button>`
     : '';
 
   return `
-        <div data-task-id="${safeIdAttr}" data-col="${colKey}" draggable="true" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl ${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing ${task.isResidualChild ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
+        <div data-task-id="${safeIdAttr}" data-col="${colKey}" draggable="true" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl ${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing ${task.isResidualChild || task.parentId ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
           <div class="flex items-start justify-between gap-2 ${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
               ${collapseBtnHtml}
               <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
-              <span class="font-mono text-xs font-bold ${task.isResidualChild ? 'text-cyan-300' : 'text-blue-400'}">${safeIdHtml}</span>
+              <span class="font-mono text-xs font-bold ${task.isResidualChild || task.parentId ? 'text-cyan-300' : 'text-blue-400'}">${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 ${prioColor}">${escapeHtmlServer(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">${typeBadge}</span>
-              ${task.coreCompleted && hasChildren ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Primary work done; tracking residual child tickets">🧩 Main Done · ${childTasks.length} Residual</span>` : ''}
-              ${task.isResidualChild ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task ${escapeHtmlServer(task.residualLetter || '')}</span>` : ''}
+              ${hasChildren ? `<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Child tickets under this non-completed parent">${task.coreCompleted ? `🧩 Main Done · ${openChildCount} Residual` : `🧩 ${childTasks.length} Child${childTasks.length === 1 ? '' : 'ren'} (${openChildCount} Open)`}</span>` : ''}
+              ${task.isResidualChild ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task ${escapeHtmlServer(task.residualLetter || '')}</span>` : (task.parentId ? `<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Child of ${escapeHtmlServer(task.parentId)}</span>` : '')}
               ${!isReady && !isInProgress && !isDone && task.liveActivity === 'planning' ? `<span class="badge bg-amber-500/25 text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket (FEAT-140)">🧠 Planning...</span>` : ''}
               ${!isReady && !isInProgress && !isDone && task.annotations ? `<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>` : ''}
               ${isReady ? `<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>` : ''}
@@ -1529,25 +1570,29 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   const savedSorts = (data.meta && data.meta.columnSorts) || {};
 
   const branchTasks = enrichedTasks.filter(t => isTaskVisibleInBranch(t, branchCtx));
-  const initialTodo = sortColumnTasksServer(branchTasks.filter(t => t.status === 'todo'), savedSorts.todo || 'custom');
-  const initialReady = sortColumnTasksServer(branchTasks.filter(t => t.status === 'ready'), savedSorts.ready || 'custom');
-  const initialInProg = sortColumnTasksServer(
-    branchTasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && !(t.isResidualChild && branchTasks.some(p => p.id === t.parentId && (p.status === 'in_progress' || p.status === 'testing')))),
-    savedSorts.in_progress || 'custom'
-  );
+  const allTodo = sortColumnTasksServer(branchTasks.filter(t => t.status === 'todo'), savedSorts.todo || 'custom');
+  const allReady = sortColumnTasksServer(branchTasks.filter(t => t.status === 'ready'), savedSorts.ready || 'custom');
+  const allInProg = sortColumnTasksServer(branchTasks.filter(t => t.status === 'in_progress' || t.status === 'testing'), savedSorts.in_progress || 'custom');
   const initialDone = sortColumnTasksServer(branchTasks.filter(t => t.status === 'done'), savedSorts.done || 'custom');
 
-  const renderServerWithChildren = (t) => {
-    const kids = branchTasks.filter(c => c.parentId === t.id && (c.status === 'in_progress' || c.status === 'testing'));
-    if (kids.length === 0) return renderCardServer(t, branchTasks);
-    const kidsHtml = kids.map(k => renderCardServer(k, branchTasks)).join('');
-    return `<div class="space-y-2">${renderCardServer(t, branchTasks)}<div class="ml-3 pl-2.5 border-l-2 border-blue-500/45 space-y-2">${kidsHtml}</div></div>`;
+  const renderServerColWithChildren = (colTasks) => {
+    const topLevel = colTasks.filter(t => !(t.parentId && colTasks.some(p => String(p.id).toUpperCase() === String(t.parentId).toUpperCase())));
+    return topLevel.map(t => {
+      const kids = colTasks.filter(c => String(c.parentId || '').toUpperCase() === String(t.id || '').toUpperCase());
+      if (kids.length === 0) return renderCardServer(t, branchTasks);
+      const kidsHtml = kids.map(k => renderCardServer(k, branchTasks)).join('');
+      return `<div class="space-y-2">${renderCardServer(t, branchTasks)}<div class="ml-3 pl-2.5 border-l-2 border-blue-500/45 space-y-2">${kidsHtml}</div></div>`;
+    }).join('');
   };
 
-  const todoHtml = initialTodo.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks in this branch — drag a ticket here</div>';
-  const readyHtml = initialReady.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready in this branch — click 📐 Plan or drag here</div>';
-  const inProgHtml = initialInProg.map(renderServerWithChildren).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress in this branch — drag a ticket here</div>';
-  const doneHtml = initialDone.map(renderCardServer).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks in this branch — drag a ticket here</div>';
+  const initialTodo = allTodo;
+  const initialReady = allReady;
+  const initialInProg = allInProg;
+
+  const todoHtml = renderServerColWithChildren(allTodo) || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks in this branch — drag a ticket here</div>';
+  const readyHtml = renderServerColWithChildren(allReady) || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready in this branch — click 📐 Plan or drag here</div>';
+  const inProgHtml = renderServerColWithChildren(allInProg) || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress in this branch — drag a ticket here</div>';
+  const doneHtml = initialDone.map(t => renderCardServer(t, branchTasks)).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks in this branch — drag a ticket here</div>';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -3736,23 +3781,26 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       \` : '';
 
       const isCollapsed = Boolean(task.collapsed);
-      const childTasks = (rawData.tasks || []).filter(c => c.parentId === task.id && (c.status === 'in_progress' || c.status === 'testing') && isClientTaskInActiveBranch(c));
+      const childTasks = !isDone
+        ? (rawData.tasks || []).filter(c => String(c.parentId || '').toUpperCase() === String(task.id || '').toUpperCase() && isClientTaskInActiveBranch(c))
+        : [];
+      const openChildCount = childTasks.filter(c => c.status !== 'done').length;
       const hasChildren = childTasks.length > 0;
-      const collapseBtnHtml = (hasChildren || task.isResidualChild || isInProgress)
+      const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress)
         ? \`<button onclick="toggleCardCollapse('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="\${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">\${isCollapsed ? '▸' : '▾'}</button>\`
         : '';
 
       return \`
-        <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" draggable="true" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl \${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing \${task.isResidualChild ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
+        <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" draggable="true" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl \${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing \${task.isResidualChild || task.parentId ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
           <div class="flex items-start justify-between gap-2 \${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
               \${collapseBtnHtml}
               <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
-              <span class="font-mono text-xs font-bold \${task.isResidualChild ? 'text-cyan-300' : 'text-blue-400'}">\${safeIdHtml}</span>
+              <span class="font-mono text-xs font-bold \${task.isResidualChild || task.parentId ? 'text-cyan-300' : 'text-blue-400'}">\${safeIdHtml}</span>
               <span class="badge border rounded px-1.5 py-0.5 \${prioColor}">\${escapeHtml(task.priority || 'med')}</span>
               <span class="badge bg-slate-700/50 text-slate-300 rounded px-1.5 py-0.5">\${typeBadge}</span>
-              \${task.coreCompleted && hasChildren ? \`<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Primary work done; tracking residual child tickets">🧩 Main Done · \${childTasks.length} Residual</span>\` : ''}
-              \${task.isResidualChild ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task \${escapeHtml(task.residualLetter || '')}</span>\` : ''}
+              \${hasChildren ? \`<span class="badge bg-purple-500/20 text-purple-200 border border-purple-500/40 rounded px-1.5 py-0.5" title="Child tickets under this non-completed parent">\${task.coreCompleted ? '🧩 Main Done · ' + openChildCount + ' Residual' : '🧩 ' + childTasks.length + ' Child' + (childTasks.length === 1 ? '' : 'ren') + ' (' + openChildCount + ' Open)'}</span>\` : ''}
+              \${task.isResidualChild ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Sub-Task \${escapeHtml(task.residualLetter || '')}</span>\` : (task.parentId ? \`<span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 rounded px-1.5 py-0.5">↳ Child of \${escapeHtml(task.parentId)}</span>\` : '')}
               \${!isReady && !isInProgress && !isDone && task.liveActivity === 'planning' ? \`<span class="badge bg-amber-500/25 text-amber-200 border border-amber-400/60 rounded px-1.5 py-0.5 animate-pulse" title="Agent is actively exploring &amp; planning this ticket (FEAT-140)">🧠 Planning...</span>\` : ''}
               \${!isReady && !isInProgress && !isDone && task.annotations ? \`<span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded px-1.5 py-0.5" title="Auto-annotated in TO DO (0 plan/code credits burned)">🏷️ Annotated</span>\` : ''}
               \${isReady ? \`<span class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-1.5 py-0.5" title="Click card to examine full Implementation Plan, Model Options &amp; Code">\${task.liveActivity === 'awaiting_approval' ? '⏳ READY · Awaiting Proceed' : '📐 READY'}</span>\` : ''}
@@ -3875,18 +3923,20 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const todoTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'todo' && filterTask(t)), columnSorts.todo);
       const readyTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'ready' && filterTask(t)), columnSorts.ready);
       const allInProgressTasks = sortColumnTasks(rawData.tasks.filter(t => (t.status === 'in_progress' || t.status === 'testing') && filterTask(t)), columnSorts.in_progress);
-      const inProgressTopLevel = allInProgressTasks.filter(t => !(t.isResidualChild && allInProgressTasks.some(p => p.id === t.parentId)));
       const doneTasks = sortColumnTasks(rawData.tasks.filter(t => t.status === 'done' && filterTask(t)), columnSorts.done);
 
-      const renderInProgWithChildren = (t) => {
-        const kids = allInProgressTasks.filter(c => c.parentId === t.id);
-        if (kids.length === 0) return renderCard(t);
-        return '<div class="space-y-2">' + renderCard(t) + '<div class="ml-3 pl-2.5 border-l-2 border-blue-500/45 space-y-2">' + kids.map(renderCard).join('') + '</div></div>';
+      const renderColWithChildren = (colTasks) => {
+        const topLevel = colTasks.filter(t => !(t.parentId && colTasks.some(p => String(p.id).toUpperCase() === String(t.parentId).toUpperCase())));
+        return topLevel.map(t => {
+          const kids = colTasks.filter(c => String(c.parentId || '').toUpperCase() === String(t.id || '').toUpperCase());
+          if (kids.length === 0) return renderCard(t);
+          return '<div class="space-y-2">' + renderCard(t) + '<div class="ml-3 pl-2.5 border-l-2 border-blue-500/45 space-y-2">' + kids.map(renderCard).join('') + '</div></div>';
+        }).join('');
       };
 
-      document.getElementById('col-todo').innerHTML = todoTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks in this branch — drag a ticket here</div>';
-      document.getElementById('col-ready').innerHTML = readyTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready in this branch — click 📐 Plan or drag here</div>';
-      document.getElementById('col-inprogress').innerHTML = inProgressTopLevel.map(renderInProgWithChildren).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress in this branch — drag a ticket here</div>';
+      document.getElementById('col-todo').innerHTML = renderColWithChildren(todoTasks) || '<div class="text-xs text-slate-500 p-4 text-center">No unplanned to-do tasks in this branch — drag a ticket here</div>';
+      document.getElementById('col-ready').innerHTML = renderColWithChildren(readyTasks) || '<div class="text-xs text-slate-500 p-4 text-center">No planned tasks ready in this branch — click 📐 Plan or drag here</div>';
+      document.getElementById('col-inprogress').innerHTML = renderColWithChildren(allInProgressTasks) || '<div class="text-xs text-slate-500 p-4 text-center">No active tasks in progress in this branch — drag a ticket here</div>';
       document.getElementById('col-done').innerHTML = doneTasks.map(renderCard).join('') || '<div class="text-xs text-slate-500 p-4 text-center">No completed tasks in this branch — drag a ticket here</div>';
 
       document.getElementById('count-todo').textContent = todoTasks.length;
@@ -4735,6 +4785,27 @@ function startBridgeServer(port = DEFAULT_PORT) {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/backlog/children') {
+      const targetRoot = resolveSafeRepoRoot(url.searchParams.get('repoRoot'));
+      const data = loadBacklog(targetRoot);
+      const gitContext = detectGitWorktreeContext(targetRoot);
+      const allBranches = url.searchParams.get('allBranches') === '1' || url.searchParams.get('allBranches') === 'true';
+      const openOnly = url.searchParams.get('openOnly') === '1' || url.searchParams.get('openOnly') === 'true';
+      const parentId = url.searchParams.get('parentId') || null;
+      const scopedTasks = allBranches ? (data.tasks || []) : (data.tasks || []).filter(t => isTaskVisibleInBranch(t, gitContext));
+      const result = getChildrenOfIncompleteParents(scopedTasks, { parentId, openOnly });
+      sendJson(res, 200, {
+        ok: true,
+        repoRoot: targetRoot,
+        gitContext,
+        parentCount: result.parents.length,
+        count: result.children.length,
+        parents: result.parents,
+        children: result.children
+      });
+      return;
+    }
+
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/backlog.html')) {
       const targetRoot = resolveSafeRepoRoot(url.searchParams.get('repoRoot'));
       const data = loadBacklog(targetRoot);
@@ -5131,6 +5202,61 @@ function main() {
 
   const data = loadBacklog();
 
+  if (command === 'children') {
+    const showAllBranches = args.includes('--all-branches');
+    const openOnly = args.includes('--open-only');
+    const asJson = args.includes('--json');
+    const parentIdArg = args.slice(1).find(a => !a.startsWith('--')) || null;
+    const displayProject = getDisplayProjectName(data);
+    const branchCtx = detectGitWorktreeContext(REPO_ROOT);
+    const scopedTasks = showAllBranches ? (data.tasks || []) : (data.tasks || []).filter(t => isTaskVisibleInBranch(t, branchCtx));
+    const result = getChildrenOfIncompleteParents(scopedTasks, { parentId: parentIdArg, openOnly });
+
+    if (asJson) {
+      console.log(JSON.stringify({
+        project: data.project || displayProject,
+        branch: branchCtx.branch,
+        parentId: parentIdArg,
+        openOnly,
+        parentCount: result.parents.length,
+        count: result.children.length,
+        parents: result.parents,
+        children: result.children
+      }, null, 2));
+      return;
+    }
+
+    console.log(`\n🧩 ${displayProject} — Children of Non-Completed Parent Tickets (${result.children.length} child ticket(s) across ${result.parents.length} parent(s)):`);
+    console.log('='.repeat(70));
+    if (result.parents.length === 0) {
+      if (parentIdArg) {
+        const matched = scopedTasks.find(t => String(t.id || '').toUpperCase() === String(parentIdArg).toUpperCase());
+        if (matched && matched.status === 'done') {
+          console.log(`ℹ️  Parent ticket [${matched.id}] is already COMPLETED (done) — excluded.`);
+        } else {
+          console.log(`ℹ️  No non-completed parent ticket matching "${parentIdArg}" found in current scope.`);
+        }
+      } else {
+        console.log('ℹ️  No child tickets found under non-completed parent tickets.');
+      }
+    } else {
+      for (const { parent, children } of result.parents) {
+        const pIcon = parent.status === 'in_progress' ? '⚡' : parent.status === 'ready' ? '📐' : parent.status === 'testing' ? '🧪' : '📋';
+        console.log(`${pIcon} [${parent.id}] (${String(parent.status || 'todo').toUpperCase()}) ${parent.title}`);
+        if (children.length === 0) {
+          console.log('   └─ (no matching child tickets)');
+        } else {
+          for (const c of children) {
+            const cIcon = c.status === 'done' ? '✅' : c.status === 'in_progress' ? '⚡' : c.status === 'ready' ? '📐' : c.status === 'testing' ? '🧪' : '📋';
+            console.log(`   └─ ${cIcon} [${c.id}] (${String(c.status || 'todo').toUpperCase()} · ${String(c.priority || 'med').toUpperCase()}) ${c.title}`);
+          }
+        }
+      }
+    }
+    console.log('='.repeat(70) + '\n');
+    return;
+  }
+
   if (command === 'list') {
     const showAllBranches = args.includes('--all-branches');
     const filter = args.slice(1).find(a => !a.startsWith('--')) || 'all';
@@ -5151,9 +5277,18 @@ function main() {
     });
 
     for (const t of filtered) {
-      const statusIcon = t.status === 'done' ? '✅' : t.status === 'in_progress' ? '⚡' : t.status === 'testing' ? '🧪' : '📋';
+      const statusIcon = t.status === 'done' ? '✅' : t.status === 'in_progress' ? '⚡' : t.status === 'ready' ? '📐' : t.status === 'testing' ? '🧪' : '📋';
       const prio = (t.priority || 'med').toUpperCase().padEnd(6);
       console.log(`${statusIcon} [${t.id}] (${prio}) ${t.title}`);
+      if (t.parentId) {
+        console.log(`   └─ ↳ Parent: [${t.parentId}]`);
+      }
+      if (t.status !== 'done') {
+        const directChildren = scopedTasks.filter(c => String(c.parentId || '').toUpperCase() === String(t.id || '').toUpperCase());
+        if (directChildren.length > 0) {
+          console.log(`   └─ 🧩 Children (${directChildren.length}): ${directChildren.map(c => `[${c.id}:${c.status}]`).join(', ')}`);
+        }
+      }
       if (t.components && t.components.length > 0) {
         console.log(`   └─ Components: ${t.components.join(', ')}`);
       }

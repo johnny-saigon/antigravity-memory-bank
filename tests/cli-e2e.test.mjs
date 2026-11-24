@@ -962,6 +962,52 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     );
   });
 
+  test('3i. backlog children: retrieves children tickets of non-completed parents only, supports --open-only and <PARENT_ID>, and renders parent/child badges', () => {
+    const backlogScriptPath = path.join(tmpRepo, 'scripts', 'backlog.mjs');
+
+    // Create an incomplete parent (in_progress) and split into 2 child tickets
+    execFileSync(process.execPath, [backlogScriptPath, 'add', '--id', 'FEAT-500', '--title', 'Incomplete Parent Feature', '--priority', 'high'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    execFileSync(process.execPath, [backlogScriptPath, 'start', 'FEAT-500'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    execFileSync(process.execPath, [backlogScriptPath, 'split', 'FEAT-500', 'Child A Open', 'Child B Done'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+
+    // Create a completed parent (done) and split into a child ticket, then mark parent done
+    execFileSync(process.execPath, [backlogScriptPath, 'add', '--id', 'FEAT-600', '--title', 'Completed Parent Feature', '--priority', 'medium'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    execFileSync(process.execPath, [backlogScriptPath, 'split', 'FEAT-600', 'Orphan Child Of Done Parent'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    execFileSync(process.execPath, [backlogScriptPath, 'done', 'FEAT-600', '--force'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+
+    // Mark second child of FEAT-500 as done to verify --open-only filtering
+    const beforeJson = JSON.parse(
+      execFileSync(process.execPath, [backlogScriptPath, 'children', 'FEAT-500', '--json', '--all-branches'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' })
+    );
+    assert.equal(beforeJson.parentCount, 1);
+    assert.equal(beforeJson.count, 2);
+    const childB = beforeJson.children.find(c => c.title.includes('Child B Done'));
+    assert.ok(childB, 'Expected Child B Done under FEAT-500');
+    execFileSync(process.execPath, [backlogScriptPath, 'done', childB.id, '--force'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+
+    // 1. All children of non-completed parents (must include FEAT-500's 2 children and EXCLUDE FEAT-600's child)
+    const allIncomplete = JSON.parse(
+      execFileSync(process.execPath, [backlogScriptPath, 'children', '--json', '--all-branches'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' })
+    );
+    assert.equal(allIncomplete.parents.some(p => p.parent.id === 'FEAT-500'), true, 'Expected incomplete parent FEAT-500');
+    assert.equal(allIncomplete.parents.some(p => p.parent.id === 'FEAT-600'), false, 'Completed parent FEAT-600 must be excluded');
+    assert.equal(allIncomplete.children.some(c => c.title.includes('Orphan Child Of Done Parent')), false, 'Children of done parents must be excluded');
+    assert.equal(allIncomplete.children.filter(c => c.parentId === 'FEAT-500').length, 2);
+
+    // 2. --open-only returns only non-completed children of non-completed parents
+    const openOnlyRes = JSON.parse(
+      execFileSync(process.execPath, [backlogScriptPath, 'children', 'FEAT-500', '--open-only', '--json', '--all-branches'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' })
+    );
+    assert.equal(openOnlyRes.count, 1);
+    assert.match(openOnlyRes.children[0].title, /Child A Open/);
+
+    // 3. Rendered backlog.html shows parent child count badge and child-of badge
+    execFileSync(process.execPath, [backlogScriptPath, 'render'], { cwd: tmpRepo, env: testEnv, encoding: 'utf8' });
+    const html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(html, /2 Children \(1 Open\)/);
+    assert.match(html, /↳ Child of FEAT-500/);
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

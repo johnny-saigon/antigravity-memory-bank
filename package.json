@@ -31,6 +31,7 @@
     "memory:uninstall": "node bin/cli.mjs uninstall",
     "backlog": "node scripts/backlog.mjs",
     "backlog:list": "node scripts/backlog.mjs list",
+    "backlog:children": "node scripts/backlog.mjs children",
     "backlog:add": "node scripts/backlog.mjs add",
     "backlog:attach": "node scripts/backlog.mjs attach",
     "backlog:unpack": "node scripts/backlog.mjs unpack",
