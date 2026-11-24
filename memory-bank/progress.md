@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **feat(kanban): delete ticket from any column across CLI, HTTP bridge, HTML & MCP App (FEAT-150)** (`43f367c`)
 - [x] **feat(mcp-app): native Antigravity Memory Bank MCP App plugin (SEP-1865) & 5-tab Control Plane (FEAT-148)** (`1a195d9`)
 - [x] **fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115)** (`8216efd`)
 - [x] **fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115)** (`85403fb`)
