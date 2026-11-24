@@ -1864,7 +1864,8 @@ function renderCardServer(task, allTasks = []) {
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
               ${isPlanningLocked
-                ? `<span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>`
+                ? `<span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>
+                   <button onclick="openDeleteTicketModal('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [${safeIdAttr}] (0 turns)">🗑️</button>`
                 : `<button onclick="moveTaskManual('${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
                    <button onclick="moveTaskManual('${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
                    <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
@@ -1875,7 +1876,8 @@ function renderCardServer(task, allTasks = []) {
                      : `<button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>`}
                    ${!isInProgress && !isDone
                      ? `<button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="text-xs hover:text-blue-400 p-0.5" title="Code [${safeIdAttr}] &amp; move to IN PROGRESS">⚡</button>`
-                     : ''}`}
+                     : ''}
+                   <button onclick="openDeleteTicketModal('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [${safeIdAttr}] (0 turns)">🗑️</button>`}
             </div>
           </div>
           <h3 class="text-xs font-semibold text-[var(--foreground,#f8fafc)] leading-snug ${isCollapsed ? 'truncate' : 'mb-1.5'} ${isDone ? 'line-through opacity-70' : ''}">
@@ -2158,6 +2160,37 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-4 right-4 bg-blue-600 text-white text-xs px-3 py-2 rounded-lg shadow-xl hidden transition-all duration-300 z-50"></div>
 
+  <!-- Delete Ticket Confirmation Modal (FEAT-150) -->
+  <div id="deleteTicketModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeDeleteTicketModal()">
+    <div class="bg-[var(--card,#1e293b)] border border-rose-500/40 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-[var(--foreground,#f8fafc)]">
+      <div class="p-4 border-b border-[var(--border,#334155)] flex items-center justify-between bg-rose-950/25">
+        <div class="flex items-center gap-2">
+          <span class="text-base">🗑️</span>
+          <h3 class="text-sm font-bold text-rose-200">Delete Ticket Permanently?</h3>
+        </div>
+        <button onclick="closeDeleteTicketModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-700/60 cursor-pointer">✕</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <div class="bg-slate-900/80 border border-slate-700/70 rounded-xl p-3">
+          <div class="flex items-center gap-2 mb-1">
+            <span id="deleteModalTaskId" class="font-mono text-xs font-bold text-rose-300"></span>
+            <span id="deleteModalTaskStatus" class="badge border border-slate-600 text-slate-300 rounded px-1.5 py-0.5 text-[10px]"></span>
+          </div>
+          <p id="deleteModalTaskTitle" class="text-xs font-semibold text-slate-100 leading-snug"></p>
+        </div>
+        <label id="deleteModalCascadeWrap" class="hidden flex items-center gap-2 text-xs text-slate-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 cursor-pointer">
+          <input id="deleteModalCascadeCheck" type="checkbox" checked class="accent-rose-500" />
+          <span id="deleteModalCascadeLabel">Also delete child ticket(s)</span>
+        </label>
+        <p class="text-[11px] text-slate-400">Removes this ticket from <code class="text-slate-300">docs/backlog.json</code> with <strong>0 AI turns executed</strong>.</p>
+      </div>
+      <div class="p-3 border-t border-[var(--border,#334155)] flex items-center justify-end gap-2 bg-slate-900/50">
+        <button onclick="closeDeleteTicketModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">Cancel</button>
+        <button onclick="confirmDeleteTicket()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition cursor-pointer">🗑️ Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Ticket Action Items, Readiness & Execution Inspector Modal (FEAT-144 / FEAT-145 AGY Correlated) -->
   <div id="taskInspectorModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 flex items-center justify-center p-4" onclick="if(event.target===this) closeTaskInspector()">
     <div class="bg-[var(--card,#1e293b)] border border-[var(--card-border,var(--border,#334155))] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden text-[var(--foreground,#f8fafc)]">
@@ -2180,6 +2213,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           </button>
           <button id="inspectorHeaderCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Select Stage B AGY Coding Model, move to IN PROGRESS &amp; execute (FEAT-145)">
             <span>💻</span> CODE NOW
+          </button>
+          <button id="inspectorHeaderDeleteBtn" onclick="openDeleteTicketModal(activeInspectTaskId, event)" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer" title="Delete this ticket permanently (0 AI turns)">
+            <span>🗑️</span> Delete
           </button>
           <button onclick="closeTaskInspector()" class="text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] text-sm px-2 py-1 rounded-lg hover:bg-[var(--border,#334155)]/60 cursor-pointer">✕</button>
         </div>
@@ -4407,6 +4443,90 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       } catch {}
     }
 
+    let pendingDeleteTaskId = null;
+
+    function openDeleteTicketModal(taskId, event) {
+      if (event) event.stopPropagation();
+      const task = (rawData.tasks || []).find(t => t.id === taskId);
+      if (!task) return;
+      pendingDeleteTaskId = task.id;
+      const modal = document.getElementById('deleteTicketModal');
+      const idEl = document.getElementById('deleteModalTaskId');
+      const statusEl = document.getElementById('deleteModalTaskStatus');
+      const titleEl = document.getElementById('deleteModalTaskTitle');
+      const cascadeWrap = document.getElementById('deleteModalCascadeWrap');
+      const cascadeCheck = document.getElementById('deleteModalCascadeCheck');
+      const cascadeLabel = document.getElementById('deleteModalCascadeLabel');
+      if (idEl) idEl.textContent = task.id;
+      if (statusEl) statusEl.textContent = String(task.status || 'todo').toUpperCase();
+      if (titleEl) titleEl.textContent = task.title || '';
+      const children = (rawData.tasks || []).filter(c => c.parentId && String(c.parentId).toLowerCase() === task.id.toLowerCase());
+      if (cascadeWrap && cascadeCheck && cascadeLabel) {
+        if (children.length > 0) {
+          cascadeWrap.classList.remove('hidden');
+          cascadeCheck.checked = true;
+          cascadeLabel.textContent = 'Also delete ' + children.length + ' child ticket' + (children.length === 1 ? '' : 's') + ' (' + children.map(c => c.id).join(', ') + ')';
+        } else {
+          cascadeWrap.classList.add('hidden');
+        }
+      }
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeDeleteTicketModal() {
+      pendingDeleteTaskId = null;
+      const modal = document.getElementById('deleteTicketModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function confirmDeleteTicket() {
+      if (!pendingDeleteTaskId) return;
+      const targetId = pendingDeleteTaskId;
+      const cascadeCheck = document.getElementById('deleteModalCascadeCheck');
+      const cascade = cascadeCheck ? Boolean(cascadeCheck.checked) : true;
+      closeDeleteTicketModal();
+      if (activeInspectTaskId && activeInspectTaskId === targetId) {
+        closeTaskInspector();
+      }
+      const deletedSet = new Set([targetId.toLowerCase()]);
+      if (cascade) {
+        for (const t of (rawData.tasks || [])) {
+          if (t.parentId && deletedSet.has(String(t.parentId).toLowerCase())) {
+            deletedSet.add(String(t.id).toLowerCase());
+          }
+        }
+      }
+      rawData.tasks = (rawData.tasks || []).filter(t => !deletedSet.has(String(t.id).toLowerCase()));
+      for (const t of rawData.tasks) {
+        if (!cascade && t.parentId && deletedSet.has(String(t.parentId).toLowerCase())) {
+          delete t.parentId;
+          delete t.isActionChild;
+          delete t.isResidualChild;
+        }
+        if (Array.isArray(t.childTicketIds)) {
+          t.childTicketIds = t.childTicketIds.filter(cid => !deletedSet.has(String(cid).toLowerCase()));
+        }
+      }
+      if (typeof selectedBatchIds !== 'undefined' && selectedBatchIds && selectedBatchIds.delete) {
+        for (const did of deletedSet) {
+          for (const sid of Array.from(selectedBatchIds)) {
+            if (String(sid).toLowerCase() === did) selectedBatchIds.delete(sid);
+          }
+        }
+      }
+      renderBoard();
+      const bridgeRes = await callLocalBridge('/api/delete', {
+        repoRoot: rawData.repoRoot,
+        id: targetId,
+        cascade
+      });
+      if (bridgeRes && bridgeRes.ok) {
+        showToast('🗑️ Deleted [' + (bridgeRes.deletedIds || [targetId]).join(', ') + '] from docs/backlog.json (0 turns run).');
+      } else {
+        showToast('🗑️ Deleted [' + targetId + '] locally (start bridge or click Save to persist).');
+      }
+    }
+
     async function unlockPlanningTicket(taskId, event) {
       if (event) event.stopPropagation();
       const task = (rawData.tasks || []).find(t => t.id === taskId);
@@ -5063,6 +5183,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
               \${isPlanningLocked ? \`
                 <span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>
+                <button onclick="openDeleteTicketModal('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [\${safeIdAttr}] (0 turns)">🗑️</button>
               \` : \`
                 <button onclick="moveTaskManual('\${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
                 <button onclick="moveTaskManual('\${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
@@ -5077,6 +5198,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                 \${!isInProgress && !isDone ? \`
                   <button onclick="openModelSelectorModal('\${safeIdAttr}', 'code', event)" class="text-xs hover:text-blue-400 p-0.5" title="Code [\${safeIdAttr}] &amp; move to IN PROGRESS">⚡</button>
                 \` : ''}
+                <button onclick="openDeleteTicketModal('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [\${safeIdAttr}] (0 turns)">🗑️</button>
               \`}
             </div>
           </div>
@@ -6714,6 +6836,22 @@ function startBridgeServer(port = DEFAULT_PORT) {
         };
       }
 
+      if (endpoint === '/api/delete') {
+        const rawIds = Array.isArray(body.ids) && body.ids.length > 0
+          ? body.ids.map(x => String(x || '').trim()).filter(Boolean)
+          : (body.id ? [String(body.id).trim()] : []);
+        const cascade = body.cascade !== false;
+        const data = loadBacklog(targetRoot);
+        const delRes = deleteBacklogTickets(data, rawIds, { cascade });
+        if (delRes.deletedIds.length === 0) {
+          return { status: 404, payload: { ok: false, error: 'Task not found' } };
+        }
+        saveBacklog(data, targetRoot);
+        renderMigrationBoard(data, targetRoot);
+        writeReviewPaneArtifacts(data, targetRoot);
+        return { status: 200, payload: { ok: true, deletedIds: delRes.deletedIds, remainingCount: data.tasks.length } };
+      }
+
       if (endpoint === '/api/unlock-plan') {
         const id = String(body.id || '').trim();
         const data = loadBacklog(targetRoot);
@@ -7047,6 +7185,67 @@ Usage:
   npm run backlog serve [--port 4199]
   npm run backlog prompt <id>
 `);
+}
+
+function deleteBacklogTickets(data, rawIds = [], { cascade = true } = {}) {
+  const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+  const requested = new Set(rawIds.map(id => String(id || '').trim().toLowerCase()).filter(Boolean));
+  if (requested.size === 0) return { deletedIds: [], unlinkedIds: [] };
+
+  const toDeleteLower = new Set();
+  for (const t of tasks) {
+    if (requested.has(String(t.id || '').toLowerCase())) {
+      toDeleteLower.add(String(t.id).toLowerCase());
+    }
+  }
+  if (toDeleteLower.size === 0) return { deletedIds: [], unlinkedIds: [] };
+
+  if (cascade) {
+    let added = true;
+    while (added) {
+      added = false;
+      for (const t of tasks) {
+        const tid = String(t.id || '').toLowerCase();
+        const pid = String(t.parentId || '').toLowerCase();
+        if (pid && toDeleteLower.has(pid) && !toDeleteLower.has(tid)) {
+          toDeleteLower.add(tid);
+          added = true;
+        }
+      }
+    }
+  }
+
+  const deletedIds = [];
+  const unlinkedIds = [];
+  const remaining = [];
+  for (const t of tasks) {
+    const tid = String(t.id || '').toLowerCase();
+    if (toDeleteLower.has(tid)) {
+      deletedIds.push(t.id);
+      continue;
+    }
+    if (!cascade && t.parentId && toDeleteLower.has(String(t.parentId).toLowerCase())) {
+      delete t.parentId;
+      delete t.isActionChild;
+      delete t.actionIndex;
+      delete t.isResidualChild;
+      delete t.residualLetter;
+      unlinkedIds.push(t.id);
+    }
+    if (Array.isArray(t.childTicketIds)) {
+      t.childTicketIds = t.childTicketIds.filter(cid => !toDeleteLower.has(String(cid || '').toLowerCase()));
+    }
+    if (Array.isArray(t.actionItems)) {
+      t.actionItems = t.actionItems.filter(a => !a.childTicketId || !toDeleteLower.has(String(a.childTicketId).toLowerCase()));
+    }
+    remaining.push(t);
+  }
+
+  data.tasks = remaining;
+  if (Array.isArray(data.activePlanTaskIds)) {
+    data.activePlanTaskIds = data.activePlanTaskIds.filter(aid => !toDeleteLower.has(String(aid || '').toLowerCase()));
+  }
+  return { deletedIds, unlinkedIds };
 }
 
 function main() {
@@ -7572,6 +7771,26 @@ function main() {
     console.log(`💡 1-LINE PROMPT ${copied ? '(AUTO-COPIED TO CLIPBOARD — PRESS ⌘V IN CHAT)' : 'TO PASTE INTO ANTIGRAVITY'}:`);
     console.log(`   ${kickoffCmd}`);
     console.log(`------------------------------------------------------------------------\n`);
+    return;
+  }
+
+  if (command === 'delete' || command === 'rm' || command === 'remove') {
+    const cascade = !args.includes('--no-cascade');
+    const rawIdArgs = args.slice(1).filter(a => !a.startsWith('--'));
+    const rawIds = rawIdArgs.join(' ').split(/[\s,]+/).filter(Boolean);
+    if (rawIds.length === 0) {
+      console.error('❌ Usage: npm run backlog delete <id> [, <id2> ...] [--no-cascade]');
+      process.exit(1);
+    }
+    const delRes = deleteBacklogTickets(data, rawIds, { cascade });
+    if (delRes.deletedIds.length === 0) {
+      console.error(`❌ No matching ticket(s) found for: ${rawIds.join(', ')}`);
+      process.exit(1);
+    }
+    saveBacklog(data, REPO_ROOT);
+    renderMigrationBoard(data, REPO_ROOT);
+    writeReviewPaneArtifacts(data, REPO_ROOT);
+    console.log(`\n🗑️  Deleted ticket(s): [${delRes.deletedIds.join(', ')}]${delRes.unlinkedIds.length > 0 ? ` (unlinked children: ${delRes.unlinkedIds.join(', ')})` : ''}`);
     return;
   }
 

@@ -1,8 +1,50 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T12:27:32.579Z",
+  "lastUpdated": "2026-11-24T15:00:21.660Z",
   "project": "antigravity-memory-bank",
   "tasks": [
+    {
+      "id": "FEAT-149",
+      "type": "feature",
+      "title": "turn the phone on",
+      "status": "todo",
+      "priority": "medium",
+      "components": [],
+      "attachments": [],
+      "description": "turn the phone on",
+      "spec": "turn the phone on",
+      "acceptanceCriteria": [
+        "Implement and verify turn the phone on",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "createdAt": "2026-11-24T14:44:26.934Z",
+      "annotations": {
+        "annotatedAt": "2026-11-24T14:44:26.936Z",
+        "complexityTier": "tier2_standard",
+        "recommendedPlanModel": "Gemini 4 Neon (Medium)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "45%–65% via Workhorse Execution"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-149-ACT-1",
+          "text": "Implement and verify turn the phone on",
+          "owner": "antigravity",
+          "done": false
+        },
+        {
+          "id": "FEAT-149-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": false
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ]
+    },
     {
       "id": "FEAT-101",
       "type": "feature",
@@ -2835,6 +2877,308 @@
       ],
       "startedAt": "2026-11-24T12:12:49.787Z",
       "completedAt": "2026-11-24T12:26:35.251Z"
+    },
+    {
+      "id": "FEAT-150",
+      "type": "ux",
+      "title": "Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App)",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs",
+        "mcp/src/server.mjs",
+        "mcp/src/ui/tabs.ts",
+        "mcp/src/ui/app.ts",
+        "mcp/src/ui/styles.css",
+        "tests/cli-e2e.test.mjs"
+      ],
+      "attachments": [],
+      "description": "Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App)",
+      "spec": "Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App)",
+      "acceptanceCriteria": [
+        "Implement and verify Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App) across bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T14:45:47.400Z",
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "planning",
+          "at": "2026-11-24T14:45:47.400Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T14:47:16.508Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T14:55:06.863Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:00:11.585Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T14:47:16.508Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-150-ACT-1",
+          "text": "Implement and verify Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App) across bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-150-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-150-ACT-1",
+          "childTicketId": "FEAT-150-ACT-1",
+          "text": "[FEAT-150-ACT-1] 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-150-ACT-2",
+          "childTicketId": "FEAT-150-ACT-2",
+          "text": "[FEAT-150-ACT-2] 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-150-ACT-3",
+          "childTicketId": "FEAT-150-ACT-3",
+          "text": "[FEAT-150-ACT-3] 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "childTicketIds": [
+        "FEAT-150-ACT-1",
+        "FEAT-150-ACT-2",
+        "FEAT-150-ACT-3"
+      ],
+      "plannedAt": "2026-11-24T14:47:16.508Z",
+      "startedAt": "2026-11-24T14:55:06.863Z",
+      "completedAt": "2026-11-24T15:00:11.624Z"
+    },
+    {
+      "id": "FEAT-150-ACT-1",
+      "parentId": "FEAT-150",
+      "isActionChild": true,
+      "actionIndex": 1,
+      "type": "feature",
+      "title": "1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity",
+      "status": "done",
+      "plannedAt": "2026-11-24T14:47:16.381Z",
+      "priority": "medium",
+      "components": [
+        "bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt"
+      ],
+      "attachments": [],
+      "description": "1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity",
+      "spec": "1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity",
+        "Verify deterministic tests and lint checks for [FEAT-150-ACT-1]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T14:47:16.381Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T14:55:23.587Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:00:11.502Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-150-ACT-1-ACT-1",
+          "text": "Complete implementation and verification for 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-150-ACT-1-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-150-ACT-1]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T14:47:16.383Z",
+        "complexityTier": "tier2_standard",
+        "recommendedPlanModel": "Gemini 4 Neon (Medium)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "45%–65% via Workhorse Execution"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T14:55:23.587Z",
+      "completedAt": "2026-11-24T15:00:11.502Z"
+    },
+    {
+      "id": "FEAT-150-ACT-2",
+      "parentId": "FEAT-150",
+      "isActionChild": true,
+      "actionIndex": 2,
+      "type": "ux",
+      "title": "2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)",
+      "status": "done",
+      "plannedAt": "2026-11-24T14:47:16.425Z",
+      "priority": "medium",
+      "components": [
+        "scripts/backlog.mjs",
+        "bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx",
+        "docs/BACKLOG.md",
+        "docs/backlog.html"
+      ],
+      "attachments": [],
+      "description": "2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)",
+      "spec": "2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)",
+        "Verify deterministic tests and lint checks for [FEAT-150-ACT-2]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T14:47:16.425Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T14:55:23.628Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:00:11.543Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-150-ACT-2-ACT-1",
+          "text": "Complete implementation and verification for 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-150-ACT-2-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-150-ACT-2]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T14:47:16.426Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T14:55:23.628Z",
+      "completedAt": "2026-11-24T15:00:11.543Z"
+    },
+    {
+      "id": "FEAT-150-ACT-3",
+      "parentId": "FEAT-150",
+      "isActionChild": true,
+      "actionIndex": 3,
+      "type": "qa",
+      "title": "3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout",
+      "status": "done",
+      "plannedAt": "2026-11-24T14:47:16.467Z",
+      "priority": "medium",
+      "components": [
+        "docs/quality/TEST_PLAN_AND_SUITES.md"
+      ],
+      "attachments": [],
+      "description": "3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout",
+      "spec": "3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout",
+      "acceptanceCriteria": [
+        "Complete implementation and verification for 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout",
+        "Verify deterministic tests and lint checks for [FEAT-150-ACT-3]"
+      ],
+      "stateHistory": [
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T14:47:16.467Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T14:55:23.667Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T15:00:11.585Z"
+        }
+      ],
+      "actionItems": [
+        {
+          "id": "FEAT-150-ACT-3-ACT-1",
+          "text": "Complete implementation and verification for 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-150-ACT-3-ACT-2",
+          "text": "Verify deterministic tests and lint checks for [FEAT-150-ACT-3]",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T14:47:16.468Z",
+        "complexityTier": "tier2_standard",
+        "recommendedPlanModel": "Gemini 4 Neon (Medium)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "45%–65% via Workhorse Execution"
+      },
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T14:55:23.667Z",
+      "completedAt": "2026-11-24T15:00:11.585Z"
     }
   ],
   "milestones": [

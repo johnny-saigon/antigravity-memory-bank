@@ -37607,6 +37607,73 @@ function createServer() {
   );
   j(
     server,
+    "app_delete_ticket",
+    {
+      description: "Delete a ticket from any column (TO DO, READY including locked, IN PROGRESS, DONE) with 0 AI turns executed and optional child cascade.",
+      inputSchema: external_exports.object({
+        repoRoot: external_exports.string(),
+        id: external_exports.string(),
+        cascade: external_exports.boolean().optional()
+      }),
+      _meta: APP_ONLY_META
+    },
+    async ({ repoRoot, id, cascade = true }) => {
+      const rootDir = resolveWorkspaceRoot(repoRoot);
+      const data = loadBacklogData(rootDir);
+      const target = data.tasks.find((t) => String(t.id).toLowerCase() === String(id).toLowerCase());
+      if (!target) {
+        return { isError: true, content: [{ type: "text", text: `Ticket [${id}] not found in ${rootDir}` }] };
+      }
+      const toDeleteLower = /* @__PURE__ */ new Set([target.id.toLowerCase()]);
+      if (cascade) {
+        let added = true;
+        while (added) {
+          added = false;
+          for (const t of data.tasks) {
+            const tid = String(t.id || "").toLowerCase();
+            const pid = String(t.parentId || "").toLowerCase();
+            if (pid && toDeleteLower.has(pid) && !toDeleteLower.has(tid)) {
+              toDeleteLower.add(tid);
+              added = true;
+            }
+          }
+        }
+      }
+      const deletedIds = [];
+      const remaining = [];
+      for (const t of data.tasks) {
+        if (toDeleteLower.has(String(t.id || "").toLowerCase())) {
+          deletedIds.push(t.id);
+          continue;
+        }
+        if (!cascade && t.parentId && toDeleteLower.has(String(t.parentId).toLowerCase())) {
+          delete t.parentId;
+          delete t.isActionChild;
+          delete t.actionIndex;
+          delete t.isResidualChild;
+          delete t.residualLetter;
+        }
+        if (Array.isArray(t.childTicketIds)) {
+          t.childTicketIds = t.childTicketIds.filter((cid) => !toDeleteLower.has(String(cid || "").toLowerCase()));
+        }
+        if (Array.isArray(t.actionItems)) {
+          t.actionItems = t.actionItems.filter((a) => !a.childTicketId || !toDeleteLower.has(String(a.childTicketId).toLowerCase()));
+        }
+        remaining.push(t);
+      }
+      data.tasks = remaining;
+      if (Array.isArray(data.activePlanTaskIds)) {
+        data.activePlanTaskIds = data.activePlanTaskIds.filter((aid) => !toDeleteLower.has(String(aid || "").toLowerCase()));
+      }
+      saveBacklogAndRender(rootDir, data);
+      return {
+        content: [{ type: "text", text: `Deleted [${deletedIds.join(", ")}] (0 turns run).` }],
+        structuredContent: { ok: true, deletedIds, snapshot: buildWorkspaceSnapshot(rootDir) }
+      };
+    }
+  );
+  j(
+    server,
     "app_reorder_tickets",
     {
       description: "Persist drag-and-drop card ordering and per-column sort preferences.",

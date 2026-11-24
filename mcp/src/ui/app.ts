@@ -38,6 +38,7 @@ const state: {
     | null
     | { kind: 'model'; mode: 'plan' | 'code'; ids: string[]; useNewThread: boolean }
     | { kind: 'inspect'; id: string }
+    | { kind: 'delete'; id: string; cascade: boolean }
     | { kind: 'add'; recording: boolean; hostRecordingId: string | null; draftTitle: string; draftDesc: string };
   draggedId: string | null;
   busy: boolean;
@@ -305,6 +306,7 @@ function renderModal(): string {
             ${canPlanOrCode ? `<button class="mb-btn mb-btn-plan mb-btn-sm" data-action="open-model" data-mode="plan" data-id="${esc(task.id)}">📐 ${task.status === 'todo' ? 'PLAN NOW' : 'RE-PLAN'}</button>` : ''}
             ${canPlanOrCode ? `<button class="mb-btn mb-btn-code mb-btn-sm" data-action="open-model" data-mode="code" data-id="${esc(task.id)}">💻 CODE NOW</button>` : ''}
             ${task.status === 'in_progress' || task.status === 'done' ? `<button class="mb-btn mb-btn-sm" data-action="set-status" data-id="${esc(task.id)}" data-status="todo">↩️ Move to TO DO</button>` : ''}
+            <button class="mb-btn mb-btn-danger mb-btn-sm" data-action="open-delete" data-id="${esc(task.id)}" title="Delete ticket permanently (0 turns)">🗑️ Delete</button>
             <button class="mb-btn mb-btn-sm" data-action="close-modal">✕</button>
           </div>
         </div>
@@ -341,6 +343,40 @@ function renderModal(): string {
                </div>`
             : ''
         }
+      </div>
+    </div>`;
+  }
+
+  if (modal.kind === 'delete') {
+    const task = snap.tasks.find((t) => t.id === modal.id);
+    if (!task) return '';
+    const children = snap.tasks.filter((c) => c.parentId?.toLowerCase() === task.id.toLowerCase());
+    return `<div class="mb-modal-backdrop" data-action="close-modal">
+      <div class="mb-modal" data-stop="true" style="max-width:440px;">
+        <div class="mb-between" style="margin-bottom:10px;">
+          <strong>🗑️ Delete Ticket Permanently?</strong>
+          <button class="mb-btn mb-btn-sm" data-action="close-modal">✕</button>
+        </div>
+        <div style="padding:10px;border-radius:9px;border:1px solid var(--color-border-primary,#334155);background:var(--color-background-tertiary,#162032);margin-bottom:10px;">
+          <div class="mb-row" style="gap:6px;margin-bottom:4px;">
+            <span class="mb-card-id">${esc(task.id)}</span>
+            <span class="mb-badge">${esc(task.status.toUpperCase())}</span>
+          </div>
+          <div style="font-size:12px;font-weight:600;">${esc(task.title)}</div>
+        </div>
+        ${
+          children.length > 0
+            ? `<label class="mb-row" style="margin-bottom:10px;font-size:12px;cursor:pointer;">
+                 <input type="checkbox" data-action="toggle-delete-cascade" ${modal.cascade ? 'checked' : ''} />
+                 <span>Also delete ${children.length} child ticket${children.length === 1 ? '' : 's'} (${esc(children.map((c) => c.id).join(', '))})</span>
+               </label>`
+            : ''
+        }
+        <p class="mb-muted" style="margin:0 0 12px;font-size:11px;">Removes this ticket from <code>docs/backlog.json</code> with <strong>0 AI turns executed</strong>.</p>
+        <div class="mb-between">
+          <button class="mb-btn mb-btn-sm" data-action="close-modal">Cancel</button>
+          <button class="mb-btn mb-btn-danger mb-btn-sm" data-action="confirm-delete" data-id="${esc(task.id)}">🗑️ Delete Permanently</button>
+        </div>
       </div>
     </div>`;
   }
@@ -667,6 +703,37 @@ document.addEventListener('click', async (e) => {
       state.snapshot = res.snapshot;
       if (state.modal?.kind === 'inspect') state.modal = null;
       showToast(`✅ Moved [${id}] → ${status.toUpperCase()} (0 turns run).`);
+      render();
+    }
+    return;
+  }
+  if (action === 'open-delete') {
+    const id = el.getAttribute('data-id') || '';
+    if (!id) return;
+    state.modal = { kind: 'delete', id, cascade: true };
+    render();
+    return;
+  }
+  if (action === 'toggle-delete-cascade' && state.modal?.kind === 'delete') {
+    state.modal.cascade = (el as HTMLInputElement).checked;
+    return;
+  }
+  if (action === 'confirm-delete' && state.modal?.kind === 'delete') {
+    const id = el.getAttribute('data-id') || state.modal.id;
+    const cascade = state.modal.cascade;
+    state.modal = null;
+    render();
+    const res = await callTool<{ deletedIds?: string[]; snapshot?: WorkspaceSnapshot }>('app_delete_ticket', {
+      repoRoot: state.repoRoot,
+      id,
+      cascade
+    });
+    if (res?.snapshot) {
+      state.snapshot = res.snapshot;
+      for (const did of res.deletedIds || [id]) {
+        state.selectedIds.delete(did);
+      }
+      showToast(`🗑️ Deleted [${(res.deletedIds || [id]).join(', ')}] (0 turns run).`);
       render();
     }
     return;

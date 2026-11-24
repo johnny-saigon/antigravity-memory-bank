@@ -1654,14 +1654,14 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       assert.equal(initRes.result?.serverInfo?.name, 'antigravity-memory-bank');
       mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
 
-      // 1. Tool visibility: strictly 2 model-visible + 14 app-only (0 model prompt bloat)
+      // 1. Tool visibility: strictly 2 model-visible + 15 app-only (0 model prompt bloat)
       const listRes = await rpc('tools/list');
       const tools = listRes.result?.tools || [];
-      assert.equal(tools.length, 16, 'Expected 16 total MCP tools (2 model + 14 app-only)');
+      assert.equal(tools.length, 17, 'Expected 17 total MCP tools (2 model + 15 app-only)');
       const modelTools = tools.filter((t) => !(t._meta?.ui?.visibility || []).includes('app')).map((t) => t.name).sort();
       const appTools = tools.filter((t) => (t._meta?.ui?.visibility || []).includes('app'));
       assert.deepEqual(modelTools, ['memory_bank_dashboard', 'memory_bank_inline_status']);
-      assert.equal(appTools.length, 14, 'All 14 UI backend tools must carry visibility: ["app"]');
+      assert.equal(appTools.length, 15, 'All 15 UI backend tools must carry visibility: ["app"]');
       const dash = tools.find((t) => t.name === 'memory_bank_dashboard');
       const entryTypes = (dash?._meta?.['com.google.antigravity/ui']?.entrypoints || []).map((e) => e.type).sort();
       assert.deepEqual(entryTypes, ['aux_pane', 'global']);
@@ -1737,6 +1737,144 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       }
       try { fs.rmSync(fakeHome, { recursive: true, force: true }); } catch {}
       try { fs.rmSync(mcpRepo, { recursive: true, force: true }); } catch {}
+    }
+  });
+
+  test('3o. FEAT-150: delete ticket from any column across CLI, HTTP Bridge (/api/delete), HTML UI, and MCP App (app_delete_ticket)', async () => {
+    const delRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-del-'));
+    const delPort = 43990 + Math.floor(Math.random() * 400);
+    let bridgeProc = null;
+    let mcpProc = null;
+    try {
+      execFileSync('git', ['init', '-b', 'main'], { cwd: delRepo, stdio: 'ignore' });
+      execFileSync(process.execPath, [CLI_PATH, 'init', delRepo, '-y', '--name', 'DeleteTestApp'], {
+        cwd: delRepo,
+        env: testEnv,
+        stdio: 'ignore'
+      });
+
+      const backlogPath = path.join(delRepo, 'docs', 'backlog.json');
+      const htmlPath = path.join(delRepo, 'docs', 'backlog.html');
+      const scriptPath = path.join(delRepo, 'scripts', 'backlog.mjs');
+      const seed = {
+        project: 'DeleteTestApp',
+        activePlanTaskIds: ['FEAT-202', 'FEAT-206'],
+        tasks: [
+          { id: 'FEAT-201', type: 'feature', title: 'Todo Ticket', status: 'todo', priority: 'medium', branch: 'main' },
+          { id: 'FEAT-202', type: 'feature', title: 'Locked Ready Ticket', status: 'ready', liveActivity: 'planning', planningLocked: true, priority: 'high', branch: 'main' },
+          { id: 'FEAT-203', type: 'feature', title: 'In Progress Parent', status: 'in_progress', priority: 'high', childTicketIds: ['FEAT-203-ACT-1'], branch: 'main' },
+          { id: 'FEAT-203-ACT-1', type: 'feature', title: 'Child of 203', parentId: 'FEAT-203', isActionChild: true, actionIndex: 1, status: 'todo', priority: 'medium', branch: 'main' },
+          { id: 'FEAT-204', type: 'feature', title: 'Done Ticket', status: 'done', priority: 'low', branch: 'main' },
+          { id: 'FEAT-205', type: 'feature', title: 'Unlink Parent', status: 'todo', priority: 'medium', childTicketIds: ['FEAT-205-ACT-1'], branch: 'main' },
+          { id: 'FEAT-205-ACT-1', type: 'feature', title: 'Surviving Child', parentId: 'FEAT-205', isActionChild: true, actionIndex: 1, status: 'todo', priority: 'medium', branch: 'main' },
+          { id: 'FEAT-206', type: 'feature', title: 'Bridge Delete Target', status: 'ready', liveActivity: 'planning', planningLocked: true, priority: 'high', branch: 'main' },
+          { id: 'FEAT-207', type: 'feature', title: 'MCP Todo Target', status: 'todo', priority: 'low', branch: 'main' },
+          { id: 'FEAT-208', type: 'feature', title: 'MCP Done Target', status: 'done', priority: 'low', branch: 'main' }
+        ]
+      };
+      fs.writeFileSync(backlogPath, JSON.stringify(seed, null, 2) + '\n', 'utf8');
+
+      // 1. CLI delete from todo, locked ready, in_progress (cascade child), done, and --no-cascade unlink
+      execFileSync(process.execPath, [scriptPath, 'delete', 'FEAT-201', 'FEAT-202', 'FEAT-203', 'FEAT-204'], { cwd: delRepo, env: testEnv });
+      execFileSync(process.execPath, [scriptPath, 'delete', 'FEAT-205', '--no-cascade'], { cwd: delRepo, env: testEnv });
+      let bj = JSON.parse(fs.readFileSync(backlogPath, 'utf8'));
+      const idsAfterCli = bj.tasks.map((t) => t.id);
+      assert.equal(idsAfterCli.includes('FEAT-201'), false);
+      assert.equal(idsAfterCli.includes('FEAT-202'), false);
+      assert.equal(idsAfterCli.includes('FEAT-203'), false);
+      assert.equal(idsAfterCli.includes('FEAT-203-ACT-1'), false, 'Cascade delete must remove child ticket');
+      assert.equal(idsAfterCli.includes('FEAT-204'), false);
+      assert.equal(idsAfterCli.includes('FEAT-205'), false);
+      const unlinked = bj.tasks.find((t) => t.id === 'FEAT-205-ACT-1');
+      assert.ok(unlinked, '--no-cascade must preserve child ticket');
+      assert.equal(unlinked.parentId, undefined, '--no-cascade must clear parentId');
+      assert.equal((bj.activePlanTaskIds || []).includes('FEAT-202'), false, 'Deleted ticket must be removed from activePlanTaskIds');
+      const renderedHtml = fs.readFileSync(htmlPath, 'utf8');
+      assert.match(renderedHtml, /openDeleteTicketModal\('FEAT-206', event\)/, 'Locked READY card must expose delete button');
+      assert.match(renderedHtml, /id="deleteTicketModal"/, 'HTML board must include Delete Confirmation Modal');
+
+      // 2. HTTP Bridge POST /api/delete (200 on locked READY, 404 on unknown)
+      bridgeProc = spawn(process.execPath, [scriptPath, 'serve', '--port', String(delPort)], {
+        cwd: delRepo,
+        env: { ...testEnv, ANTIGRAVITY_SKIP_PROMPT_DISPATCH: '1' },
+        stdio: 'ignore'
+      });
+      const baseUrl = `http://127.0.0.1:${delPort}`;
+      let ok = false;
+      for (let i = 0; i < 40; i++) {
+        try {
+          const r = await fetch(`${baseUrl}/api/health`);
+          if (r.ok) { ok = true; break; }
+        } catch {}
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      assert.equal(ok, true, 'Bridge must start for FEAT-150 test');
+
+      const del206 = await fetch(`${baseUrl}/api/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoRoot: delRepo, id: 'FEAT-206', cascade: true })
+      });
+      assert.equal(del206.status, 200);
+      const del206Json = await del206.json();
+      assert.deepEqual(del206Json.deletedIds, ['FEAT-206']);
+
+      const del404 = await fetch(`${baseUrl}/api/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoRoot: delRepo, id: 'FEAT-9999' })
+      });
+      assert.equal(del404.status, 404);
+
+      // 3. MCP App app_delete_ticket over stdio (delete TODO + DONE + reject missing ID)
+      const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
+      mcpProc = spawn(process.execPath, [distServer, `--data-dir=${os.tmpdir()}`], {
+        cwd: os.tmpdir(),
+        env: { ...testEnv, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      const pending = new Map();
+      let buf = '';
+      let nextId = 1;
+      mcpProc.stdout.on('data', (chunk) => {
+        buf += chunk.toString();
+        let nl;
+        while ((nl = buf.indexOf('\n')) !== -1) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          const msg = JSON.parse(line);
+          if (msg.id && pending.has(msg.id)) {
+            const { resolve } = pending.get(msg.id);
+            pending.delete(msg.id);
+            resolve(msg);
+          }
+        }
+      });
+      const rpc = (method, params = {}) =>
+        new Promise((resolve, reject) => {
+          const id = nextId++;
+          const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout on ${method}`)); }, 15000);
+          pending.set(id, { resolve: (m) => { clearTimeout(timer); resolve(m); } });
+          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
+        });
+      await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'del-e2e', version: '1.0' } });
+      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+
+      const mcpDel1 = await rpc('tools/call', { name: 'app_delete_ticket', arguments: { repoRoot: delRepo, id: 'FEAT-207' } });
+      assert.equal(mcpDel1.result?.isError, undefined);
+      assert.deepEqual(mcpDel1.result?.structuredContent?.deletedIds, ['FEAT-207']);
+
+      const mcpDel2 = await rpc('tools/call', { name: 'app_delete_ticket', arguments: { repoRoot: delRepo, id: 'FEAT-208' } });
+      assert.equal(mcpDel2.result?.isError, undefined);
+      assert.deepEqual(mcpDel2.result?.structuredContent?.deletedIds, ['FEAT-208']);
+
+      const mcpDelMissing = await rpc('tools/call', { name: 'app_delete_ticket', arguments: { repoRoot: delRepo, id: 'FEAT-4040' } });
+      assert.equal(mcpDelMissing.result?.isError, true);
+    } finally {
+      if (bridgeProc && !bridgeProc.killed) { try { bridgeProc.kill('SIGKILL'); } catch {} }
+      if (mcpProc && !mcpProc.killed) { try { mcpProc.kill('SIGKILL'); } catch {} }
+      try { fs.rmSync(delRepo, { recursive: true, force: true }); } catch {}
     }
   });
 

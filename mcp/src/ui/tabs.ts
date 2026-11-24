@@ -177,8 +177,12 @@ export function renderKanbanTab(
                  ${opts.canContext ? `<button class="mb-btn mb-btn-sm" title="Attach ticket spec to next prompt pill (app.updateModelContext)" data-action="pin-context" data-id="${esc(t.id)}">📎</button>` : ''}
                  <button class="mb-btn mb-btn-sm" title="Inspect details & plan" data-action="inspect" data-id="${esc(t.id)}">🔎</button>
                  ${!isDone ? `<button class="mb-btn mb-btn-sm" title="Mark DONE (0 turns)" data-action="set-status" data-id="${esc(t.id)}" data-status="done">✅</button>` : `<button class="mb-btn mb-btn-sm" title="Move back to TO DO (0 turns)" data-action="set-status" data-id="${esc(t.id)}" data-status="todo">↩️</button>`}
+                 <button class="mb-btn mb-btn-sm" title="Delete ticket permanently (0 turns)" data-action="open-delete" data-id="${esc(t.id)}">🗑️</button>
                </div>`
-            : `<span class="mb-badge">🔒 Locked</span>`
+            : `<div class="mb-row" style="gap:3px;">
+                 <span class="mb-badge">🔒 Locked</span>
+                 <button class="mb-btn mb-btn-sm" title="Delete ticket permanently (0 turns)" data-action="open-delete" data-id="${esc(t.id)}">🗑️</button>
+               </div>`
         }
       </div>
       <div class="mb-card-title ${isDone ? 'done' : ''}" data-action="${locked ? '' : 'inspect'}" data-id="${esc(t.id)}">${esc(t.title)}</div>

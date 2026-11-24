@@ -6,6 +6,18 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ## 1. Active Feature Backlog
 
+### FEAT-149: turn the phone on
+- **Status:** Backlog (`TODO`)
+- **Priority:** Medium
+- **Description:** turn the phone on
+- **Technical Specification:**
+  turn the phone on
+- **Acceptance Criteria:**
+  - [ ] Implement and verify turn the phone on
+  - [ ] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
 ### FEAT-101: Three-Tier Memory Bank Brick, 2-Phase Continuous Cycle & <150-Line Linter
 - **Status:** Completed (`DONE`)
 - **Priority:** High
@@ -752,6 +764,45 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-150: Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `mcp/src/server.mjs`, `mcp/src/ui/tabs.ts`, `mcp/src/ui/app.ts`, `mcp/src/ui/styles.css`, `tests/cli-e2e.test.mjs`
+- **Description:** Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App)
+- **Technical Specification:**
+  Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App)
+- **Acceptance Criteria:**
+  - [x] Implement and verify Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App) across bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
+### FEAT-150-ACT-1: 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt`
+- **Description:** 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity
+- **Technical Specification:**
+  1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity
+  - [x] Verify deterministic tests and lint checks for [FEAT-150-ACT-1]
+
+---
+
+### FEAT-150-ACT-2: 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)
+- **Status:** Completed (`DONE`)
+- **Priority:** Medium
+- **Components:** `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md`, `docs/backlog.html`
+- **Description:** 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)
+- **Technical Specification:**
+  2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html)
+  - [x] Verify deterministic tests and lint checks for [FEAT-150-ACT-2]
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)
@@ -784,6 +835,17 @@ This board tracks active development tickets, feature backlogs, architecture ini
 - **Acceptance Criteria:**
   - [x] Complete implementation and verification for 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification
   - [x] Verify deterministic tests and lint checks for [FEAT-148-ACT-4]
+
+---
+
+### FEAT-150-ACT-3: 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout
+- **Status:** Completed (`DONE`)
+- **Platform:** docs/quality/TEST_PLAN_AND_SUITES.md
+- **Scope:**
+  3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout
+- **Acceptance Criteria:**
+  - [x] Complete implementation and verification for 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout
+  - [x] Verify deterministic tests and lint checks for [FEAT-150-ACT-3]
 
 ---
 

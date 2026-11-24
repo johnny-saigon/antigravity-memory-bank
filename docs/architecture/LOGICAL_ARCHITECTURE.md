@@ -34,10 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-133`** | Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant | 🟢 DONE | `skills/backlog-add/SKILL.md`, `scripts/backlog.mjs`, `bin/cli.mjs` |
-| **`FEAT-134`** | Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
-| **`FEAT-135`** | Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects | 🟢 DONE | `skills/backlog-plan/SKILL.md`, `skills/backlog-start/SKILL.md`, `docs/CREDITS_CHEATSHEET.md` |
-| **`FEAT-136`** | Automatic Ad-Hoc /plan → READY (After Design Review Display) & READY → IN PROGRESS (On Proceed) | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `scripts/sync-memory-context.mjs` |
 | **`FEAT-137`** | Repackage antigravity-memory-bank into 11 Standalone Cross-Agent Skills (Agensi.io) | 🟢 DONE | `bin/cli.mjs`, `scripts/backlog.mjs`, `scripts/sync-memory-context.mjs` |
 | **`FEAT-138`** | ### [FEAT-138] READY Ticket Examination Modal — Full Implementation Plan Viewer, Credit/Model Details & Direct 💻 Code Button (HIGH) | 🟢 DONE | `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/PLANNING_GUIDE.md`, `docs/planning/implementation_plan.md` |
 | **`FEAT-139`** | ### [FEAT-139] Partial-Done Residual Sub-Ticket Creation (a, b, c Children), Collapsed Parent in IN PROGRESS & Collapsible Open Children (HIGH) | 🟢 DONE | — |
@@ -54,6 +50,10 @@ flowchart LR
 | **`FEAT-148-ACT-2`** | 2. [FEAT-148-ACT-2] Native Kanban Tab, app.sendMessage() & Context Pills | 🟢 DONE | `scripts/sync-memory-context.mjs`, `lib/context-scraper.mjs`, `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift` |
 | **`FEAT-148-ACT-3`** | 3. [FEAT-148-ACT-3] Memory & Rules, Credits/Usage, Fleet Worktrees & Bricks Tabs | 🟢 DONE | `scripts/lint-memory.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/brick.json` |
 | **`FEAT-148-ACT-4`** | 4. [FEAT-148-ACT-4] CLI Plugin Installer, Template Sync & E2E Verification | 🟢 DONE | `scripts/sync-living-docs.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/adapters/templates/theme.adapter.template.ts` |
+| **`FEAT-150`** | Delete Ticket from Any Column in Kanban (CLI, Bridge, HTML & MCP App) | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `mcp/src/server.mjs` |
+| **`FEAT-150-ACT-1`** | 1. [FEAT-150-ACT-1] CLI delete, HTTP Bridge /api/delete & Reference Integrity | 🟢 DONE | `bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt` |
+| **`FEAT-150-ACT-2`** | 2. [FEAT-150-ACT-2] Delete UI & Confirmation Modal Across All 4 Columns (MCP App + backlog.html) | 🟢 DONE | `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md` |
+| **`FEAT-150-ACT-3`** | 3. [FEAT-150-ACT-3] Bundle Rebuild, E2E Test Suite (3o. FEAT-150) & Rollout | 🟢 DONE | `docs/quality/TEST_PLAN_AND_SUITES.md` |
 <!-- ag-section:logical-features:end -->
 
 ---
