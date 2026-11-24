@@ -7,7 +7,7 @@
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-- **Backlog Completion**: **59 / 59** tickets verified `DONE` (0 in progress, 0 queued).
+- **Backlog Completion**: **60 / 60** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
 - **feat(docs): unify `FEAT-121` Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/design/DESIGN.md`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `.agents/rules/docs-living-specs.md`, `README.md`) and roll out `upgrade` across `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `wiro` (`10/10` canonical docs active, custom/nested docs classified & archived with repo-wide link rewriting, `10/10` ingestion checklist passed)**
@@ -17,6 +17,11 @@
 - **feat(organize): implement `FEAT-117` AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
+### ✅ [BUG-115]: Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan *(Verified 2026-11-24)*
+- **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [BACKLOG.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG.md), [backlog.html](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.html), [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json)
+- **Verified Criterion**: ✓ Implement and verify Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan across scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json
+- **Verified Criterion**: ✓ Add both a non-regression unit/component test and an E2E test verifying the fix
+
 ### ✅ [BUG-114]: Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning *(Verified 2026-11-24)*
 - **Summary**: Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning
 - **Verified Components**: [PLANNING_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/PLANNING_GUIDE.md)
@@ -345,7 +350,7 @@
 | :--- | :--- | :--- |
 | **Memory Bank Line Budget (`< 150 lines`)** | `npm run lint:memory` | ✅ Verified (`0` violations) |
 | **10-Point Baseline Ingestion Checklist** | `npx antigravity-memory-bank upgrade` | ✅ `10/10` Passed |
-| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (59/59 Done) |
+| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (60/60 Done) |
 | **Automated Verification Command** | `npm run lint:memory` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm test` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm run test:e2e` | ✅ Configured & Active |

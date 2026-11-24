@@ -691,6 +691,16 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### BUG-115: Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `docs/BACKLOG.md`, `docs/backlog.html`, `docs/backlog.json`
+- **Acceptance Criteria:**
+  - [x] Implement and verify Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan across scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json
+  - [x] Add both a non-regression unit/component test and an E2E test verifying the fix
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

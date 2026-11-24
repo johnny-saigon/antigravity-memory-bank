@@ -1059,7 +1059,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.doesNotMatch(html, /webkitSpeechRecognition/, '#todoIdeaModal must not rely on Chromium cloud webkitSpeechRecognition which fails in Electron');
     const bridgeSrc = fs.readFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'utf8');
     assert.match(bridgeSrc, /import os from 'node:os'/, 'backlog.mjs must import node:os for ASR config & host-mic temp helpers');
-    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.9\.1'/, 'Bridge version must be bumped to 1.9.1 so stale daemons restart automatically');
+    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.9\.2'/, 'Bridge version must be bumped to 1.9.2 so stale daemons restart automatically');
     assert.match(bridgeSrc, /transcribeViaGemini/, 'Bridge server must include Gemini multimodal audio transcription');
     assert.match(bridgeSrc, /transcribeViaWhisperEndpoint/, 'Bridge server must include Whisper ASR transcription failover');
     assert.doesNotMatch(html, /id="todoIdeaType"/, '#todoIdeaModal must not clutter UI with manual Type/Priority dropdowns');
@@ -1440,6 +1440,123 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       assert.equal(t830.liveActivity, 'coding');
     } finally {
       try { fs.rmSync(bugRepo, { recursive: true, force: true }); } catch {}
+    }
+  });
+
+  test('3m. BUG-115: Prompt Window dispatch on PLAN/CODE transitions, strict IN PROGRESS/DONE -> TO DO guard, and /api/unlock-plan', async () => {
+    const backlogSrc = fs.readFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'utf8');
+    assert.match(backlogSrc, /function dispatchPromptToAntigravity\(/, 'BUG-115: backlog.mjs must define dispatchPromptToAntigravity');
+    assert.match(backlogSrc, /needsAccessibility/, 'BUG-115: bridge response must surface macOS Accessibility fallback cleanly');
+    assert.match(backlogSrc, /async function unlockPlanningTicket\(/, 'BUG-115: UI must define unlockPlanningTicket escape hatch');
+    assert.match(backlogSrc, /endpoint === '\/api\/unlock-plan'/, 'BUG-115: bridge server must expose /api/unlock-plan');
+    assert.match(backlogSrc, /function tryNativeHostSendMessage\(/, 'BUG-115: client must attempt MCP App ui/message dispatch when embedded');
+    assert.match(
+      backlogSrc,
+      /openModelSelectorModal\('\$\{safeIdAttr\}', 'plan', event\)/,
+      'BUG-115: TO DO quick plan button must route through PLAN modal & Prompt dispatch'
+    );
+    assert.match(
+      backlogSrc,
+      /openModelSelectorModal\('\$\{safeIdAttr\}', 'code', event\)/,
+      'BUG-115: quick code button must route through CODE modal & Prompt dispatch'
+    );
+    assert.match(
+      backlogSrc,
+      /Move \[' \+ sourceId \+ '\] back to TO DO first to re-plan it\./,
+      'BUG-115: drag-drop must block IN PROGRESS/DONE -> READY re-plan without returning to TO DO'
+    );
+
+    const httpRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-bug115-bridge-'));
+    let bridgeProc = null;
+    try {
+      execFileSync(process.execPath, [CLI_PATH, 'install', httpRepo], { cwd: httpRepo, env: testEnv, stdio: 'pipe' });
+      const httpBacklogScript = path.join(httpRepo, 'scripts', 'backlog.mjs');
+      const httpJsonPath = path.join(httpRepo, 'docs', 'backlog.json');
+      const httpHtmlPath = path.join(httpRepo, 'docs', 'backlog.html');
+
+      execFileSync(process.execPath, [httpBacklogScript, 'add', '--id', 'FEAT-910', '--title', 'Todo Dispatch Ticket', '--priority', 'high'], { cwd: httpRepo, env: testEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [httpBacklogScript, 'add', '--id', 'FEAT-911', '--title', 'InProg Guard Ticket', '--priority', 'medium'], { cwd: httpRepo, env: testEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [httpBacklogScript, 'start', 'FEAT-911'], { cwd: httpRepo, env: testEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [httpBacklogScript, 'add', '--id', 'FEAT-912', '--title', 'Done Guard Ticket', '--priority', 'low'], { cwd: httpRepo, env: testEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [httpBacklogScript, 'done', 'FEAT-912', '--force'], { cwd: httpRepo, env: testEnv, stdio: 'pipe' });
+
+      const bridgePort = 14399 + Math.floor(Math.random() * 400);
+      bridgeProc = spawn(process.execPath, [httpBacklogScript, 'serve', '--port', String(bridgePort)], {
+        cwd: httpRepo,
+        env: { ...testEnv, ANTIGRAVITY_SKIP_PROMPT_DISPATCH: '1' },
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
+      const baseUrl = `http://127.0.0.1:${bridgePort}`;
+      let health = null;
+      for (let i = 0; i < 30; i++) {
+        try {
+          const r = await fetch(`${baseUrl}/api/health`);
+          if (r.ok) {
+            health = await r.json();
+            break;
+          }
+        } catch {}
+        await new Promise((res) => setTimeout(res, 100));
+      }
+      assert.equal(health?.ok, true, 'BUG-115: isolated bridge server must boot');
+      assert.equal(health?.version, '1.9.2', 'BUG-115: bridge health must report v1.9.2');
+
+      const postJson = async (endpoint, body) => {
+        const res = await fetch(`${baseUrl}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repoRoot: httpRepo, ...body })
+        });
+        return { status: res.status, data: await res.json() };
+      };
+
+      // 1. PLAN on TO DO ticket -> 200, READY + planningLocked + unlock button in rendered HTML
+      const planTodo = await postJson('/api/plan', { id: 'FEAT-910', prompt: '/effort high /backlog-plan FEAT-910 --model gemini-4-argon-high' });
+      assert.equal(planTodo.status, 200);
+      assert.equal(planTodo.data.ok, true);
+      let bj = JSON.parse(fs.readFileSync(httpJsonPath, 'utf8'));
+      const t910 = bj.tasks.find((t) => t.id === 'FEAT-910');
+      assert.equal(t910.status, 'ready');
+      assert.equal(t910.liveActivity, 'planning');
+      assert.equal(t910.planningLocked, true);
+      const renderedHtml = fs.readFileSync(httpHtmlPath, 'utf8');
+      assert.match(renderedHtml, /unlockPlanningTicket\('FEAT-910', event\)/, 'Locked READY card must expose 🔓 Unlock button');
+
+      // 2. PLAN on IN PROGRESS & DONE -> 409 blocked (must return to TO DO first)
+      const planInProg = await postJson('/api/plan', { id: 'FEAT-911', prompt: '/effort high /backlog-plan FEAT-911' });
+      assert.equal(planInProg.status, 409);
+      assert.match(planInProg.data.error, /back to TO DO/i);
+
+      const planDone = await postJson('/api/plan', { id: 'FEAT-912', prompt: '/effort high /backlog-plan FEAT-912' });
+      assert.equal(planDone.status, 409);
+      assert.match(planDone.data.error, /back to TO DO/i);
+
+      // 3. CODE on DONE or IN PROGRESS -> 409 blocked
+      const codeDone = await postJson('/api/kickoff', { id: 'FEAT-912', prompt: '/effort low /backlog-start FEAT-912' });
+      assert.equal(codeDone.status, 409);
+      assert.match(codeDone.data.error, /back to TO DO/i);
+
+      // 4. Unlock locked READY card -> cleanly reverts to TO DO without executing a turn
+      const unlockRes = await postJson('/api/unlock-plan', { id: 'FEAT-910' });
+      assert.equal(unlockRes.status, 200);
+      assert.equal(unlockRes.data.status, 'todo');
+      bj = JSON.parse(fs.readFileSync(httpJsonPath, 'utf8'));
+      assert.equal(bj.tasks.find((t) => t.id === 'FEAT-910')?.planningLocked, undefined);
+
+      // 5. CODE on TO DO ticket -> 200 & transitions to IN PROGRESS (coding)
+      const codeTodo = await postJson('/api/kickoff', { id: 'FEAT-910', prompt: '/effort high /backlog-start FEAT-910 --model gemini-4-neon-medium' });
+      assert.equal(codeTodo.status, 200);
+      assert.equal(codeTodo.data.ok, true);
+      bj = JSON.parse(fs.readFileSync(httpJsonPath, 'utf8'));
+      const coded910 = bj.tasks.find((t) => t.id === 'FEAT-910');
+      assert.equal(coded910.status, 'in_progress');
+      assert.equal(coded910.liveActivity, 'coding');
+    } finally {
+      if (bridgeProc && !bridgeProc.killed) {
+        try { bridgeProc.kill('SIGKILL'); } catch {}
+      }
+      try { fs.rmSync(httpRepo, { recursive: true, force: true }); } catch {}
     }
   });
 

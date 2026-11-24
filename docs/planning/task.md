@@ -4,7 +4,7 @@
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
 > - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-> - **Backlog Progress**: `59/59` tickets completed (`0` in progress, `0` queued).
+> - **Backlog Progress**: `60/60` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline
 - [x] Ingest Three-Tier Memory Hierarchy (`~/.gemini/GEMINI.md`, `.agents/rules/infra.md`, `memory-bank/*.md`)
@@ -78,3 +78,4 @@
 - [x] **[FEAT-147]** Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets
 - [x] **[BUG-113]** Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)
 - [x] **[BUG-114]** Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning
+- [x] **[BUG-115]** Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan

@@ -22,6 +22,8 @@
 | **`BUG-112`** | Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart — Fix TO DO Modal Voice Capture with PlayTask-Parity Gemini/Whisper ASR, Host-Mic Iframe Fallback & Bridge v1.8.0 Restart | DONE | `bricks/user-profile/platforms/android/headless/CredentialManagerOAuthBridge.kt, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/planning/task.md` |
 | **`BUG-113`** | Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) — Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked) | DONE | `core` |
 | **`BUG-114`** | Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning — Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning | DONE | `docs/PLANNING_GUIDE.md` |
+| **`BUG-115`** | Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan — Recorded in backlog.json | DONE | `scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json` |
+| **`COMMIT-85403fb`** | fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115) — Git fix commit `85403fb` | DONE | `git history` |
 | **`COMMIT-c296aaf`** | fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112) — Git fix commit `c296aaf` | DONE | `git history` |
 | **`COMMIT-cfd803c`** | fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111) — Git fix commit `cfd803c` | DONE | `git history` |
 | **`COMMIT-1881828`** | fix(worktree): prevent cross-worktree brain implementation_plan.md bleed and harden sandboxed worktree branch detection — Git fix commit `1881828` | DONE | `git history` |
@@ -31,7 +33,6 @@
 | **`COMMIT-f3e143e`** | fix(skills): simplify Always-On Credit Tip to recommend /start directly (auto-runs /clear & /compact pre-flight) — Git fix commit `f3e143e` | DONE | `git history` |
 | **`COMMIT-86d8f52`** | fix(cli): use local bin/cli.mjs for memory:upgrade/export/uninstall in self-repo package.json [skip ci] — Git fix commit `86d8f52` | DONE | `git history` |
 | **`COMMIT-04218b1`** | fix(cli): untrack docs/backlog.html from git index during commit [skip ci] — Git fix commit `04218b1` | DONE | `git history` |
-| **`COMMIT-611658d`** | fix(customizations): ensure <24KB rule shard balance and pre-auth mandate across all repos [skip ci] — Git fix commit `611658d` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

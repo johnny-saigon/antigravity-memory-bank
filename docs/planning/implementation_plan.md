@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[BUG-115] Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan** (`HIGH` · Status: `done`): Implement and verify according to project architecture invariants.
   - **[BUG-114] Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning** (`HIGH` · Status: `done`): Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning
   - **[BUG-113] Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)** (`HIGH` · Status: `done`): Fix Premature READY to IN PROGRESS Transition When Proceed Button Is Displayed (Not Clicked)
   - **[FEAT-147] Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets** (`HIGH` · Status: `done`): Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets
-  - **[FEAT-146] Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution** (`HIGH` · Status: `done`): Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -20,11 +20,17 @@
 > - **Local Live Server Port**: `node scripts/backlog.mjs serve` defaults to `http://127.0.0.1:4199`.
 > - **Package Whitelist (`"files"`)**: `package.json` strictly restricts published package contents to `bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, and `install.sh`, excluding dogfood files (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`).
 
-> [!WARNING]
-> **Strict Live End-to-End Verification Before Closure (Mandate #6 / Rule #4)**:
-> One or more planned tickets involve third-party integrations, OAuth providers, or external credentials. **NEVER mark these tickets as `done` (`npm run backlog done`) until live server credentials are configured and real end-to-end provider HTTP requests pass.** If external credentials are pending, keep the ticket `in_progress`.
-
 ## 3. Proposed Changes
+### [BUG-115] Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan *(Completed & Verified Baseline)*
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+  - `[VERIFIED]` [BACKLOG.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG.md) (`docs/BACKLOG.md`)
+  - `[VERIFIED]` [backlog.html](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.html) (`docs/backlog.html`)
+  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
+- **Acceptance Criteria**:
+  - Implement and verify Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan across scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json
+  - Add both a non-regression unit/component test and an E2E test verifying the fix
+
 ### [BUG-114] Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning *(Completed & Verified Baseline)*
 - **Specification**: Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning
 - **Component Modifications (Dependencies First)**:
@@ -49,14 +55,6 @@
   - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
 - **Acceptance Criteria**:
   - Implement and verify Consistent Child Ticket Creation & Naming (FEAT-xxx-ACT-1) for Planned Parent Tickets
-  - Pass deterministic lint, typecheck, and automated test verification (npm test)
-
-### [FEAT-146] Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution *(Completed & Verified Baseline)*
-- **Specification**: Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [google.verifier.ts](file:///Users/jbb/Documents/antigravity-memory-bank/bricks/user-profile/core/oauth/google.verifier.ts) (`bricks/user-profile/core/oauth/google.verifier.ts`)
-- **Acceptance Criteria**:
-  - Implement and verify Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution across bricks/user-profile/core/oauth/google.verifier.ts
   - Pass deterministic lint, typecheck, and automated test verification (npm test)
 
 ## 4. Verification Plan

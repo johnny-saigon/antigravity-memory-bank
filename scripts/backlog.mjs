@@ -514,6 +514,96 @@ function copyToNativeOsClipboard(text) {
 }
 
 /**
+ * Copy a slash command prompt to clipboard and attempt native OS auto-paste + submit into
+ * Antigravity's Prompt Window (`Ask anything` input), with graceful Accessibility fallback (BUG-115).
+ */
+function dispatchPromptToAntigravity(prompt) {
+  const cleanPrompt = String(prompt || '').trim();
+  if (!cleanPrompt) {
+    return { dispatched: false, copied: false, needsAccessibility: false, error: 'Empty prompt' };
+  }
+  if (process.env.ANTIGRAVITY_SKIP_PROMPT_DISPATCH === '1' || process.env.NODE_TEST_CONTEXT) {
+    return { dispatched: false, copied: false, skipped: true, reason: 'test_env', needsAccessibility: false };
+  }
+
+  const copied = copyToNativeOsClipboard(cleanPrompt);
+
+  if (process.platform === 'darwin') {
+    const appleScript = [
+      'tell application "Antigravity" to activate',
+      'delay 0.12',
+      'tell application "System Events"',
+      '  tell process "Antigravity"',
+      '    set foundPrompt to false',
+      '    try',
+      '      set uiElems to entire contents of front window',
+      '      repeat with el in uiElems',
+      '        try',
+      '          set elRole to role of el',
+      '          if elRole is "AXTextArea" or elRole is "AXTextField" then',
+      '            set elDesc to ""',
+      '            try',
+      '              set elDesc to elDesc & " " & (description of el as text)',
+      '            end try',
+      '            try',
+      '              set elDesc to elDesc & " " & (help of el as text)',
+      '            end try',
+      '            try',
+      '              set elDesc to elDesc & " " & (value of attribute "AXPlaceholderValue" of el as text)',
+      '            end try',
+      '            if elDesc contains "Ask anything" or elDesc contains "prompt" or elDesc contains "message" or elDesc contains "chat" then',
+      '              set focused of el to true',
+      '              set foundPrompt to true',
+      '              exit repeat',
+      '            end if',
+      '          end if',
+      '        end try',
+      '      end repeat',
+      '    end try',
+      '    if not foundPrompt then',
+      '      keystroke "l" using command down',
+      '    end if',
+      '    delay 0.1',
+      '    keystroke "v" using command down',
+      '    delay 0.12',
+      '    key code 36',
+      '  end tell',
+      'end tell'
+    ].join('\n');
+
+    try {
+      const res = spawnSync('osascript', ['-e', appleScript], { encoding: 'utf8', timeout: 4000 });
+      if (res.status === 0) {
+        return { dispatched: true, copied, method: 'osascript', needsAccessibility: false };
+      }
+      const stderr = String(res.stderr || res.error?.message || '').trim();
+      const needsAccessibility = /-1719|assistive|not allowed/i.test(stderr);
+      return {
+        dispatched: false,
+        copied,
+        needsAccessibility,
+        error: stderr || `osascript exited with status ${res.status}`
+      };
+    } catch (err) {
+      const msg = String(err && err.message || err || '');
+      return {
+        dispatched: false,
+        copied,
+        needsAccessibility: /-1719|assistive|not allowed/i.test(msg),
+        error: msg
+      };
+    }
+  }
+
+  return {
+    dispatched: false,
+    copied,
+    needsAccessibility: false,
+    error: 'Auto-submit requires macOS Accessibility or manual paste'
+  };
+}
+
+/**
  * Count occurrences of a workspace path inside a transcript log
  * (requires trailing '/', '"', '\\', or "'" to avoid partial prefix matches)
  */
@@ -1780,11 +1870,11 @@ function renderCardServer(task, allTasks = []) {
                    <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
                    ${!isDone
                      ? `<button onclick="triggerAttachFile('${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
-                        ${!isReady && !isInProgress ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>` : ''}
+                        ${!isReady && !isInProgress ? `<button onclick="openModelSelectorModal('${safeIdAttr}', 'plan', event)" class="text-xs hover:text-purple-400 p-0.5" title="Plan [${safeIdAttr}] &amp; move to READY">📐</button>` : ''}
                         <button onclick="updateTaskStatus('${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>`
                      : `<button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>`}
                    ${!isInProgress && !isDone
-                     ? `<button onclick="updateTaskStatus('${safeIdAttr}', 'in_progress')" class="text-xs hover:text-blue-400 p-0.5" title="Mark In Progress">⚡</button>`
+                     ? `<button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="text-xs hover:text-blue-400 p-0.5" title="Code [${safeIdAttr}] &amp; move to IN PROGRESS">⚡</button>`
                      : ''}`}
             </div>
           </div>
@@ -1811,11 +1901,12 @@ function renderCardServer(task, allTasks = []) {
               ? isPlanningLocked
                 ? `<div class="flex items-center gap-1.5 flex-wrap">
                      <button type="button" disabled class="bg-slate-800/70 text-slate-400 border border-slate-700/60 text-xs font-semibold px-2.5 py-1 rounded-md opacity-75 cursor-not-allowed flex items-center gap-1" title="Locked &amp; greyed out in READY while Implementation Plan is drafted (BUG-114)"><span>🔒</span> Planning Locked</button>
+                     <button onclick="unlockPlanningTicket('${safeIdAttr}', event)" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-600/60 text-xs font-medium px-2 py-1 rounded-md transition cursor-pointer" title="Unlock and return [${safeIdAttr}] to TO DO without executing a turn">🔓 Unlock</button>
                    </div>`
                 : `<div class="flex items-center gap-1.5 flex-wrap">
                    ${isInProgress
                      ? `<button onclick="openTaskInspector('${safeIdAttr}', event)" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="View Action Items being waited on &amp; do or assign to Antigravity"><span>⏳</span> Action Items (${pendingActions.length})</button>
-                        <button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Choose AGY Coding Model &amp; continue [${safeIdAttr}]"><span>💻</span> Code</button>`
+                        <button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/50 text-xs font-medium px-2 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Move [${safeIdAttr}] back to TO DO to re-plan (0 turns run)"><span>↩️</span> To-Do</button>`
                      : isReady
                        ? `<button onclick="openTaskInspector('${safeIdAttr}', event)" class="bg-indigo-600/25 hover:bg-indigo-600/45 text-indigo-200 border border-indigo-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Examine full Implementation Plan, Model Options &amp; Code [${safeIdAttr}]"><span>🔎</span> Examine</button>
                           <button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Select best AGY Coding Model, move [${safeIdAttr}] to IN PROGRESS &amp; execute plan"><span>💻</span> Code</button>
@@ -2828,7 +2919,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         effortBadge.title = effortInfo.reason;
       }
 
-      const showActionButtons = task.status !== 'done';
+      const canPlanOrCode = task.status === 'todo' || task.status === 'ready';
       const planBtnLabel = task.status === 'todo' ? '<span>📐</span> PLAN NOW' : '<span>📐</span> RE-PLAN NOW';
       const headerPlanBtn = document.getElementById('inspectorHeaderPlanBtn');
       const footerPlanBtn = document.getElementById('inspectorFooterPlanBtn');
@@ -2836,16 +2927,16 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const footerCodeBtn = document.getElementById('inspectorFooterCodeBtn');
       if (headerPlanBtn) {
         headerPlanBtn.innerHTML = planBtnLabel;
-        headerPlanBtn.classList.toggle('hidden', !showActionButtons);
+        headerPlanBtn.classList.toggle('hidden', !canPlanOrCode);
       }
       if (footerPlanBtn) {
         footerPlanBtn.innerHTML = planBtnLabel;
-        footerPlanBtn.classList.toggle('hidden', !showActionButtons);
+        footerPlanBtn.classList.toggle('hidden', !canPlanOrCode);
       }
-      if (headerCodeBtn) headerCodeBtn.classList.toggle('hidden', !showActionButtons);
-      if (footerCodeBtn) footerCodeBtn.classList.toggle('hidden', !showActionButtons);
+      if (headerCodeBtn) headerCodeBtn.classList.toggle('hidden', !canPlanOrCode);
+      if (footerCodeBtn) footerCodeBtn.classList.toggle('hidden', !canPlanOrCode);
 
-      // Render Universal Execution & Plan Examination View (TO DO, READY & IN PROGRESS — FEAT-138 / FEAT-145)
+      // Render Universal Execution & Plan Examination View (TO DO, READY & IN PROGRESS — FEAT-138 / FEAT-145 / BUG-115)
       const planExamEl = document.getElementById('inspectorPlanExamination');
       if (planExamEl) {
         if (task.status !== 'done') {
@@ -2862,30 +2953,12 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             ? '📐 Implementation Plan, Effort &amp; Execution Controls'
             : '🚀 Ticket Plan / Code Launchpad &amp; Execution Effort';
           const inlinePlanLabel = task.status === 'todo' ? '📐 PLAN NOW' : '📐 RE-PLAN NOW';
-          planExamEl.innerHTML = \`
-            <div class="bg-[var(--background,#0f172a)]/65 border border-purple-500/40 rounded-xl p-3.5 space-y-3">
-              <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-purple-200">\${boxHeaderTitle}</span>
-                  \${task.plannedAt ? '<span class="text-[10px] font-mono text-purple-300/80">Planned: ' + escapeHtml(String(task.plannedAt).slice(0, 16).replace('T', ' ')) + '</span>' : ''}
-                </div>
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  \${rawData.implementationPlanMd ? '<button onclick="toggleInspectorFullPlan()" class="text-[11px] bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-purple-200 border border-purple-500/35 px-2 py-1 rounded cursor-pointer">' + (inspectorShowFullPlan ? '🔎 Ticket Section Only' : '📄 Full implementation_plan.md') + '</button>' : ''}
-                  <button onclick="openPlanFromInspector(event)" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">\${inlinePlanLabel}</button>
-                  <button onclick="openCodeFromInspector(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">💻 CODE NOW</button>
-                </div>
-              </div>
-              <div class="border rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs \${effortInfo.boxClass}">
-                <div><strong>🔥 Suggested Execution Effort: \${effortInfo.label}</strong> <code class="font-mono px-1.5 py-0.5 rounded bg-black/30">\${effortInfo.flag}</code></div>
-                <span class="text-[11px] opacity-90">\${escapeHtml(effortInfo.reason)}</span>
-              </div>
-              <div class="text-xs text-[var(--muted-foreground,#cbd5e1)] flex flex-wrap items-center gap-1.5">
-                <strong class="text-[var(--foreground,#e2e8f0)]">Target Files:</strong> \${compsHtml}
-              </div>
-              <div class="bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg p-3 max-h-48 overflow-y-auto">
-                <pre class="whitespace-pre-wrap font-mono text-[11px] text-[var(--foreground,#e2e8f0)] leading-relaxed">\${escapeHtml(planMd || 'No implementation plan recorded yet. Click PLAN NOW to draft implementation_plan.md or CODE NOW to execute directly.')}</pre>
-              </div>
-              <div class="space-y-1.5">
+          const inspectorActionControls = canPlanOrCode
+            ? \`<button onclick="openPlanFromInspector(event)" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">\${inlinePlanLabel}</button>
+               <button onclick="openCodeFromInspector(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">💻 CODE NOW</button>\`
+            : \`<button onclick="updateTaskStatus('\${safeId}', 'todo'); closeTaskInspector();" class="bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-600 text-xs font-semibold px-2.5 py-1 rounded-lg transition cursor-pointer" title="Return IN PROGRESS ticket to TO DO before re-planning (BUG-115)">↩️ Move back to TO DO to Re-Plan</button>\`;
+          const quickLaunchSection = canPlanOrCode
+            ? \`<div class="space-y-1.5">
                 <div class="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">⚡ Quick Launch with AGY Model (Suggested Effort: \${effortInfo.label}):</div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   \${codeOptions.map(opt => \`
@@ -2899,7 +2972,31 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                     </button>
                   \`).join('')}
                 </div>
+              </div>\`
+            : \`<div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">ℹ️ This ticket is <strong>IN PROGRESS</strong>. To re-plan or switch tracks, move it back to <strong>TO DO</strong> first (0 agent turns execute outside PLAN/CODE transitions).</div>\`;
+          planExamEl.innerHTML = \`
+            <div class="bg-[var(--background,#0f172a)]/65 border border-purple-500/40 rounded-xl p-3.5 space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-purple-200">\${boxHeaderTitle}</span>
+                  \${task.plannedAt ? '<span class="text-[10px] font-mono text-purple-300/80">Planned: ' + escapeHtml(String(task.plannedAt).slice(0, 16).replace('T', ' ')) + '</span>' : ''}
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  \${rawData.implementationPlanMd ? '<button onclick="toggleInspectorFullPlan()" class="text-[11px] bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-purple-200 border border-purple-500/35 px-2 py-1 rounded cursor-pointer">' + (inspectorShowFullPlan ? '🔎 Ticket Section Only' : '📄 Full implementation_plan.md') + '</button>' : ''}
+                  \${inspectorActionControls}
+                </div>
               </div>
+              <div class="border rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs \${effortInfo.boxClass}">
+                <div><strong>🔥 Suggested Execution Effort: \${effortInfo.label}</strong> <code class="font-mono px-1.5 py-0.5 rounded bg-black/30">\${effortInfo.flag}</code></div>
+                <span class="text-[11px] opacity-90">\${escapeHtml(effortInfo.reason)}</span>
+              </div>
+              <div class="text-xs text-[var(--muted-foreground,#cbd5e1)] flex flex-wrap items-center gap-1.5">
+                <strong class="text-[var(--foreground,#e2e8f0)]">Target Files:</strong> \${compsHtml}
+              </div>
+              <div class="bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg p-3 max-h-48 overflow-y-auto">
+                <pre class="whitespace-pre-wrap font-mono text-[11px] text-[var(--foreground,#e2e8f0)] leading-relaxed">\${escapeHtml(planMd || 'No implementation plan recorded yet. Click PLAN NOW to draft implementation_plan.md or CODE NOW to execute directly.')}</pre>
+              </div>
+              \${quickLaunchSection}
             </div>
           \`;
           planExamEl.classList.remove('hidden');
@@ -4089,6 +4186,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         showToast('🔒 [' + lockedTask.id + '] is currently being planned in READY — locked until Implementation Plan is finalized.');
         return;
       }
+      const blockedTask = tasks.find(t => t.status === 'done' || t.status === 'in_progress' || t.status === 'testing');
+      if (blockedTask) {
+        if (dropCtx) renderBoard();
+        pendingDropContext = null;
+        showToast('↩️ Move [' + blockedTask.id + '] back to TO DO first before planning or coding (BUG-115).');
+        return;
+      }
       const isBatch = tasks.length > 1;
       const idsJoined = tasks.map(t => t.id).join(', ');
       const idsCsv = tasks.map(t => t.id).join(',');
@@ -4243,40 +4347,82 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       renderBoard();
       copyTextToClipboard(cmd, true, tasks[0].id);
+      tryNativeHostSendMessage(cmd);
 
-      const titleEl = document.getElementById('kickoffBannerTitle');
-      if (titleEl) {
-        titleEl.textContent = isBatch
-          ? ((isPlan ? '🎛️ Batch Planned ' : '🎛️ Simultaneous Orchestrator Execution ') + '[' + idListStr + '] · Model: ' + modelId + ' — Press ⌘V + Enter in Chat!')
-          : (isPlan
-              ? ('📐 Moved [' + tasks[0].id + '] to READY · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!')
-              : ('💻 Moved [' + tasks[0].id + '] to IN PROGRESS · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!'));
+      const bridgeRes = isPlan
+        ? await callLocalBridge('/api/plan', {
+            repoRoot: rawData.repoRoot,
+            id: tasks[0].id,
+            ids: tasks.map(t => t.id),
+            prompt: cmd
+          })
+        : await callLocalBridge('/api/kickoff', {
+            repoRoot: rawData.repoRoot,
+            id: tasks[0].id,
+            ids: tasks.map(t => t.id),
+            prompt: cmd
+          });
+
+      if (dropCtx) {
+        await callLocalBridge('/api/reorder', {
+          repoRoot: rawData.repoRoot,
+          orderedIds: rawData.tasks.map(t => t.id),
+          columnSorts
+        });
       }
 
-      await callLocalBridge('/api/reorder', {
-        repoRoot: rawData.repoRoot,
-        orderedIds: rawData.tasks.map(t => t.id),
-        movedId: tasks[0].id,
-        newStatus: tasks[0].status,
-        columnSorts
-      });
-
-      if (isPlan) {
-        await callLocalBridge('/api/plan', {
-          repoRoot: rawData.repoRoot,
-          id: tasks[0].id,
-          ids: tasks.map(t => t.id),
-          prompt: cmd
-        });
-        showToast('📐 Moved [' + idListStr + '] to READY! Copied "' + cmd + '" — press ⌘V in chat.');
+      const titleEl = document.getElementById('kickoffBannerTitle');
+      if (bridgeRes && bridgeRes.dispatched) {
+        if (titleEl) {
+          titleEl.textContent = (isPlan ? '📐 Auto-executed in Prompt Window: ' : '💻 Auto-executed in Prompt Window: ') + cmd;
+        }
+        showToast('🚀 Executed in Prompt Window: "' + cmd + '"');
+      } else if (bridgeRes && bridgeRes.needsAccessibility) {
+        if (titleEl) {
+          titleEl.textContent = '⚠️ Copied "' + cmd + '" — Enable Accessibility (System Settings → Privacy & Security → Accessibility → Antigravity) for auto-submit, or press ⌘V + Enter!';
+        }
+        showToast('⚠️ Copied "' + cmd + '" — grant macOS Accessibility to Antigravity or press ⌘V + Enter in Chat.');
       } else {
-        await callLocalBridge('/api/kickoff', {
-          repoRoot: rawData.repoRoot,
-          id: tasks[0].id,
-          ids: tasks.map(t => t.id),
-          prompt: cmd
-        });
-        showToast((isBatch ? '🎛️ ' : '💻 ') + '[' + idListStr + '] moved to IN PROGRESS! Copied "' + cmd + '" — press ⌘V in chat.');
+        if (titleEl) {
+          titleEl.textContent = isBatch
+            ? ((isPlan ? '🎛️ Batch Planned ' : '🎛️ Simultaneous Orchestrator Execution ') + '[' + idListStr + '] · Model: ' + modelId + ' — Press ⌘V + Enter in Chat!')
+            : (isPlan
+                ? ('📐 Locked [' + tasks[0].id + '] in READY · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!')
+                : ('💻 Moved [' + tasks[0].id + '] to IN PROGRESS · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!'));
+        }
+        showToast((isPlan ? '📐 Locked [' + idListStr + '] in READY! ' : (isBatch ? '🎛️ ' : '💻 ') + '[' + idListStr + '] moved to IN PROGRESS! ') + 'Copied "' + cmd + '" — press ⌘V + Enter in Chat.');
+      }
+    }
+
+    function tryNativeHostSendMessage(prompt) {
+      try {
+        if (window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+          window.parent.postMessage({
+            jsonrpc: '2.0',
+            id: 'agmb-' + Date.now(),
+            method: 'ui/message',
+            params: { role: 'user', content: [{ type: 'text', text: String(prompt || '') }] }
+          }, '*');
+        }
+      } catch {}
+    }
+
+    async function unlockPlanningTicket(taskId, event) {
+      if (event) event.stopPropagation();
+      const task = (rawData.tasks || []).find(t => t.id === taskId);
+      if (!task) return;
+      task.status = 'todo';
+      delete task.planningLocked;
+      delete task.liveActivity;
+      renderBoard();
+      const bridgeRes = await callLocalBridge('/api/unlock-plan', {
+        repoRoot: rawData.repoRoot,
+        id: taskId
+      });
+      if (bridgeRes && bridgeRes.ok) {
+        showToast('🔓 Unlocked [' + taskId + '] & moved back to TO DO (0 turns run).');
+      } else {
+        showToast('🔓 Moved [' + taskId + '] back to TO DO locally.');
       }
     }
 
@@ -4284,6 +4430,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const task = rawData.tasks.find(t => t.id === id);
       if (isClientTaskPlanningLocked(task)) {
         showToast('🔒 [' + id + '] is currently being planned in READY — wait until Implementation Plan is finalized.');
+        return;
+      }
+      if (task && (task.status === 'done' || task.status === 'in_progress' || task.status === 'testing')) {
+        showToast('↩️ Move [' + id + '] back to TO DO first before coding (BUG-115).');
         return;
       }
       const wasReady = task && task.status === 'ready';
@@ -4298,6 +4448,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       // Immediately copy & highlight synchronously inside click handler
       copyTextToClipboard(prompt, true, id);
+      tryNativeHostSendMessage(prompt);
 
       const attachCount = (task && Array.isArray(task.attachments)) ? task.attachments.length : 0;
       const attachSuffix = attachCount > 0 ? ' (📎 ' + attachCount + ' attachment' + (attachCount > 1 ? 's' : '') + ' auto-unpacked)' : '';
@@ -4309,14 +4460,19 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           : ('🚀 Ready to Kick Off [' + task.id + '] · Optimal Model: ' + adv.stageBGoogle + attachSuffix);
       }
 
-      // Also invoke local native bridge (runs OS pbcopy + persists in_progress + unpacks .zip attachments)
+      // Also invoke local native bridge (runs OS clipboard/auto-submit + persists in_progress + unpacks .zip attachments)
       const bridgeRes = await callLocalBridge('/api/kickoff', {
         repoRoot: rawData.repoRoot,
         id: id,
         prompt: prompt
       });
 
-      if (bridgeRes && bridgeRes.ok) {
+      if (bridgeRes && bridgeRes.dispatched) {
+        if (titleEl) titleEl.textContent = '💻 Auto-executed in Prompt Window: ' + prompt + attachSuffix;
+        showToast('🚀 Executed "' + prompt + '" in Prompt Window & marked ' + id + ' IN_PROGRESS!');
+      } else if (bridgeRes && bridgeRes.needsAccessibility) {
+        showToast('⚠️ Copied "' + prompt + '" — grant macOS Accessibility to Antigravity for auto-submit or press ⌘V + Enter!');
+      } else if (bridgeRes && bridgeRes.ok) {
         showToast((wasReady ? '🎯 READY → Switch model DOWN to ' + adv.stageBGoogle + '! ' : '🚀 ') + 'Copied "' + prompt + '" & marked ' + id + ' IN_PROGRESS!');
       } else {
         showToast('📋 Ready: "' + prompt + '" copied — Best Model: ' + adv.stageBGoogle);
@@ -4325,6 +4481,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
     async function planTask(id) {
       const task = id ? rawData.tasks.find(t => t.id === id) : null;
+      if (task && (task.status === 'done' || task.status === 'in_progress' || task.status === 'testing')) {
+        showToast('↩️ Move [' + id + '] back to TO DO first before re-planning (BUG-115).');
+        return;
+      }
       const adv = computeTicketCreditAdvice(task);
       const prompt = id ? ('/effort high /backlog-plan ' + id) : '/effort high /backlog-plan';
 
@@ -4338,6 +4498,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
 
       copyTextToClipboard(prompt, true, id || '');
+      tryNativeHostSendMessage(prompt);
 
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl) {
@@ -4352,7 +4513,12 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         prompt: prompt
       });
 
-      if (bridgeRes && bridgeRes.ok) {
+      if (bridgeRes && bridgeRes.dispatched) {
+        if (titleEl) titleEl.textContent = '📐 Auto-executed in Prompt Window: ' + prompt;
+        showToast('🚀 Executed "' + prompt + '" in Prompt Window & locked [' + (id || 'plan') + '] in READY!');
+      } else if (bridgeRes && bridgeRes.needsAccessibility) {
+        showToast('⚠️ Copied "' + prompt + '" — grant macOS Accessibility to Antigravity for auto-submit or press ⌘V + Enter!');
+      } else if (bridgeRes && bridgeRes.ok) {
         showToast('📐 Locked [' + (id || 'plan') + '] in READY & copied "' + prompt + '"! Plan on Argon/Opus, then switch down to Neon/Sonnet.');
       } else {
         showToast('📐 Copied "' + prompt + '" — press ⌘V in Antigravity chat!');
@@ -4686,6 +4852,14 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
 
       const prevStatus = sourceTask.status;
+      if ((prevStatus === 'in_progress' || prevStatus === 'testing' || prevStatus === 'done') && targetColKey === 'ready') {
+        showToast('↩️ Move [' + sourceId + '] back to TO DO first to re-plan it.');
+        return;
+      }
+      if (prevStatus === 'done' && targetColKey === 'in_progress') {
+        showToast('↩️ Move [' + sourceId + '] back to TO DO first to re-code it.');
+        return;
+      }
       if (prevStatus === 'todo' && targetColKey === 'ready') {
         openModelSelectorModal(sourceId, 'plan', null, { targetColKey: 'ready', targetTaskId, insertBefore });
         return;
@@ -4694,14 +4868,19 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         openModelSelectorModal(sourceId, 'code', null, { targetColKey: 'in_progress', targetTaskId, insertBefore });
         return;
       }
-      if (targetColKey === 'done') sourceTask.status = 'done';
-      else if (targetColKey === 'in_progress') {
+      if (targetColKey === 'done') {
+        sourceTask.status = 'done';
+        delete sourceTask.liveActivity;
+        delete sourceTask.planningLocked;
+      } else if (targetColKey === 'in_progress') {
         if (sourceTask.status !== 'testing') sourceTask.status = 'in_progress';
       } else if (targetColKey === 'ready') {
         sourceTask.status = 'ready';
         if (!sourceTask.plannedAt) sourceTask.plannedAt = new Date().toISOString();
       } else {
         sourceTask.status = 'todo';
+        delete sourceTask.liveActivity;
+        delete sourceTask.planningLocked;
       }
 
       rawData.tasks = rawData.tasks.filter(t => t.id !== sourceId);
@@ -4737,9 +4916,21 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       const sourceTask = rawData.tasks.find(t => t.id === sourceId);
       if (!sourceTask) return;
+      if (isClientTaskPlanningLocked(sourceTask)) {
+        showToast('🔒 [' + sourceTask.id + '] is locked in READY while planning.');
+        return;
+      }
 
       materializeColumnVisualOrder(colKey);
       const prevStatus = sourceTask.status;
+      if ((prevStatus === 'in_progress' || prevStatus === 'testing' || prevStatus === 'done') && colKey === 'ready') {
+        showToast('↩️ Move [' + sourceId + '] back to TO DO first to re-plan it.');
+        return;
+      }
+      if (prevStatus === 'done' && colKey === 'in_progress') {
+        showToast('↩️ Move [' + sourceId + '] back to TO DO first to re-code it.');
+        return;
+      }
       if (prevStatus === 'todo' && colKey === 'ready') {
         openModelSelectorModal(sourceId, 'plan', null, { targetColKey: 'ready', targetTaskId: null, insertBefore: false });
         return;
@@ -4748,14 +4939,19 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         openModelSelectorModal(sourceId, 'code', null, { targetColKey: 'in_progress', targetTaskId: null, insertBefore: false });
         return;
       }
-      if (colKey === 'done') sourceTask.status = 'done';
-      else if (colKey === 'in_progress') {
+      if (colKey === 'done') {
+        sourceTask.status = 'done';
+        delete sourceTask.liveActivity;
+        delete sourceTask.planningLocked;
+      } else if (colKey === 'in_progress') {
         if (sourceTask.status !== 'testing') sourceTask.status = 'in_progress';
       } else if (colKey === 'ready') {
         sourceTask.status = 'ready';
         if (!sourceTask.plannedAt) sourceTask.plannedAt = new Date().toISOString();
       } else {
         sourceTask.status = 'todo';
+        delete sourceTask.liveActivity;
+        delete sourceTask.planningLocked;
       }
 
       rawData.tasks = rawData.tasks.filter(t => t.id !== sourceId);
@@ -4873,13 +5069,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                 <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
                 \${!isDone ? \`
                   <button onclick="triggerAttachFile('\${safeIdAttr}')" class="text-xs hover:text-indigo-400 p-0.5" title="Attach UX/UI .zip or context file">📎</button>
-                  \${!isReady && !isInProgress ? \`<button onclick="updateTaskStatus('\${safeIdAttr}', 'ready')" class="text-xs hover:text-purple-400 p-0.5" title="Mark Ready (Planned)">📐</button>\` : ''}
+                  \${!isReady && !isInProgress ? \`<button onclick="openModelSelectorModal('\${safeIdAttr}', 'plan', event)" class="text-xs hover:text-purple-400 p-0.5" title="Plan [\${safeIdAttr}] &amp; move to READY">📐</button>\` : ''}
                   <button onclick="updateTaskStatus('\${safeIdAttr}', 'done')" class="text-xs hover:text-emerald-400 p-0.5" title="Mark Done">✅</button>
                 \` : \`
                   <button onclick="updateTaskStatus('\${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>
                 \`}
                 \${!isInProgress && !isDone ? \`
-                  <button onclick="updateTaskStatus('\${safeIdAttr}', 'in_progress')" class="text-xs hover:text-blue-400 p-0.5" title="Mark In Progress">⚡</button>
+                  <button onclick="openModelSelectorModal('\${safeIdAttr}', 'code', event)" class="text-xs hover:text-blue-400 p-0.5" title="Code [\${safeIdAttr}] &amp; move to IN PROGRESS">⚡</button>
                 \` : ''}
               \`}
             </div>
@@ -4927,6 +5123,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                 <button type="button" disabled class="bg-slate-800/70 text-slate-400 border border-slate-700/60 text-xs font-semibold px-2.5 py-1 rounded-md opacity-75 cursor-not-allowed flex items-center gap-1" title="Locked &amp; greyed out in READY while Implementation Plan is drafted (BUG-114)">
                   <span>🔒</span> Planning Locked
                 </button>
+                <button onclick="unlockPlanningTicket('\${safeIdAttr}', event)" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-600/60 text-xs font-medium px-2 py-1 rounded-md transition cursor-pointer" title="Unlock and return [\${safeIdAttr}] to TO DO without executing a turn">
+                  🔓 Unlock
+                </button>
               </div>
             \` : \`
               <div class="flex items-center gap-1.5 flex-wrap">
@@ -4934,8 +5133,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                   <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="View Action Items being waited on &amp; do or assign to Antigravity">
                     <span>⏳</span> Action Items (\${pendingActions.length})
                   </button>
-                  <button onclick="openModelSelectorModal('\${safeIdAttr}', 'code', event)" class="bg-emerald-600/25 hover:bg-emerald-600/45 text-emerald-200 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Choose AGY Coding Model &amp; continue [\${safeIdAttr}]">
-                    <span>💻</span> Code
+                  <button onclick="updateTaskStatus('\${safeIdAttr}', 'todo')" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/50 text-xs font-medium px-2 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Move [\${safeIdAttr}] back to TO DO to re-plan (0 turns run)">
+                    <span>↩️</span> To-Do
                   </button>
                 \` : isReady ? \`
                   <button onclick="openTaskInspector('\${safeIdAttr}', event)" class="bg-indigo-600/25 hover:bg-indigo-600/45 text-indigo-200 border border-indigo-500/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer" title="Examine full Implementation Plan, Model Options &amp; Code [\${safeIdAttr}]">
@@ -5763,7 +5962,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 }
 
-const BRIDGE_VERSION = '1.9.1';
+const BRIDGE_VERSION = '1.9.2';
 
 function spawnBridgeDaemon() {
   try {
@@ -6408,18 +6607,31 @@ function startBridgeServer(port = DEFAULT_PORT) {
           : String(body.id || '').split(/[\s,]+/).filter(Boolean);
         const idLabel = ids.join(', ');
         const prompt = String(body.prompt || (idLabel ? `/backlog-start ${idLabel}` : '')).trim();
-        const copied = prompt ? copyToNativeOsClipboard(prompt) : false;
 
         if (ids.length > 0) {
           const data = loadBacklog(targetRoot);
+          for (const oneId of ids) {
+            const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
+            if (!task) continue;
+            if (task.planningLocked || (task.status === 'ready' && task.liveActivity === 'planning')) {
+              return { status: 409, payload: { ok: false, error: `Ticket ${task.id} is locked in READY while planning (BUG-114).` } };
+            }
+            if (task.status === 'done' || task.status === 'in_progress' || task.status === 'testing') {
+              return {
+                status: 409,
+                payload: {
+                  ok: false,
+                  error: `Move ${task.status.toUpperCase()} ticket ${task.id} back to TO DO before coding or re-planning (BUG-115).`
+                }
+              };
+            }
+          }
           let changed = false;
           for (const oneId of ids) {
             const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
-            if (task) {
-              if (task.status === 'todo' || task.status === 'ready') {
-                recordTaskStateTransition(task, 'in_progress', 'coding');
-                changed = true;
-              }
+            if (task && (task.status === 'todo' || task.status === 'ready')) {
+              recordTaskStateTransition(task, 'in_progress', 'coding');
+              changed = true;
               unpackTaskAttachments(task, targetRoot);
             }
           }
@@ -6429,7 +6641,20 @@ function startBridgeServer(port = DEFAULT_PORT) {
             writeReviewPaneArtifacts(data, targetRoot);
           }
         }
-        return { status: 200, payload: { ok: true, copied, prompt, id: ids[0] || '', ids } };
+        const dispatchRes = prompt ? dispatchPromptToAntigravity(prompt) : { dispatched: false, copied: false, needsAccessibility: false };
+        return {
+          status: 200,
+          payload: {
+            ok: true,
+            copied: Boolean(dispatchRes.copied),
+            dispatched: Boolean(dispatchRes.dispatched),
+            needsAccessibility: Boolean(dispatchRes.needsAccessibility),
+            dispatchError: dispatchRes.error || '',
+            prompt,
+            id: ids[0] || '',
+            ids
+          }
+        };
       }
 
       if (endpoint === '/api/plan') {
@@ -6438,10 +6663,22 @@ function startBridgeServer(port = DEFAULT_PORT) {
           : String(body.id || '').split(/[\s,]+/).filter(Boolean);
         const idLabel = ids.join(', ');
         const prompt = String(body.prompt || (idLabel ? `/backlog-plan ${idLabel}` : '/backlog-plan')).trim();
-        const copied = prompt ? copyToNativeOsClipboard(prompt) : false;
 
         const data = loadBacklog(targetRoot);
         if (ids.length > 0) {
+          for (const oneId of ids) {
+            const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
+            if (!task) continue;
+            if (task.status === 'done' || task.status === 'in_progress' || task.status === 'testing') {
+              return {
+                status: 409,
+                payload: {
+                  ok: false,
+                  error: `Move ${task.status.toUpperCase()} ticket ${task.id} back to TO DO before re-planning (BUG-115).`
+                }
+              };
+            }
+          }
           const matchedCanonicalIds = [];
           for (const oneId of ids) {
             const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
@@ -6460,17 +6697,39 @@ function startBridgeServer(port = DEFAULT_PORT) {
         saveBacklog(data, targetRoot);
         renderMigrationBoard(data, targetRoot);
         writeReviewPaneArtifacts(data, targetRoot, true);
+        const dispatchRes = prompt ? dispatchPromptToAntigravity(prompt) : { dispatched: false, copied: false, needsAccessibility: false };
         return {
           status: 200,
           payload: {
             ok: true,
-            copied,
+            copied: Boolean(dispatchRes.copied),
+            dispatched: Boolean(dispatchRes.dispatched),
+            needsAccessibility: Boolean(dispatchRes.needsAccessibility),
+            dispatchError: dispatchRes.error || '',
             prompt,
             id: ids[0] || '',
             ids,
             planPath: path.join(targetRoot, 'docs', 'planning', 'implementation_plan.md')
           }
         };
+      }
+
+      if (endpoint === '/api/unlock-plan') {
+        const id = String(body.id || '').trim();
+        const data = loadBacklog(targetRoot);
+        const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
+        if (!task) {
+          return { status: 404, payload: { ok: false, error: 'Task not found' } };
+        }
+        recordTaskStateTransition(task, 'todo', null);
+        delete task.waitingOn;
+        if (Array.isArray(data.activePlanTaskIds)) {
+          data.activePlanTaskIds = data.activePlanTaskIds.filter(aid => String(aid).toLowerCase() !== task.id.toLowerCase());
+        }
+        saveBacklog(data, targetRoot);
+        renderMigrationBoard(data, targetRoot);
+        writeReviewPaneArtifacts(data, targetRoot);
+        return { status: 200, payload: { ok: true, id: task.id, status: task.status } };
       }
 
       if (endpoint === '/api/status') {
@@ -6481,19 +6740,24 @@ function startBridgeServer(port = DEFAULT_PORT) {
         if (!task) {
           return { status: 404, payload: { ok: false, error: 'Task not found' } };
         }
-        if (task.planningLocked || (task.status === 'ready' && task.liveActivity === 'planning')) {
+        if ((task.planningLocked || (task.status === 'ready' && task.liveActivity === 'planning')) && newStatus !== 'todo') {
           return { status: 409, payload: { ok: false, error: `Ticket ${task.id} is locked in READY while planning (BUG-114)` } };
         }
-        task.status = newStatus;
-        if (newStatus === 'ready' && !task.plannedAt) {
-          task.plannedAt = new Date().toISOString();
-        }
-        if (newStatus === 'done' && !task.completedAt) {
-          task.completedAt = new Date().toISOString();
-        }
-        if (newStatus === 'in_progress') {
-          ensureTaskActionItems(task);
-          unpackTaskAttachments(task, targetRoot);
+        if (newStatus === 'todo') {
+          recordTaskStateTransition(task, 'todo', null);
+          delete task.waitingOn;
+        } else {
+          task.status = newStatus;
+          if (newStatus === 'ready' && !task.plannedAt) {
+            task.plannedAt = new Date().toISOString();
+          }
+          if (newStatus === 'done' && !task.completedAt) {
+            task.completedAt = new Date().toISOString();
+          }
+          if (newStatus === 'in_progress') {
+            ensureTaskActionItems(task);
+            unpackTaskAttachments(task, targetRoot);
+          }
         }
         saveBacklog(data, targetRoot);
         renderMigrationBoard(data, targetRoot);
@@ -6508,16 +6772,23 @@ function startBridgeServer(port = DEFAULT_PORT) {
         if (movedId && newStatus) {
           const movedTask = data.tasks.find(t => t.id.toLowerCase() === movedId.toLowerCase());
           if (movedTask) {
-            if (movedTask.planningLocked || (movedTask.status === 'ready' && movedTask.liveActivity === 'planning')) {
+            if ((movedTask.planningLocked || (movedTask.status === 'ready' && movedTask.liveActivity === 'planning')) && newStatus !== 'todo') {
               return { status: 409, payload: { ok: false, error: `Ticket ${movedTask.id} is locked in READY while planning (BUG-114)` } };
             }
-            movedTask.status = newStatus;
-            if (newStatus === 'done' && !movedTask.completedAt) {
-              movedTask.completedAt = new Date().toISOString();
-            }
-            if (newStatus === 'in_progress') {
-              ensureTaskActionItems(movedTask);
-              unpackTaskAttachments(movedTask, targetRoot);
+            if (newStatus === 'todo') {
+              recordTaskStateTransition(movedTask, 'todo', null);
+              delete movedTask.waitingOn;
+            } else {
+              movedTask.status = newStatus;
+              if (newStatus === 'done') {
+                delete movedTask.liveActivity;
+                delete movedTask.planningLocked;
+                if (!movedTask.completedAt) movedTask.completedAt = new Date().toISOString();
+              }
+              if (newStatus === 'in_progress') {
+                ensureTaskActionItems(movedTask);
+                unpackTaskAttachments(movedTask, targetRoot);
+              }
             }
           }
         }

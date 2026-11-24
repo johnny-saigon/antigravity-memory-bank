@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T11:19:23.238Z",
+  "lastUpdated": "2026-11-24T11:57:18.081Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -2408,6 +2408,66 @@
       "plannedAt": "2026-11-24T11:00:02.164Z",
       "startedAt": "2026-11-24T11:02:45.660Z",
       "completedAt": "2026-11-24T11:19:22.672Z"
+    },
+    {
+      "id": "BUG-115",
+      "type": "bug",
+      "title": "Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "docs/BACKLOG.md",
+        "docs/backlog.html",
+        "docs/backlog.json"
+      ],
+      "attachments": [],
+      "description": "",
+      "spec": "",
+      "acceptanceCriteria": [
+        "Implement and verify Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan across scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json",
+        "Add both a non-regression unit/component test and an E2E test verifying the fix"
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T11:53:05.821Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "BUG-115-ACT-1",
+          "text": "Implement and verify Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan across scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "BUG-115-ACT-2",
+          "text": "Add both a non-regression unit/component test and an E2E test verifying the fix",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "startedAt": "2026-11-24T11:53:08.288Z",
+      "stateHistory": [
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T11:53:08.288Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T11:57:14.700Z"
+        }
+      ],
+      "completedAt": "2026-11-24T11:57:14.700Z"
     }
   ],
   "milestones": [
