@@ -400,7 +400,21 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
     fallbackDirs.push(process.env.ANTIGRAVITY_BRAIN_DIR);
   }
   if (data && data.meta && data.meta.lastBrainDir && fs.existsSync(data.meta.lastBrainDir) && !fallbackDirs.includes(data.meta.lastBrainDir)) {
-    fallbackDirs.push(data.meta.lastBrainDir);
+    let safeLastBrain = true;
+    try {
+      const resolvedForFallback = path.resolve(rootDir);
+      const lbHtml = path.join(data.meta.lastBrainDir, 'backlog.html');
+      if (fs.existsSync(lbHtml)) {
+        const rrMatch = fs.readFileSync(lbHtml, 'utf8').match(/"repoRoot":("(?:[^"\\]|\\.)*")/);
+        if (rrMatch) {
+          const recordedRoot = JSON.parse(rrMatch[1]);
+          if (path.resolve(recordedRoot) !== resolvedForFallback && fs.existsSync(recordedRoot)) {
+            safeLastBrain = false;
+          }
+        }
+      }
+    } catch {}
+    if (safeLastBrain) fallbackDirs.push(data.meta.lastBrainDir);
   }
   if (!fs.existsSync(brainBase)) return fallbackDirs;
 
@@ -411,8 +425,17 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
     const projectSlug = (data && data.project) || path.basename(resolvedRoot).toLowerCase().replace(/[^a-z0-9]/g, '_');
     const escapedHome = homeDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const homeProjRegex = homeDir
-      ? new RegExp(`${escapedHome}/(?:\\.gemini/antigravity/worktrees/[^/"'\\\\\\s\`]+/[^/"'\\\\\\s\`]+|(?!\\.|Library/)(?:[^/"'\\\\\\s\`]+/){1,2})`, 'g')
+      ? new RegExp(`${escapedHome}/(?:\\.gemini/antigravity/worktrees/[^/"'\\\\\\s\`]+/[^/"'\\\\\\s\`]+|(?:Documents|Pictures|Projects|Desktop|Developer|src|workspace)/[^/"'\\\\\\s\`]+|(?!\\.|Library/)[^/"'\\\\\\s\`]+)`, 'g')
       : null;
+
+    let siblingDirs = [];
+    try {
+      const parentOfRoot = path.dirname(resolvedRoot);
+      siblingDirs = fs.readdirSync(parentOfRoot, { withFileTypes: true })
+        .filter(d => d.isDirectory() && !d.name.startsWith('.'))
+        .map(d => path.resolve(parentOfRoot, d.name))
+        .filter(p => p !== resolvedRoot && !resolvedRoot.startsWith(p + path.sep) && !p.startsWith(resolvedRoot + path.sep));
+    } catch {}
 
     const candidates = [];
     const now = Date.now();
@@ -436,6 +459,11 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
           const fullText = fs.readFileSync(transcriptPath, 'utf8');
           myCount = countWorkspaceMentions(fullText, resolvedRoot);
 
+          for (const sibPath of siblingDirs) {
+            const sibCount = countWorkspaceMentions(fullText, sibPath);
+            if (sibCount > maxOther) maxOther = sibCount;
+          }
+
           if (homeProjRegex) {
             const otherCounts = {};
             let m;
@@ -445,7 +473,8 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
               if (
                 candidatePath !== resolvedRoot &&
                 !resolvedRoot.startsWith(candidatePath + path.sep) &&
-                !candidatePath.startsWith(resolvedRoot + path.sep)
+                !candidatePath.startsWith(resolvedRoot + path.sep) &&
+                fs.existsSync(candidatePath)
               ) {
                 otherCounts[candidatePath] = (otherCounts[candidatePath] || 0) + 1;
               }
@@ -465,25 +494,31 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
           const repoRootTag = `"repoRoot":${JSON.stringify(resolvedRoot)}`;
           if (htmlText.includes(repoRootTag)) {
             ownsExisting = true;
-          } else if (htmlText.includes('"repoRoot":')) {
-            ownedByOther = true;
           } else {
-            const htmlSample = htmlText.slice(0, 4000);
-            if (
-              htmlSample.includes(`<title>${displayProject} Backlog`) ||
-              htmlSample.includes(`"project":"${projectSlug}"`)
-            ) {
-              ownsExisting = true;
-            } else if (htmlSample.includes('Backlog & Sprint Board</title>')) {
-              ownedByOther = true;
+            const rrMatch = htmlText.match(/"repoRoot":("(?:[^"\\]|\\.)*")/);
+            if (rrMatch) {
+              const recordedRoot = JSON.parse(rrMatch[1]);
+              if (fs.existsSync(recordedRoot)) {
+                ownedByOther = true;
+              }
+            } else {
+              const htmlSample = htmlText.slice(0, 4000);
+              if (
+                htmlSample.includes(`<title>${displayProject} Backlog`) ||
+                htmlSample.includes(`"project":"${projectSlug}"`)
+              ) {
+                ownsExisting = true;
+              } else if (htmlSample.includes('Backlog & Sprint Board</title>')) {
+                ownedByOther = true;
+              }
             }
           }
         } catch {}
       }
 
+      let isOwnedByProject = ownsExisting && !ownedByOther;
       const isDominantWorkspace = myCount > 0 && myCount >= maxOther;
-      const isOwnedByProject = ownsExisting && !ownedByOther && (myCount > 0 || maxOther === 0);
-      const isBrandNewUnassigned = myCount === 0 && maxOther === 0 && !ownedByOther && (now - mtime < 15 * 60 * 1000);
+      const isBrandNewUnassigned = myCount === 0 && maxOther === 0 && !ownedByOther && !ownsExisting && (now - mtime < 15 * 60 * 1000);
 
       candidates.push({
         dirPath,
@@ -506,7 +541,8 @@ function findTargetBrainDirs(data, rootDir = REPO_ROOT) {
       return matchedDirs;
     }
 
-    const withMentions = candidates.find(c => c.myCount > 0);
+    // Never hijack a brain directory owned or dominated by another existing repository!
+    const withMentions = candidates.find(c => c.myCount > 0 && !c.ownedByOther && c.myCount >= c.maxOther);
     if (withMentions) return [withMentions.dirPath];
 
     const unownedRecent = candidates.find(c => !c.ownsExisting && !c.ownedByOther && c.maxOther === 0);
@@ -1452,6 +1488,10 @@ function autoAnnotateTicket(task, rootDir = REPO_ROOT) {
   return task;
 }
 
+const AGY_RECORD_AUDIO_SVG = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>';
+const AGY_STOP_AUDIO_SVG = '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+const AGY_SPINNER_SVG = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+
 function renderCardServer(task, allTasks = []) {
   const isDone = task.status === 'done';
   const isInProgress = task.status === 'in_progress' || task.status === 'testing';
@@ -1514,6 +1554,10 @@ function renderCardServer(task, allTasks = []) {
     : [];
   const openChildCount = childTasks.filter(c => c.status !== 'done').length;
   const hasChildren = childTasks.length > 0;
+  const canMultiSelect = colKey === 'todo' || colKey === 'ready';
+  const selectCheckboxHtml = canMultiSelect
+    ? `<input type="checkbox" data-select-id="${safeIdAttr}" onclick="toggleTicketMultiSelect('${safeIdAttr}', event)" class="w-3.5 h-3.5 rounded border-[var(--border,#475569)] accent-[var(--primary,#3b82f6)] cursor-pointer shrink-0" title="Select [${safeIdAttr}] for batch Plan or Orchestrator Code execution">`
+    : '';
   const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress)
     ? `<button onclick="toggleCardCollapse('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">${isCollapsed ? '▸' : '▾'}</button>`
     : '';
@@ -1522,6 +1566,7 @@ function renderCardServer(task, allTasks = []) {
         <div data-task-id="${safeIdAttr}" data-col="${colKey}" draggable="true" ondragstart="handleDragStart(event, '${safeIdAttr}')" ondragover="handleCardDragOver(event, '${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border ${cardBorder} rounded-xl ${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing ${task.isResidualChild || task.parentId ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
           <div class="flex items-start justify-between gap-2 ${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
+              ${selectCheckboxHtml}
               ${collapseBtnHtml}
               <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
               <span class="font-mono text-xs font-bold ${task.isResidualChild || task.parentId ? 'text-cyan-300' : 'text-blue-400'}">${safeIdHtml}</span>
@@ -1824,32 +1869,36 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-4 right-4 bg-blue-600 text-white text-xs px-3 py-2 rounded-lg shadow-xl hidden transition-all duration-300 z-50"></div>
 
-  <!-- Ticket Action Items & Blocker Inspector Modal -->
+  <!-- Ticket Action Items, Readiness & Execution Inspector Modal (FEAT-144 / FEAT-145 AGY Correlated) -->
   <div id="taskInspectorModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 flex items-center justify-center p-4" onclick="if(event.target===this) closeTaskInspector()">
-    <div class="bg-[var(--card,#1e293b)] border border-blue-500/40 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+    <div class="bg-[var(--card,#1e293b)] border border-[var(--card-border,var(--border,#334155))] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden text-[var(--foreground,#f8fafc)]">
       <!-- Modal Header -->
-      <div class="p-4 border-b border-[var(--border,#334155)] flex items-start justify-between gap-3 bg-slate-900/60">
+      <div class="p-4 border-b border-[var(--border,#334155)] flex items-start justify-between gap-3 bg-[var(--background,#0f172a)]/75">
         <div class="flex-1">
           <div class="flex items-center gap-2 flex-wrap mb-1">
-            <span id="inspectorTaskId" class="font-mono text-sm font-bold text-blue-400"></span>
+            <span id="inspectorTaskId" class="font-mono text-sm font-bold text-[var(--primary,#60a5fa)]"></span>
             <span id="inspectorStatusBadge" class="badge rounded px-2 py-0.5 text-xs"></span>
             <span id="inspectorPriorityBadge" class="badge border rounded px-2 py-0.5 text-xs"></span>
+            <span id="inspectorEffortBadge" class="badge border rounded px-2 py-0.5 text-xs"></span>
             <span id="inspectorBranchBadge" class="hidden text-[11px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 px-2 py-0.5 rounded"></span>
           </div>
-          <h2 id="inspectorTaskTitle" class="text-sm font-bold text-white leading-snug"></h2>
-          <p id="inspectorTaskDesc" class="text-xs text-slate-400 mt-1 leading-relaxed"></p>
+          <h2 id="inspectorTaskTitle" class="text-sm font-bold text-[var(--foreground,#f8fafc)] leading-snug"></h2>
+          <p id="inspectorTaskDesc" class="text-xs text-[var(--muted-foreground,#94a3b8)] mt-1 leading-relaxed"></p>
         </div>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <button id="inspectorHeaderCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Select Stage B AGY Coding Model, move to IN PROGRESS &amp; execute plan (FEAT-138)">
-            <span>💻</span> Code
+        <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          <button id="inspectorHeaderPlanBtn" onclick="openPlanFromInspector(event)" class="hidden bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Select AGY Planning Model, generate implementation_plan.md &amp; move to READY (FEAT-145)">
+            <span>📐</span> PLAN NOW
           </button>
-          <button onclick="closeTaskInspector()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-800 cursor-pointer">✕</button>
+          <button id="inspectorHeaderCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Select Stage B AGY Coding Model, move to IN PROGRESS &amp; execute (FEAT-145)">
+            <span>💻</span> CODE NOW
+          </button>
+          <button onclick="closeTaskInspector()" class="text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] text-sm px-2 py-1 rounded-lg hover:bg-[var(--border,#334155)]/60 cursor-pointer">✕</button>
         </div>
       </div>
 
       <!-- Modal Body -->
       <div class="p-4 overflow-y-auto flex-1 space-y-4">
-        <!-- READY Ticket Examination View: Implementation Plan, Target Details & Stage B Model Selection (FEAT-138) -->
+        <!-- Universal Readiness, Execution Effort & Direct Model/PLAN/CODE Examination View (FEAT-138 / FEAT-145) -->
         <div id="inspectorPlanExamination" class="hidden space-y-3"></div>
 
         <!-- Waiting On Summary -->
@@ -1859,7 +1908,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             <span class="text-[11px] font-normal text-amber-200/80">Auto-synced to docs/backlog.json</span>
           </label>
           <div class="flex gap-2">
-            <input id="inspectorWaitingOnInput" type="text" placeholder="e.g. Apple Developer Portal Services ID registration or live E2E test..." class="flex-1 bg-slate-900/90 border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400" onchange="saveInspectorWaitingOn()">
+            <input id="inspectorWaitingOnInput" type="text" placeholder="e.g. Apple Developer Portal Services ID registration or live E2E test..." class="flex-1 bg-[var(--background,#0f172a)] border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-amber-400" onchange="saveInspectorWaitingOn()">
             <button onclick="saveInspectorWaitingOn()" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer">
               💾 Save
             </button>
@@ -1870,8 +1919,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
             <div class="flex items-center gap-2">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200">🎯 Action Items Being Waited On</h3>
-              <span id="inspectorActionCounts" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded"></span>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground,#e2e8f0)]">🎯 Action Items Being Waited On</h3>
+              <span id="inspectorActionCounts" class="text-xs font-mono bg-[var(--background,#0f172a)] text-[var(--muted-foreground,#94a3b8)] border border-[var(--border,#334155)] px-2 py-0.5 rounded"></span>
             </div>
             <div class="flex items-center gap-1">
               <button onclick="setInspectorOwnerFilter('all')" id="inspFilterAll" class="text-xs px-2 py-0.5 rounded border border-blue-500 bg-blue-500/20 text-white font-semibold cursor-pointer">All</button>
@@ -1885,15 +1934,15 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         </div>
 
         <!-- Add New Action Item -->
-        <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl p-3">
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">➕ Add Action Item to Wait List</label>
+        <div class="bg-[var(--background,#0f172a)]/80 border border-[var(--border,#334155)] rounded-xl p-3">
+          <label class="block text-xs font-semibold text-[var(--muted-foreground,#cbd5e1)] mb-1.5">➕ Add Action Item to Wait List</label>
           <div class="flex flex-col sm:flex-row gap-2">
-            <input id="newActionItemInput" type="text" onkeydown="if(event.key==='Enter') addInspectorActionItem()" placeholder="Describe action item (e.g. Add META_APP_SECRET to server/.env or run Playwright E2E)..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
-            <select id="newActionItemOwner" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+            <input id="newActionItemInput" type="text" onkeydown="if(event.key==='Enter') addInspectorActionItem()" placeholder="Describe action item (e.g. Add META_APP_SECRET to server/.env or run Playwright E2E)..." class="flex-1 bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-[var(--primary,#3b82f6)]">
+            <select id="newActionItemOwner" class="bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--foreground,#f8fafc)] focus:outline-none focus:border-[var(--primary,#3b82f6)]">
               <option value="user">👤 Waiting on Me (User)</option>
               <option value="antigravity">🤖 Assign to Antigravity</option>
             </select>
-            <button onclick="addInspectorActionItem()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer">
+            <button onclick="addInspectorActionItem()" class="bg-[var(--primary,#3b82f6)] hover:opacity-90 text-[var(--primary-foreground,#ffffff)] text-xs font-semibold px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer">
               ➕ Add
             </button>
           </div>
@@ -1901,9 +1950,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       </div>
 
       <!-- Modal Footer -->
-      <div class="p-3.5 border-t border-[var(--border,#334155)] bg-slate-900/80 flex flex-wrap items-center justify-between gap-2">
+      <div class="p-3.5 border-t border-[var(--border,#334155)] bg-[var(--background,#0f172a)]/85 flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-2 flex-wrap">
-          <button onclick="assignAllPendingToAntigravity()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer" title="Assign all pending action items to Antigravity and copy the execution prompt">
+          <button onclick="assignAllPendingToAntigravity()" class="bg-[var(--primary,#3b82f6)] hover:opacity-90 text-[var(--primary-foreground,#ffffff)] text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer" title="Assign all pending action items to Antigravity and copy the execution prompt">
             <span>🤖</span> Assign All Pending to Antigravity (Copy Prompt)
           </button>
           <button onclick="notifyUserActionsCompleted()" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer" title="Mark your user action items done and copy prompt for Antigravity to verify &amp; finish">
@@ -1911,8 +1960,11 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           </button>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <button id="inspectorFooterCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Choose Stage B AGY Coding Model &amp; start coding this READY ticket (FEAT-138)">
-            <span>💻</span> Code (Select Model &amp; Start)
+          <button id="inspectorFooterPlanBtn" onclick="openPlanFromInspector(event)" class="hidden bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Choose AGY Planning Model &amp; plan this ticket now (FEAT-145)">
+            <span>📐</span> PLAN NOW
+          </button>
+          <button id="inspectorFooterCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Choose Stage B AGY Coding Model &amp; code this ticket now (FEAT-145)">
+            <span>💻</span> CODE NOW
           </button>
           <button onclick="completeWithResidualFromInspector()" class="bg-purple-600/25 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer" title="Keep parent collapsed in IN PROGRESS &amp; spawn residual child tickets (a, b, c) (FEAT-139)">
             🧩 Done + Residual (a, b, c)
@@ -1920,7 +1972,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           <button onclick="markInspectedTaskDone()" class="bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer">
             ✅ Mark Ticket Done
           </button>
-          <button onclick="closeTaskInspector()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg transition cursor-pointer">
+          <button onclick="closeTaskInspector()" class="bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-[var(--muted-foreground,#cbd5e1)] border border-[var(--border,#334155)] text-xs px-3 py-1.5 rounded-lg transition cursor-pointer">
             Close
           </button>
         </div>
@@ -1935,7 +1987,8 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         <div>
           <div class="flex items-center gap-2 flex-wrap mb-1">
             <span id="modelModalModeBadge" class="badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-2 py-0.5 text-xs font-bold">📐 SELECT AGY PLANNING MODEL</span>
-            <span id="modelModalTaskId" class="font-mono text-xs font-bold text-blue-400"></span>
+            <span id="modelModalTaskId" class="font-mono text-xs font-bold text-[var(--primary,#60a5fa)]"></span>
+            <span id="modelModalEffortBadge" class="hidden badge border rounded px-2 py-0.5 text-xs"></span>
           </div>
           <h2 id="modelModalTitle" class="text-sm font-bold text-white leading-snug">Choose the Best Credit-Optimized AGY Model to Run This Ticket</h2>
           <p id="modelModalSubtitle" class="text-xs text-slate-400 mt-0.5"></p>
@@ -1972,30 +2025,30 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     </div>
   </div>
 
-  <!-- Minimalist Isolated TO DO-Only /backlog-add Modal (FEAT-143: Single Text Field · Auto-Configured · 0 Tokens) -->
+  <!-- Minimalist Isolated TO DO-Only /backlog-add Modal (FEAT-143 / FEAT-144: AGY Branding + Native Record Audio Vector Icon · 0 Tokens) -->
   <div id="todoIdeaModal" class="hidden fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTodoIdeaModal()">
-    <div class="bg-[var(--card,#1e293b)] border border-amber-500/45 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onclick="event.stopPropagation()">
-      <div class="px-4 py-3 border-b border-[var(--border,#334155)] flex items-center justify-between gap-2 bg-slate-900/70">
+    <div class="bg-[var(--card,#1e293b)] border border-[var(--card-border,var(--border,#334155))] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-[var(--foreground,#f8fafc)]" onclick="event.stopPropagation()">
+      <div class="px-4 py-3 border-b border-[var(--border,#334155)] flex items-center justify-between gap-2 bg-[var(--background,#0f172a)]/80">
         <div class="flex items-center gap-2">
-          <span class="text-xs font-bold text-amber-300">➕ /backlog-add</span>
-          <span class="text-[11px] text-slate-400">· Isolated · Auto-configured</span>
+          <span class="inline-flex items-center gap-1 text-xs font-bold text-[var(--primary,#60a5fa)]"><span>✦</span> /backlog-add</span>
+          <span class="text-[11px] text-[var(--muted-foreground,#94a3b8)]">· AGY Isolated Capture · Auto-configured</span>
         </div>
-        <button onclick="closeTodoIdeaModal()" class="text-slate-400 hover:text-white text-sm px-1.5 py-0.5 rounded hover:bg-slate-800 cursor-pointer">✕</button>
+        <button onclick="closeTodoIdeaModal()" class="text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] text-sm px-1.5 py-0.5 rounded hover:bg-[var(--border,#334155)]/60 cursor-pointer">✕</button>
       </div>
       <div class="p-4 space-y-3">
         <div class="relative">
-          <textarea id="todoIdeaInput" rows="3" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitIsolatedTodoIdea();}else if(event.key==='Escape'){closeTodoIdeaModal();}" placeholder="Describe or dictate your idea... (ID, type, priority, files &amp; ROI are auto-configured)" class="w-full bg-slate-950 border border-amber-500/40 rounded-xl pl-3 pr-11 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 resize-none"></textarea>
-          <button id="todoVoiceBtn" type="button" onclick="toggleTodoIdeaVoice(event)" class="absolute right-2 bottom-2.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1" title="Voice input: click to dictate your idea into TO DO">
-            <span id="todoVoiceIcon">🎙️</span>
+          <textarea id="todoIdeaInput" rows="3" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitIsolatedTodoIdea();}else if(event.key==='Escape'){closeTodoIdeaModal();}" placeholder="Describe or record your idea... (ID, type, priority, files &amp; effort are auto-configured)" class="w-full bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-xl pl-3 pr-11 py-2.5 text-xs text-[var(--foreground,#f8fafc)] placeholder-[var(--placeholder,#64748b)] focus:outline-none focus:border-[var(--primary,#3b82f6)] resize-none"></textarea>
+          <button id="todoVoiceBtn" type="button" onclick="toggleTodoIdeaVoice(event)" class="absolute right-2 bottom-2.5 bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] rounded-lg px-2 py-1.5 text-xs font-semibold transition cursor-pointer flex items-center gap-1" title="Record Audio" aria-label="Record Audio">
+            <span id="todoVoiceIcon" class="inline-flex items-center gap-1">${AGY_RECORD_AUDIO_SVG}</span>
           </button>
         </div>
         <div id="todoVoiceStatus" class="hidden text-[11px] text-rose-300 flex items-center gap-1.5">
           <span id="todoVoicePing" class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-          <span id="todoVoiceText">Listening... speak your idea (click 🎙️ to finish)</span>
+          <span id="todoVoiceText">Recording Audio... speak your idea (click Stop to transcribe)</span>
         </div>
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[11px] text-slate-500">Press <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Enter</kbd> to save · <kbd class="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-[10px] font-mono">Esc</kbd> to cancel</span>
-          <button onclick="submitIsolatedTodoIdea()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition cursor-pointer">
+          <span class="text-[11px] text-[var(--muted-foreground,#94a3b8)]">Press <kbd class="px-1 py-0.5 bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded text-[10px] font-mono">Enter</kbd> to save · <kbd class="px-1 py-0.5 bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded text-[10px] font-mono">Esc</kbd> to cancel</span>
+          <button onclick="submitIsolatedTodoIdea()" class="bg-[var(--primary,#3b82f6)] hover:opacity-90 text-[var(--primary-foreground,#ffffff)] text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition cursor-pointer">
             Add to TO DO
           </button>
         </div>
@@ -2014,6 +2067,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           <h2 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground,#f8fafc)]">To-Do / Backlog</h2>
         </div>
         <div class="flex items-center gap-1.5">
+          <button id="select-all-todo" onclick="toggleSelectColumn('todo', event)" class="text-[11px] bg-[var(--background,#0f172a)]/80 hover:bg-[var(--card,#1e293b)] text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Select all TO DO tickets for batch Plan or Orchestrator Code">☑ All</button>
           <button onclick="openTodoIdeaModal(event)" class="text-[11px] bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 px-2 py-0.5 rounded font-semibold transition cursor-pointer" title="Open isolated /backlog-add Idea Modal (0 tokens · does not disturb active turn)">+ Idea</button>
           <button id="sort-btn-todo" onclick="cycleColumnSort('todo')" class="text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Click to toggle column sort: Newest → Oldest / Oldest → Newest / Manual Order">✋ Manual</button>
           <span id="count-todo" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialTodo.length}</span>
@@ -2033,6 +2087,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           <h2 class="text-xs font-bold uppercase tracking-wider text-purple-200" title="Planned or /backlog-plan tickets ready for low-cost workhorse execution">Ready (Planned)</h2>
         </div>
         <div class="flex items-center gap-1.5">
+          <button id="select-all-ready" onclick="toggleSelectColumn('ready', event)" class="text-[11px] bg-[var(--background,#0f172a)]/80 hover:bg-[var(--card,#1e293b)] text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Select all READY tickets for Google Orchestrator simultaneous execution">☑ All</button>
           <button id="sort-btn-ready" onclick="cycleColumnSort('ready')" class="text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Click to toggle column sort: Newest → Oldest / Oldest → Newest / Manual Order">✋ Manual</button>
           <span id="count-ready" class="text-xs bg-purple-500/20 text-purple-200 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">${initialReady.length}</span>
         </div>
@@ -2072,6 +2127,25 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
   </div>
 
+  <!-- Floating Multi-Ticket Batch Action Bar (FEAT-146: TO DO & READY Orchestrator Batching) -->
+  <div id="multiSelectActionBar" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[var(--card,#1e293b)]/95 backdrop-blur-md border border-[var(--primary,#3b82f6)] rounded-2xl shadow-2xl px-4 py-2.5 flex flex-wrap items-center justify-center gap-2.5 max-w-[95vw]">
+    <div class="flex items-center gap-2">
+      <span id="multiSelectCountBadge" class="badge bg-[var(--primary,#3b82f6)] text-[var(--primary-foreground,#ffffff)] rounded-full px-2.5 py-0.5 text-xs font-bold">0 SELECTED</span>
+      <span id="multiSelectIdsPreview" class="text-xs font-mono text-[var(--muted-foreground,#94a3b8)] max-w-[240px] truncate"></span>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button id="batchPlanBtn" onclick="openBatchModelSelector('plan', event)" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition cursor-pointer flex items-center gap-1" title="Plan all selected tickets & move to READY">
+        <span>📐</span> PLAN NOW (<span id="batchPlanCount">0</span>)
+      </button>
+      <button id="batchCodeBtn" onclick="openBatchModelSelector('code', event)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition cursor-pointer flex items-center gap-1" title="Execute all selected tickets simultaneously via Google Orchestrator">
+        <span>🎛️</span> CODE NOW · Orchestrator (<span id="batchCodeCount">0</span>)
+      </button>
+      <button onclick="clearTicketMultiSelect(event)" class="bg-[var(--background,#0f172a)] hover:bg-[var(--border,#334155)] text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] text-xs font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer">
+        ✕ Clear
+      </button>
+    </div>
+  </div>
+
   <script>
     let rawData = ${jsonString};
     const BRIDGE_URL = 'http://127.0.0.1:${DEFAULT_PORT}';
@@ -2083,6 +2157,10 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     let activeInspectTaskId = null;
     let inspectorOwnerFilter = 'all';
     let draggedTaskId = null;
+    let selectedTicketIds = new Set();
+    const AGY_RECORD_AUDIO_SVG = ${JSON.stringify(AGY_RECORD_AUDIO_SVG)};
+    const AGY_STOP_AUDIO_SVG = ${JSON.stringify(AGY_STOP_AUDIO_SVG)};
+    const AGY_SPINNER_SVG = ${JSON.stringify(AGY_SPINNER_SVG)};
     const initialMetaSorts = (rawData.meta && rawData.meta.columnSorts) || {};
     let columnSorts = {
       todo: initialMetaSorts.todo || 'custom',
@@ -2345,12 +2423,60 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       showToast('✅ Marked your action items done & copied verification prompt for Antigravity!');
     }
 
+    function openPlanFromInspector(ev) {
+      if (ev) ev.stopPropagation();
+      if (!activeInspectTaskId) return;
+      const tid = activeInspectTaskId;
+      closeTaskInspector();
+      openModelSelectorModal(tid, 'plan', ev);
+    }
+
     function openCodeFromInspector(ev) {
       if (ev) ev.stopPropagation();
       if (!activeInspectTaskId) return;
       const tid = activeInspectTaskId;
       closeTaskInspector();
       openModelSelectorModal(tid, 'code', ev);
+    }
+
+    function getRecommendedExecutionEffort(taskOrTasks) {
+      const tasks = Array.isArray(taskOrTasks) ? taskOrTasks.filter(Boolean) : (taskOrTasks ? [taskOrTasks] : []);
+      const combinedText = tasks.map(t => ((t.id || '') + ' ' + (t.title || '') + ' ' + (t.description || '') + ' ' + (t.spec || '') + ' ' + (t.components || []).join(' ')).toLowerCase()).join(' ');
+      const maxComps = tasks.reduce((m, t) => Math.max(m, Array.isArray(t.components) ? t.components.length : 0), 0);
+      const hasExplicitHigh = tasks.some(t => String(t.recommendedEffort || '').toLowerCase() === 'high' || /suggested(?: execution)? effort:\\s*high|high effort/i.test((t.description || '') + ' ' + (t.spec || '')));
+      const hasHighPrio = tasks.some(t => String(t.priority || '').toLowerCase() === 'high');
+      const hasRefactorOrComplex = tasks.some(t => String(t.type || '').toLowerCase() === 'refactor') || /\\b(oauth|auth|security|schema|migration|concurrency|architect|p0|brick|fleet|branding|orchestrator|parity|modal|voice|simultaneous)\\b/.test(combinedText);
+      if (tasks.length > 1 || hasExplicitHigh || hasHighPrio || maxComps >= 3 || hasRefactorOrComplex) {
+        return {
+          level: 'high',
+          label: 'HIGH',
+          flag: '/effort high',
+          badgeClass: 'bg-rose-500/20 text-rose-200 border-rose-500/45',
+          boxClass: 'bg-rose-500/10 border-rose-500/35 text-rose-200',
+          reason: tasks.length > 1
+            ? ('Multi-ticket batch (' + tasks.length + ' tickets) — High Effort coordinates parallel dependencies without regressions.')
+            : 'High-priority / multi-component ticket — High Effort recommended for thorough architecture & full test verification.'
+        };
+      }
+      const allMicro = tasks.length === 1 && String(tasks[0].priority || '').toLowerCase() === 'low' && maxComps <= 1;
+      if (allMicro) {
+        return {
+          level: 'low',
+          label: 'LOW',
+          flag: '/effort low',
+          badgeClass: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/40',
+          boxClass: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200',
+          reason: 'Low-complexity scoped change — Low Effort maximizes speed and credit savings.'
+        };
+      }
+      return {
+        level: 'medium',
+        label: 'MEDIUM',
+        flag: '/effort medium',
+        badgeClass: 'bg-amber-500/20 text-amber-200 border-amber-500/40',
+        boxClass: 'bg-amber-500/10 border-amber-500/30 text-amber-200',
+        reason: 'Standard feature/fix — Medium Effort balances throughput and credit efficiency.'
+      };
     }
 
     function toggleInspectorFullPlan() {
@@ -2488,54 +2614,82 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         }
       }
 
+      const effortInfo = getRecommendedExecutionEffort(task);
+      const effortBadge = document.getElementById('inspectorEffortBadge');
+      if (effortBadge) {
+        effortBadge.textContent = '🔥 Suggested Execution Effort: ' + effortInfo.label + ' (' + effortInfo.flag + ')';
+        effortBadge.className = 'badge border rounded px-2 py-0.5 text-xs ' + effortInfo.badgeClass;
+        effortBadge.title = effortInfo.reason;
+      }
+
+      const showActionButtons = task.status !== 'done';
+      const planBtnLabel = task.status === 'todo' ? '<span>📐</span> PLAN NOW' : '<span>📐</span> RE-PLAN NOW';
+      const headerPlanBtn = document.getElementById('inspectorHeaderPlanBtn');
+      const footerPlanBtn = document.getElementById('inspectorFooterPlanBtn');
       const headerCodeBtn = document.getElementById('inspectorHeaderCodeBtn');
       const footerCodeBtn = document.getElementById('inspectorFooterCodeBtn');
-      const showCodeButtons = task.status === 'ready' || task.status === 'in_progress' || task.status === 'testing';
-      if (headerCodeBtn) headerCodeBtn.classList.toggle('hidden', !showCodeButtons);
-      if (footerCodeBtn) footerCodeBtn.classList.toggle('hidden', !showCodeButtons);
+      if (headerPlanBtn) {
+        headerPlanBtn.innerHTML = planBtnLabel;
+        headerPlanBtn.classList.toggle('hidden', !showActionButtons);
+      }
+      if (footerPlanBtn) {
+        footerPlanBtn.innerHTML = planBtnLabel;
+        footerPlanBtn.classList.toggle('hidden', !showActionButtons);
+      }
+      if (headerCodeBtn) headerCodeBtn.classList.toggle('hidden', !showActionButtons);
+      if (footerCodeBtn) footerCodeBtn.classList.toggle('hidden', !showActionButtons);
 
-      // Render FEAT-138 READY Ticket Examination View (Implementation Plan, Ticket Details & Direct Model/CODE Selection)
+      // Render Universal Execution & Plan Examination View (TO DO, READY & IN PROGRESS — FEAT-138 / FEAT-145)
       const planExamEl = document.getElementById('inspectorPlanExamination');
       if (planExamEl) {
-        const isReadyOrPlanned = task.status === 'ready' || Boolean(task.extractedPlanSection) || Boolean(task.plannedAt);
-        if (isReadyOrPlanned) {
+        if (task.status !== 'done') {
+          const isReadyOrPlanned = task.status === 'ready' || Boolean(task.extractedPlanSection) || Boolean(task.plannedAt);
           const planMd = inspectorShowFullPlan
             ? (rawData.implementationPlanMd || task.extractedPlanSection || task.spec || task.description || '')
-            : (task.extractedPlanSection || rawData.implementationPlanMd || task.spec || task.description || '');
+            : (task.extractedPlanSection || task.spec || task.description || (task.status === 'ready' ? rawData.implementationPlanMd : '') || '');
           const codeOptions = getModelOptionsForTicket(task, 'code');
           const safeId = escapeAttr(task.id);
           const compsHtml = (task.components && task.components.length > 0)
-            ? task.components.map(c => '<span class="font-mono text-[11px] bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded">' + escapeHtml(c) + '</span>').join(' ')
-            : '<span class="text-slate-400 text-[11px]">Auto-discovered during execution</span>';
+            ? task.components.map(c => '<span class="font-mono text-[11px] bg-[var(--background,#0f172a)] text-[var(--foreground,#e2e8f0)] border border-[var(--border,#334155)] px-1.5 py-0.5 rounded">' + escapeHtml(c) + '</span>').join(' ')
+            : '<span class="text-[var(--muted-foreground,#94a3b8)] text-[11px]">Auto-discovered during planning / execution</span>';
+          const boxHeaderTitle = isReadyOrPlanned
+            ? '📐 Implementation Plan, Effort &amp; Execution Controls'
+            : '🚀 Ticket Plan / Code Launchpad &amp; Execution Effort';
+          const inlinePlanLabel = task.status === 'todo' ? '📐 PLAN NOW' : '📐 RE-PLAN NOW';
           planExamEl.innerHTML = \`
-            <div class="bg-purple-950/35 border border-purple-500/45 rounded-xl p-3.5 space-y-3">
+            <div class="bg-[var(--background,#0f172a)]/65 border border-purple-500/40 rounded-xl p-3.5 space-y-3">
               <div class="flex items-center justify-between flex-wrap gap-2">
                 <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-purple-200">📐 Implementation Plan &amp; Readiness Examination</span>
+                  <span class="text-xs font-bold text-purple-200">\${boxHeaderTitle}</span>
                   \${task.plannedAt ? '<span class="text-[10px] font-mono text-purple-300/80">Planned: ' + escapeHtml(String(task.plannedAt).slice(0, 16).replace('T', ' ')) + '</span>' : ''}
                 </div>
-                <div class="flex items-center gap-1.5">
-                  \${rawData.implementationPlanMd ? '<button onclick="toggleInspectorFullPlan()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-purple-200 border border-purple-500/35 px-2 py-0.5 rounded cursor-pointer">' + (inspectorShowFullPlan ? '🔎 Ticket Section Only' : '📄 Full implementation_plan.md') + '</button>' : ''}
-                  <button onclick="openCodeFromInspector(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">💻 Code Now</button>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  \${rawData.implementationPlanMd ? '<button onclick="toggleInspectorFullPlan()" class="text-[11px] bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-purple-200 border border-purple-500/35 px-2 py-1 rounded cursor-pointer">' + (inspectorShowFullPlan ? '🔎 Ticket Section Only' : '📄 Full implementation_plan.md') + '</button>' : ''}
+                  <button onclick="openPlanFromInspector(event)" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">\${inlinePlanLabel}</button>
+                  <button onclick="openCodeFromInspector(event)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition cursor-pointer">💻 CODE NOW</button>
                 </div>
               </div>
-              <div class="text-xs text-slate-300 flex flex-wrap items-center gap-1.5">
-                <strong class="text-slate-200">Target Files:</strong> \${compsHtml}
+              <div class="border rounded-lg px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs \${effortInfo.boxClass}">
+                <div><strong>🔥 Suggested Execution Effort: \${effortInfo.label}</strong> <code class="font-mono px-1.5 py-0.5 rounded bg-black/30">\${effortInfo.flag}</code></div>
+                <span class="text-[11px] opacity-90">\${escapeHtml(effortInfo.reason)}</span>
               </div>
-              <div class="bg-slate-950/90 border border-slate-700/80 rounded-lg p-3 max-h-56 overflow-y-auto">
-                <pre class="whitespace-pre-wrap font-mono text-[11px] text-slate-200 leading-relaxed">\${escapeHtml(planMd || 'No implementation plan recorded yet. Click Re-Plan to generate one.')}</pre>
+              <div class="text-xs text-[var(--muted-foreground,#cbd5e1)] flex flex-wrap items-center gap-1.5">
+                <strong class="text-[var(--foreground,#e2e8f0)]">Target Files:</strong> \${compsHtml}
+              </div>
+              <div class="bg-[var(--background,#0f172a)] border border-[var(--border,#334155)] rounded-lg p-3 max-h-48 overflow-y-auto">
+                <pre class="whitespace-pre-wrap font-mono text-[11px] text-[var(--foreground,#e2e8f0)] leading-relaxed">\${escapeHtml(planMd || 'No implementation plan recorded yet. Click PLAN NOW to draft implementation_plan.md or CODE NOW to execute directly.')}</pre>
               </div>
               <div class="space-y-1.5">
-                <div class="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">⚡ Select Stage B AGY Coding Model to Start Coding Immediately (Saves 55%–80% Credits):</div>
+                <div class="text-[11px] font-bold text-emerald-300 uppercase tracking-wider">⚡ Quick Launch with AGY Model (Suggested Effort: \${effortInfo.label}):</div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   \${codeOptions.map(opt => \`
-                    <button onclick="closeTaskInspector(); confirmModelAndRun('\${safeId}', 'code', '\${escapeAttr(opt.name)}', '\${escapeAttr(opt.modelId)}', '\${escapeAttr(opt.effort)}')" class="text-left p-2 rounded-lg border transition cursor-pointer \${opt.recommended ? 'border-emerald-400/70 bg-emerald-950/40 hover:bg-emerald-900/50' : 'border-slate-700 bg-slate-900/80 hover:border-slate-500'}">
+                    <button onclick="closeTaskInspector(); confirmModelAndRun('\${safeId}', 'code', '\${escapeAttr(opt.name)}', '\${escapeAttr(opt.modelId)}', '\${escapeAttr(opt.effort)}')" class="text-left p-2 rounded-lg border transition cursor-pointer \${opt.recommended ? 'border-emerald-400/70 bg-emerald-950/40 hover:bg-emerald-900/50' : 'border-[var(--border,#334155)] bg-[var(--card,#1e293b)]/80 hover:border-slate-500'}">
                       <div class="flex items-center justify-between gap-1">
-                        <span class="font-bold text-white text-xs">\${escapeHtml(opt.name)}</span>
+                        <span class="font-bold text-[var(--foreground,#ffffff)] text-xs">\${escapeHtml(opt.name)}</span>
                         \${opt.recommended ? '<span class="text-[10px] font-bold text-amber-300">🏆 Best ROI</span>' : ''}
                       </div>
-                      <div class="text-[11px] text-emerald-300/90 font-mono mt-0.5">\${escapeHtml(opt.burn)}</div>
-                      <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">\${escapeHtml(opt.pool)}</div>
+                      <div class="text-[11px] text-emerald-300/90 font-mono mt-0.5">\${escapeHtml(opt.burn)} · /effort \${escapeHtml(opt.effort)}</div>
+                      <div class="text-[10px] text-[var(--muted-foreground,#94a3b8)] mt-0.5 line-clamp-1">\${escapeHtml(opt.pool)}</div>
                     </button>
                   \`).join('')}
                 </div>
@@ -2910,21 +3064,23 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       if (btn) {
         btn.disabled = (state === 'transcribing');
+        btn.title = state === 'recording' ? 'Stop Record Audio' : (state === 'transcribing' ? 'Transcribing Audio...' : 'Record Audio');
+        btn.setAttribute('aria-label', btn.title);
         if (state === 'recording') {
-          btn.className = 'absolute right-2 bottom-2.5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1 shadow-lg shadow-rose-900/40';
+          btn.className = 'absolute right-2 bottom-2.5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded-lg px-2 py-1.5 text-xs font-semibold transition cursor-pointer flex items-center gap-1 shadow-lg shadow-rose-900/40';
         } else if (state === 'transcribing') {
-          btn.className = 'absolute right-2 bottom-2.5 bg-amber-600/80 text-white border border-amber-400 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-wait flex items-center gap-1';
+          btn.className = 'absolute right-2 bottom-2.5 bg-[var(--primary,#3b82f6)]/80 text-[var(--primary-foreground,#ffffff)] border border-[var(--primary,#3b82f6)] rounded-lg px-2 py-1.5 text-xs font-semibold transition cursor-wait flex items-center gap-1';
         } else {
-          btn.className = 'absolute right-2 bottom-2.5 bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-500/40 rounded-lg px-2 py-1 text-xs font-semibold transition cursor-pointer flex items-center gap-1';
+          btn.className = 'absolute right-2 bottom-2.5 bg-[var(--card,#1e293b)] hover:bg-[var(--border,#334155)] text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] rounded-lg px-2 py-1.5 text-xs font-semibold transition cursor-pointer flex items-center gap-1';
         }
       }
       if (icon) {
         if (state === 'recording') {
-          icon.textContent = '⏹️ ' + formatTodoVoiceDuration(todoVoiceSeconds);
+          icon.innerHTML = AGY_STOP_AUDIO_SVG + '<span class="font-mono tabular-nums text-[11px]">' + formatTodoVoiceDuration(todoVoiceSeconds) + '</span>';
         } else if (state === 'transcribing') {
-          icon.textContent = '⏳';
+          icon.innerHTML = AGY_SPINNER_SVG;
         } else {
-          icon.textContent = '🎙️';
+          icon.innerHTML = AGY_RECORD_AUDIO_SVG;
         }
       }
       if (status) {
@@ -2953,14 +3109,14 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     function startTodoVoiceTimer() {
       clearTodoVoiceTimer();
       todoVoiceSeconds = 0;
-      setTodoVoiceUI('recording', '🎙️ Recording 0:00 — speak your idea, then click ⏹️ to transcribe');
+      setTodoVoiceUI('recording', 'Record Audio 0:00 — speak your idea, then click Stop to transcribe');
       todoVoiceTimer = setInterval(() => {
         todoVoiceSeconds += 1;
         const dur = formatTodoVoiceDuration(todoVoiceSeconds);
         const icon = document.getElementById('todoVoiceIcon');
         const text = document.getElementById('todoVoiceText');
-        if (icon && todoVoiceActive) icon.textContent = '⏹️ ' + dur;
-        if (text && todoVoiceActive) text.textContent = '🎙️ Recording ' + dur + ' — speak your idea, then click ⏹️ to transcribe';
+        if (icon && todoVoiceActive) icon.innerHTML = AGY_STOP_AUDIO_SVG + '<span class="font-mono tabular-nums text-[11px]">' + dur + '</span>';
+        if (text && todoVoiceActive) text.textContent = 'Record Audio ' + dur + ' — speak your idea, then click Stop to transcribe';
       }, 1000);
     }
 
@@ -3042,7 +3198,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         const mime = todoVoiceRecorderMime || 'audio/webm';
         todoVoiceMediaRecorder = null;
 
-        setTodoVoiceUI('transcribing', '⏳ Transcribing voice capture...');
+        setTodoVoiceUI('transcribing', 'Transcribing recorded audio...');
 
         const blob = await new Promise((resolve) => {
           recorder.onstop = () => {
@@ -3079,7 +3235,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           setTodoVoiceUI('idle');
           if (res && res.ok) {
             if (appendTranscriptToIdeaInput(res.transcript)) {
-              showToast('🎙️ Voice transcribed! Review or press Enter to add to TO DO');
+              showToast('✅ Record Audio transcribed — review or press Enter to add to TO DO');
               return res.transcript;
             }
             showToast('⚠️ No speech recognized — please try speaking again');
@@ -3094,7 +3250,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       }
 
       if (engine === 'host-mic') {
-        setTodoVoiceUI('transcribing', '⏳ Transcribing microphone recording...');
+        setTodoVoiceUI('transcribing', 'Transcribing microphone audio...');
         const res = await callBridgeJson('/api/voice-record/stop', {
           repoRoot: rawData.repoRoot,
           lang
@@ -3102,7 +3258,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         setTodoVoiceUI('idle');
         if (res && res.ok) {
           if (appendTranscriptToIdeaInput(res.transcript)) {
-            showToast('🎙️ Voice transcribed! Review or press Enter to add to TO DO');
+            showToast('✅ Record Audio transcribed — review or press Enter to add to TO DO');
             return res.transcript;
           }
           showToast('⚠️ No speech recognized — please try speaking again');
@@ -3468,24 +3624,102 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
     let pendingDropContext = null;
 
-    function getModelOptionsForTicket(task, mode) {
-      const compCount = task && Array.isArray(task.components) ? task.components.length : 0;
-      const prio = String((task && task.priority) || 'medium').toLowerCase();
-      const type = String((task && task.type) || 'feature').toLowerCase();
-      const text = task ? ((task.title || '') + ' ' + (task.description || '')).toLowerCase() : '';
-      const isComplex = compCount >= 3 || prio === 'high' || type === 'refactor' || /\\b(oauth|auth|schema|migration|concurrency|architect|p0|brick)\\b/.test(text);
-      const isMicro = compCount <= 1 && prio === 'low';
+    function toggleTicketMultiSelect(taskId, event) {
+      if (event) event.stopPropagation();
+      if (!taskId) return;
+      if (selectedTicketIds.has(taskId)) selectedTicketIds.delete(taskId);
+      else selectedTicketIds.add(taskId);
+      renderBoard();
+    }
+
+    function toggleSelectColumn(colKey, event) {
+      if (event) event.stopPropagation();
+      const q = (document.getElementById('searchInput') ? document.getElementById('searchInput').value : '').toLowerCase();
+      const colTasks = (rawData.tasks || []).filter(t => {
+        if (t.status !== colKey) return false;
+        if (!isClientTaskInActiveBranch(t)) return false;
+        return !q || t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q));
+      });
+      if (colTasks.length === 0) return;
+      const allSelected = colTasks.every(t => selectedTicketIds.has(t.id));
+      for (const t of colTasks) {
+        if (allSelected) selectedTicketIds.delete(t.id);
+        else selectedTicketIds.add(t.id);
+      }
+      renderBoard();
+    }
+
+    function clearTicketMultiSelect(event) {
+      if (event) event.stopPropagation();
+      selectedTicketIds.clear();
+      renderBoard();
+    }
+
+    function updateMultiSelectBar() {
+      const validIds = [];
+      for (const id of Array.from(selectedTicketIds)) {
+        const t = (rawData.tasks || []).find(item => item.id === id);
+        if (t && (t.status === 'todo' || t.status === 'ready')) {
+          validIds.push(id);
+        } else {
+          selectedTicketIds.delete(id);
+        }
+      }
+      const bar = document.getElementById('multiSelectActionBar');
+      const countBadge = document.getElementById('multiSelectCountBadge');
+      const previewEl = document.getElementById('multiSelectIdsPreview');
+      const planCountEl = document.getElementById('batchPlanCount');
+      const codeCountEl = document.getElementById('batchCodeCount');
+      if (bar) bar.classList.toggle('hidden', validIds.length === 0);
+      if (countBadge) countBadge.textContent = validIds.length + ' SELECTED';
+      if (previewEl) previewEl.textContent = validIds.join(', ');
+      if (planCountEl) planCountEl.textContent = String(validIds.length);
+      if (codeCountEl) codeCountEl.textContent = String(validIds.length);
+
+      ['todo', 'ready'].forEach(colKey => {
+        const btn = document.getElementById('select-all-' + colKey);
+        if (!btn) return;
+        const colTasks = (rawData.tasks || []).filter(t => t.status === colKey && isClientTaskInActiveBranch(t));
+        const allSel = colTasks.length > 0 && colTasks.every(t => selectedTicketIds.has(t.id));
+        btn.textContent = allSel ? '☑ None' : '☑ All';
+        btn.className = allSel
+          ? 'text-[11px] bg-[var(--primary,#3b82f6)] text-[var(--primary-foreground,#ffffff)] border border-[var(--primary,#3b82f6)] px-2 py-0.5 rounded font-semibold transition cursor-pointer'
+          : 'text-[11px] bg-[var(--background,#0f172a)]/80 hover:bg-[var(--card,#1e293b)] text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] border border-[var(--border,#334155)] px-2 py-0.5 rounded font-medium transition cursor-pointer';
+      });
+    }
+
+    function openBatchModelSelector(mode, event) {
+      if (event) event.stopPropagation();
+      const ids = Array.from(selectedTicketIds).filter(id => {
+        const t = (rawData.tasks || []).find(item => item.id === id);
+        return t && (t.status === 'todo' || t.status === 'ready');
+      });
+      if (ids.length === 0) {
+        showToast('⚠️ Select one or more tickets in TO DO or READY first');
+        return;
+      }
+      openModelSelectorModal(ids, mode, event, null);
+    }
+
+    function getModelOptionsForTicket(taskOrTasks, mode) {
+      const tasks = Array.isArray(taskOrTasks) ? taskOrTasks.filter(Boolean) : (taskOrTasks ? [taskOrTasks] : []);
+      const isBatch = tasks.length >= 2;
+      const effortInfo = getRecommendedExecutionEffort(tasks);
+      const isHigh = effortInfo.level === 'high';
+      const isMicro = effortInfo.level === 'low';
+      const capLabel = effortInfo.level.charAt(0).toUpperCase() + effortInfo.level.slice(1);
+      const codeEffort = effortInfo.level;
 
       if (mode === 'plan') {
-        return [
+        const basePlanOptions = [
           {
             name: 'Gemini 4 Argon (High)',
             modelId: 'gemini-4-argon-high',
             effort: 'high',
             pool: '🔵 Google Quota Pool 1',
             burn: '5.0x–7.0x',
-            recommended: isComplex,
-            why: 'Frontier architectural synthesis — ideal for 3+ file features, cross-layer schemas, and P0 root-cause planning (1–2 turns, then switch down for CODE).'
+            recommended: !isBatch && isHigh,
+            why: 'Frontier architectural synthesis — ideal for multi-file features, cross-layer schemas, and P0 root-cause planning (1–2 turns, then switch down for CODE).'
           },
           {
             name: 'Gemini 4 Carbon (High)',
@@ -3493,7 +3727,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             effort: 'high',
             pool: '🔵 Google Quota Pool 1',
             burn: '3.5x–4.5x',
-            recommended: !isComplex && !isMicro,
+            recommended: !isBatch && !isHigh && !isMicro,
             why: 'Best Quality-to-Credit balance for planning 2–3 file backend, OAuth, database, or state-machine tickets (~35% cheaper than Argon).'
           },
           {
@@ -3511,61 +3745,137 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             effort: 'medium',
             pool: '🔵 Google Quota Pool 1',
             burn: '2.0x–3.0x',
-            recommended: isMicro,
+            recommended: !isBatch && isMicro,
             why: 'Fast, low-burn planning for 1–2 file UI/feature tickets where heavyweight Argon/Opus reasoning is unnecessary.'
           }
         ];
+
+        const orchestratorPlanOptions = [
+          {
+            name: 'Google Orchestrator (Carbon · High)',
+            modelId: 'orchestrator-carbon-high',
+            effort: 'high',
+            isOrchestrator: true,
+            pool: '🎛️ Google Orchestrator Pool · Simultaneous Parallel Swarm',
+            burn: '5.5x–8.0x (Parallel Batch)',
+            recommended: isBatch,
+            why: isBatch
+              ? ('Explore & plan all ' + tasks.length + ' selected tickets simultaneously in parallel sub-agents into READY.')
+              : 'Spawn parallel research sub-agents when this ticket spans multiple repos or decoupled layers.'
+          },
+          {
+            name: 'Google Orchestrator (Argon · High)',
+            modelId: 'orchestrator-argon-high',
+            effort: 'high',
+            isOrchestrator: true,
+            pool: '🎛️ Google Orchestrator Pool · Frontier Parallel Swarm',
+            burn: '8.0x–12.0x (Parallel Batch)',
+            recommended: false,
+            why: 'Maximum-depth simultaneous planning across multiple complex tickets or cross-service refactors.'
+          }
+        ];
+
+        return isBatch ? [...orchestratorPlanOptions, ...basePlanOptions] : [...basePlanOptions, orchestratorPlanOptions[0]];
       }
 
-      return [
+      const orchestratorCodeOptions = [
         {
-          name: 'Gemini 4 Neon (Medium)',
-          modelId: 'gemini-4-neon-medium',
-          effort: 'medium',
-          pool: '🔵 Google Quota Pool 1',
-          burn: '2.0x–3.0x (Saves ~65% vs Argon)',
-          recommended: !isMicro,
-          why: 'Premier Stage B daily workhorse for coding 80% of READY tickets according to implementation_plan.md.'
+          name: 'Google Orchestrator (Carbon · High)',
+          modelId: 'orchestrator-carbon-high',
+          effort: 'high',
+          isOrchestrator: true,
+          pool: '🎛️ Google Orchestrator Pool · Simultaneous Multi-Agent Swarm',
+          burn: '6.0x–9.0x (Simultaneous N-Ticket Execution)',
+          recommended: isBatch && isHigh,
+          why: isBatch
+            ? ('Execute all ' + tasks.length + ' selected tickets simultaneously with High Effort coordination and shared test verification.')
+            : 'Parallel sub-agent swarm execution if you want multiple sub-modules coded simultaneously.'
         },
         {
-          name: 'Claude Sonnet 5.5 (Medium)',
-          modelId: 'claude-sonnet-5-5-medium',
-          effort: 'medium',
+          name: 'Google Orchestrator (Neon · High)',
+          modelId: 'orchestrator-neon-high',
+          effort: 'high',
+          isOrchestrator: true,
+          pool: '🎛️ Google Orchestrator Pool · Fast Parallel Swarm',
+          burn: '4.0x–6.0x (Fast Simultaneous Swarm)',
+          recommended: isBatch && !isHigh,
+          why: 'High-throughput simultaneous execution across multiple independent tickets at lower credit burn (~35% cheaper than Orchestrator Carbon).'
+        },
+        {
+          name: 'Google Orchestrator (Argon · High)',
+          modelId: 'orchestrator-argon-high',
+          effort: 'high',
+          isOrchestrator: true,
+          pool: '🎛️ Google Orchestrator Pool · Frontier Parallel Swarm',
+          burn: '9.0x–14.0x (Frontier Simultaneous Swarm)',
+          recommended: false,
+          why: 'Frontier parallel Orchestrator swarm for deep cross-system migrations and P0 architecture.'
+        }
+      ];
+
+      const workhorseCodeOptions = [
+        {
+          name: isHigh ? 'Gemini 4 Carbon (High)' : 'Gemini 4 Neon (' + capLabel + ')',
+          modelId: isHigh ? 'gemini-4-carbon-high' : ('gemini-4-neon-' + codeEffort),
+          effort: codeEffort,
+          pool: '🔵 Google Quota Pool 1',
+          burn: isHigh ? '3.5x–4.5x (/effort high)' : '2.0x–3.0x (Saves ~65% vs Argon)',
+          recommended: !isBatch && isHigh,
+          why: isHigh
+            ? 'High-Effort execution workhorse recommended for this ticket — thorough root-cause rigor without Argon frontier surcharge.'
+            : 'Premier Stage B daily workhorse for coding tickets cleanly according to implementation_plan.md.'
+        },
+        {
+          name: 'Gemini 4 Neon (' + (isHigh ? 'High' : capLabel) + ')',
+          modelId: 'gemini-4-neon-' + (isHigh ? 'high' : codeEffort),
+          effort: isHigh ? 'high' : codeEffort,
+          pool: '🔵 Google Quota Pool 1',
+          burn: '2.0x–3.0x (Saves ~65% vs Argon)',
+          recommended: !isBatch && !isHigh && !isMicro,
+          why: 'Fast, high-Q/C Google implementation workhorse — keeps throughput crisp on UI, CLI, and full-stack modules.'
+        },
+        {
+          name: 'Claude Sonnet 5.5 (' + (isHigh ? 'High' : 'Medium') + ')',
+          modelId: 'claude-sonnet-5-5-' + (isHigh ? 'high' : 'medium'),
+          effort: isHigh ? 'high' : 'medium',
           pool: '🟠 External Quota Pool 2 (Separate Reset Clock)',
           burn: '2.5x–4.0x (Saves ~60% vs Opus)',
           recommended: false,
           why: 'Surgical TypeScript/React/UI component coding and multi-file refactoring on the independent External quota pool.'
         },
         {
-          name: 'Gemini 3.8 Flash (Medium)',
-          modelId: 'gemini-3.8-flash-medium',
-          effort: 'low',
+          name: 'Gemini 3.8 Flash (' + (isMicro ? 'Low' : 'Medium') + ')',
+          modelId: 'gemini-3.8-flash-' + (isMicro ? 'low' : 'medium'),
+          effort: isMicro ? 'low' : 'medium',
           pool: '🔵 Google Quota Pool 1',
           burn: '1.0x (Lowest Burn · Saves ~80%)',
-          recommended: isMicro,
+          recommended: !isBatch && isMicro,
           why: 'Ultra-fast, lowest credit burn — ideal for 1–2 file UI tweaks, CSS, copy, docs, or straightforward CRUD tickets.'
-        },
-        {
-          name: 'GPT-OSS 120B (Medium)',
-          modelId: 'gpt-oss-120b-medium',
-          effort: 'medium',
-          pool: '🟠 External Quota Pool 2 (Separate Reset Clock)',
-          burn: '1.5x (Open-Weight Offload)',
-          recommended: false,
-          why: 'High-efficiency open-weight coding option when offloading routine implementation from Google and Claude pools.'
         }
       ];
+
+      return isBatch
+        ? [...orchestratorCodeOptions, ...workhorseCodeOptions.slice(0, 2)]
+        : [...workhorseCodeOptions, orchestratorCodeOptions[0]];
     }
 
-    function openModelSelectorModal(taskId, mode, ev, dropCtx = null) {
+    function openModelSelectorModal(taskIdOrIds, mode, ev, dropCtx = null) {
       if (ev) ev.stopPropagation();
-      const task = rawData.tasks.find(t => t.id === taskId);
-      if (!task) return;
+      const rawIds = Array.isArray(taskIdOrIds)
+        ? taskIdOrIds
+        : String(taskIdOrIds || '').split(/[\\s,]+/).filter(Boolean);
+      const tasks = rawIds.map(id => (rawData.tasks || []).find(t => t.id === id)).filter(Boolean);
+      if (tasks.length === 0) return;
+      const isBatch = tasks.length > 1;
+      const idsJoined = tasks.map(t => t.id).join(', ');
+      const idsCsv = tasks.map(t => t.id).join(',');
+      const effortInfo = getRecommendedExecutionEffort(tasks);
       pendingDropContext = dropCtx;
 
       const modal = document.getElementById('modelSelectorModal');
       const badge = document.getElementById('modelModalModeBadge');
       const taskIdEl = document.getElementById('modelModalTaskId');
+      const effortBadgeEl = document.getElementById('modelModalEffortBadge');
       const titleEl = document.getElementById('modelModalTitle');
       const subEl = document.getElementById('modelModalSubtitle');
       const bodyEl = document.getElementById('modelSelectorBody');
@@ -3573,44 +3883,73 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       const isPlan = mode === 'plan';
       const fromDrag = Boolean(dropCtx);
-      badge.textContent = isPlan
-        ? (fromDrag ? '📐 DRAGGED TO READY → SELECT PLANNING MODEL' : '📐 PLAN BUTTON → SELECT AGY PLANNING MODEL')
-        : (fromDrag ? '💻 DRAGGED TO IN PROGRESS → SELECT CODING MODEL' : '💻 CODE BUTTON → SELECT STAGE B CODING MODEL');
-      badge.className = isPlan
-        ? 'badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-2 py-0.5 text-xs font-bold'
-        : 'badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded px-2 py-0.5 text-xs font-bold';
+      badge.textContent = isBatch
+        ? (isPlan
+            ? ('🎛️ BATCH PLAN (' + tasks.length + ' TICKETS) → ORCHESTRATOR / MODEL SELECT')
+            : ('🎛️ BATCH CODE (' + tasks.length + ' TICKETS) → SIMULTANEOUS ORCHESTRATOR SELECT'))
+        : (isPlan
+            ? (fromDrag ? '📐 DRAGGED TO READY → SELECT PLANNING MODEL' : '📐 PLAN NOW → SELECT AGY PLANNING MODEL')
+            : (fromDrag ? '💻 DRAGGED TO IN PROGRESS → SELECT CODING MODEL' : '💻 CODE NOW → SELECT STAGE B CODING MODEL'));
+      badge.className = isBatch
+        ? 'badge bg-indigo-500/20 text-indigo-200 border border-indigo-400/50 rounded px-2 py-0.5 text-xs font-bold'
+        : (isPlan
+            ? 'badge bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded px-2 py-0.5 text-xs font-bold'
+            : 'badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded px-2 py-0.5 text-xs font-bold');
 
-      taskIdEl.textContent = '[' + task.id + '] · ' + (task.priority || 'medium').toUpperCase();
-      titleEl.textContent = isPlan
-        ? ('Plan [' + task.id + ']: ' + task.title + ' (Moves Ticket to READY)')
-        : ('Code [' + task.id + ']: ' + task.title + ' (Moves Ticket to IN PROGRESS)');
-      subEl.textContent = isPlan
-        ? 'Select the best AGY model to plan this ticket. After selection, the ticket moves to READY and /backlog-plan is ready to run.'
-        : 'Blueprint is READY! Select a Stage B workhorse model below to save 55%–80% credits, move the ticket to IN PROGRESS, and execute the plan.';
+      taskIdEl.textContent = isBatch
+        ? (tasks.length + ' Selected: [' + idsJoined + ']')
+        : ('[' + tasks[0].id + '] · ' + (tasks[0].priority || 'medium').toUpperCase());
 
-      const options = getModelOptionsForTicket(task, isPlan ? 'plan' : 'code');
-      const safeId = escapeAttr(task.id);
+      if (effortBadgeEl) {
+        effortBadgeEl.textContent = '🔥 Suggested Execution Effort: ' + effortInfo.label + ' (' + effortInfo.flag + ')';
+        effortBadgeEl.className = 'badge border rounded px-2 py-0.5 text-xs ' + effortInfo.badgeClass;
+        effortBadgeEl.classList.remove('hidden');
+      }
 
-      bodyEl.innerHTML = options.map(opt => {
-        const borderCls = opt.recommended
-          ? (isPlan ? 'border-purple-400 bg-purple-950/35 ring-1 ring-purple-400/30' : 'border-emerald-400 bg-emerald-950/35 ring-1 ring-emerald-400/30')
-          : 'border-slate-700/80 bg-slate-900/80 hover:border-slate-500';
-        const btnCls = isPlan
-          ? 'bg-purple-600 hover:bg-purple-500 text-white'
-          : 'bg-emerald-600 hover:bg-emerald-500 text-white';
-        const actionLabel = isPlan
-          ? '📐 Select & Move to READY → Run /backlog-plan'
-          : '💻 Select & Move to IN PROGRESS → Run /backlog-start';
+      titleEl.textContent = isBatch
+        ? ((isPlan ? 'Plan ' : 'Code ') + tasks.length + ' Selected Tickets Simultaneously (Choose Google Orchestrator or Stage Model)')
+        : (isPlan
+            ? ('Plan [' + tasks[0].id + ']: ' + tasks[0].title + ' (Moves Ticket to READY)')
+            : ('Code [' + tasks[0].id + ']: ' + tasks[0].title + ' (Moves Ticket to IN PROGRESS)'));
+      subEl.textContent = isBatch
+        ? ('Selected: ' + idsJoined + '. Pick a Google Orchestrator below for simultaneous multi-agent swarm execution (' + effortInfo.flag + ').')
+        : (isPlan
+            ? ('Select the best AGY model to plan this ticket (' + effortInfo.flag + '). Moves ticket to READY and copies /backlog-plan.')
+            : ('Select your Stage B coding model or Orchestrator (' + effortInfo.flag + '). Moves ticket to IN PROGRESS and copies /backlog-start.'));
+
+      const options = getModelOptionsForTicket(tasks, isPlan ? 'plan' : 'code');
+      const safeCsv = escapeAttr(idsCsv);
+
+      const effortBannerHtml = \`
+        <div class="border rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs \${effortInfo.boxClass}">
+          <div><strong>🔥 Suggested Execution Effort: \${effortInfo.label}</strong> <code class="font-mono px-1.5 py-0.5 rounded bg-black/30">\${effortInfo.flag}</code></div>
+          <span class="text-[11px] opacity-90">\${escapeHtml(effortInfo.reason)}</span>
+        </div>
+      \`;
+
+      bodyEl.innerHTML = effortBannerHtml + options.map(opt => {
+        const borderCls = opt.isOrchestrator
+          ? (opt.recommended ? 'border-indigo-400 bg-indigo-950/45 ring-1 ring-indigo-400/40' : 'border-indigo-500/40 bg-indigo-950/20 hover:border-indigo-400')
+          : (opt.recommended
+              ? (isPlan ? 'border-purple-400 bg-purple-950/35 ring-1 ring-purple-400/30' : 'border-emerald-400 bg-emerald-950/35 ring-1 ring-emerald-400/30')
+              : 'border-[var(--border,#334155)] bg-[var(--background,#0f172a)]/80 hover:border-slate-500');
+        const btnCls = opt.isOrchestrator
+          ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
+          : (isPlan ? 'bg-purple-600 hover:bg-purple-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white');
+        const actionLabel = opt.isOrchestrator
+          ? (isPlan ? '🎛️ Launch Orchestrator Plan' : '🎛️ Launch Simultaneous Orchestrator')
+          : (isPlan ? '📐 PLAN NOW → Move to READY' : '💻 CODE NOW → Move to IN PROGRESS');
         return \`
-          <div onclick="confirmModelAndRun('\${safeId}', '\${isPlan ? 'plan' : 'code'}', '\${escapeAttr(opt.name)}', '\${escapeAttr(opt.modelId)}', '\${escapeAttr(opt.effort)}')" class="border \${borderCls} rounded-xl p-3 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div onclick="confirmModelAndRun('\${safeCsv}', '\${isPlan ? 'plan' : 'code'}', '\${escapeAttr(opt.name)}', '\${escapeAttr(opt.modelId)}', '\${escapeAttr(opt.effort)}')" class="border \${borderCls} rounded-xl p-3 transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="space-y-1 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-bold text-white text-xs">\${escapeHtml(opt.name)}</span>
-                \${opt.recommended ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 text-[10px]">🏆 RECOMMENDED BEST Q/C ROI</span>' : ''}
-                <span class="text-[11px] font-mono bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">\${escapeHtml(opt.burn)}</span>
-                <span class="text-[11px] text-slate-400">\${escapeHtml(opt.pool)}</span>
+                <span class="font-bold text-[var(--foreground,#ffffff)] text-xs">\${escapeHtml(opt.name)}</span>
+                \${opt.isOrchestrator ? '<span class="badge bg-indigo-500/25 text-indigo-200 border border-indigo-400/50 rounded px-1.5 py-0.5 text-[10px]">🎛️ GOOGLE ORCHESTRATOR</span>' : ''}
+                \${opt.recommended ? '<span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-1.5 py-0.5 text-[10px]">🏆 RECOMMENDED</span>' : ''}
+                <span class="text-[11px] font-mono bg-[var(--card,#1e293b)] text-[var(--foreground,#e2e8f0)] border border-[var(--border,#334155)] px-1.5 py-0.5 rounded">\${escapeHtml(opt.burn)}</span>
+                <span class="text-[11px] text-[var(--muted-foreground,#94a3b8)]">\${escapeHtml(opt.pool)}</span>
               </div>
-              <p class="text-slate-300 text-xs leading-relaxed">\${escapeHtml(opt.why)}</p>
+              <p class="text-[var(--muted-foreground,#cbd5e1)] text-xs leading-relaxed">\${escapeHtml(opt.why)}</p>
             </div>
             <button class="\${btnCls} text-xs font-semibold px-3 py-2 rounded-lg shadow transition whitespace-nowrap cursor-pointer shrink-0">
               \${actionLabel}
@@ -3633,9 +3972,11 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       pendingDropContext = null;
     }
 
-    async function confirmModelAndRun(taskId, mode, modelNameAttr, modelId, effortTier) {
-      const task = rawData.tasks.find(t => t.id === taskId);
-      if (!task) return;
+    async function confirmModelAndRun(taskIdsCsv, mode, modelNameAttr, modelId, effortTier) {
+      const ids = String(taskIdsCsv || '').split(/[\\s,]+/).filter(Boolean);
+      const tasks = ids.map(id => (rawData.tasks || []).find(t => t.id === id)).filter(Boolean);
+      if (tasks.length === 0) return;
+      const isBatch = tasks.length > 1;
       const dropCtx = pendingDropContext;
       pendingDropContext = null;
       closeModelSelectorModal(false);
@@ -3644,57 +3985,67 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const targetColKey = isPlan ? 'ready' : 'in_progress';
       materializeColumnVisualOrder(targetColKey);
 
-      task.status = isPlan ? 'ready' : 'in_progress';
-      if (isPlan && !task.plannedAt) {
-        task.plannedAt = new Date().toISOString();
+      for (const task of tasks) {
+        task.status = isPlan ? 'ready' : 'in_progress';
+        if (isPlan && !task.plannedAt) {
+          task.plannedAt = new Date().toISOString();
+        }
       }
 
-      if (dropCtx && dropCtx.targetTaskId && dropCtx.targetTaskId !== taskId) {
-        rawData.tasks = rawData.tasks.filter(t => t.id !== taskId);
+      if (!isBatch && dropCtx && dropCtx.targetTaskId && dropCtx.targetTaskId !== tasks[0].id) {
+        const task = tasks[0];
+        rawData.tasks = rawData.tasks.filter(t => t.id !== task.id);
         const targetIdx = rawData.tasks.findIndex(t => t.id === dropCtx.targetTaskId);
         const insertIdx = dropCtx.insertBefore ? targetIdx : targetIdx + 1;
         rawData.tasks.splice(Math.max(0, insertIdx), 0, task);
-      } else if (dropCtx) {
-        rawData.tasks = rawData.tasks.filter(t => t.id !== taskId);
+      } else if (!isBatch && dropCtx) {
+        const task = tasks[0];
+        rawData.tasks = rawData.tasks.filter(t => t.id !== task.id);
         rawData.tasks.push(task);
       }
 
+      if (isBatch) selectedTicketIds.clear();
+      const idListStr = tasks.map(t => t.id).join(', ');
       const cmd = isPlan
-        ? ('/effort ' + effortTier + ' /backlog-plan ' + taskId + ' --model ' + modelId)
-        : ('/effort ' + effortTier + ' /backlog-start ' + taskId + ' --model ' + modelId);
+        ? ('/effort ' + effortTier + ' /backlog-plan ' + idListStr + ' --model ' + modelId)
+        : ('/effort ' + effortTier + ' /backlog-start ' + idListStr + ' --model ' + modelId);
 
       renderBoard();
-      copyTextToClipboard(cmd, true, taskId);
+      copyTextToClipboard(cmd, true, tasks[0].id);
 
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (titleEl) {
-        titleEl.textContent = isPlan
-          ? ('📐 Moved [' + task.id + '] to READY · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!')
-          : ('💻 Moved [' + task.id + '] to IN PROGRESS · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!');
+        titleEl.textContent = isBatch
+          ? ((isPlan ? '🎛️ Batch Planned ' : '🎛️ Simultaneous Orchestrator Execution ') + '[' + idListStr + '] · Model: ' + modelId + ' — Press ⌘V + Enter in Chat!')
+          : (isPlan
+              ? ('📐 Moved [' + tasks[0].id + '] to READY · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!')
+              : ('💻 Moved [' + tasks[0].id + '] to IN PROGRESS · Selected Model: ' + modelId + ' — Press ⌘V + Enter in Chat!'));
       }
 
       await callLocalBridge('/api/reorder', {
         repoRoot: rawData.repoRoot,
         orderedIds: rawData.tasks.map(t => t.id),
-        movedId: task.id,
-        newStatus: task.status,
+        movedId: tasks[0].id,
+        newStatus: tasks[0].status,
         columnSorts
       });
 
       if (isPlan) {
         await callLocalBridge('/api/plan', {
           repoRoot: rawData.repoRoot,
-          id: task.id,
+          id: tasks[0].id,
+          ids: tasks.map(t => t.id),
           prompt: cmd
         });
-        showToast('📐 [' + task.id + '] moved to READY! Copied "' + cmd + '" — press ⌘V in chat.');
+        showToast('📐 Moved [' + idListStr + '] to READY! Copied "' + cmd + '" — press ⌘V in chat.');
       } else {
         await callLocalBridge('/api/kickoff', {
           repoRoot: rawData.repoRoot,
-          id: task.id,
+          id: tasks[0].id,
+          ids: tasks.map(t => t.id),
           prompt: cmd
         });
-        showToast('💻 [' + task.id + '] moved to IN PROGRESS! Copied "' + cmd + '" — press ⌘V in chat.');
+        showToast((isBatch ? '🎛️ ' : '💻 ') + '[' + idListStr + '] moved to IN PROGRESS! Copied "' + cmd + '" — press ⌘V in chat.');
       }
     }
 
@@ -4190,11 +4541,15 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         : task.type === 'qa' ? 'QA'
         : 'TASK';
 
-      const cardBorder = isInProgress
-        ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
-        : isReady
-          ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
-          : 'border-[var(--border,#334155)] hover:border-slate-500';
+      const canMultiSelect = colKey === 'todo' || colKey === 'ready';
+      const isSelected = canMultiSelect && selectedTicketIds.has(task.id);
+      const cardBorder = isSelected
+        ? 'border-[var(--primary,#3b82f6)] ring-2 ring-[var(--primary,#3b82f6)]/60'
+        : isInProgress
+          ? 'border-blue-500/50 hover:border-blue-400 ring-1 ring-blue-500/20'
+          : isReady
+            ? 'border-purple-500/45 hover:border-purple-400 ring-1 ring-purple-500/15'
+            : 'border-[var(--border,#334155)] hover:border-slate-500';
 
       const actionItemsPreviewHtml = isInProgress ? \`
         <div class="mb-2.5 bg-slate-900/90 border border-amber-500/30 hover:border-amber-400/60 rounded-lg p-2 transition cursor-pointer" onclick="openTaskInspector('\${safeIdAttr}', event)" title="Click to inspect &amp; assign Action Items being waited on">
@@ -4225,6 +4580,9 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         : [];
       const openChildCount = childTasks.filter(c => c.status !== 'done').length;
       const hasChildren = childTasks.length > 0;
+      const selectCheckboxHtml = canMultiSelect
+        ? \`<input type="checkbox" data-select-id="\${safeIdAttr}" \${isSelected ? 'checked' : ''} onclick="toggleTicketMultiSelect('\${safeIdAttr}', event)" class="w-3.5 h-3.5 rounded border-[var(--border,#475569)] accent-[var(--primary,#3b82f6)] cursor-pointer shrink-0" title="Select [\${safeIdAttr}] for batch Plan or Orchestrator Code execution">\`
+        : '';
       const collapseBtnHtml = (hasChildren || task.isResidualChild || Boolean(task.parentId) || isInProgress)
         ? \`<button onclick="toggleCardCollapse('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60 font-mono cursor-pointer" title="\${isCollapsed ? 'Expand ticket details' : 'Collapse ticket details'}">\${isCollapsed ? '▸' : '▾'}</button>\`
         : '';
@@ -4233,6 +4591,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         <div data-task-id="\${safeIdAttr}" data-col="\${colKey}" draggable="true" ondragstart="handleDragStart(event, '\${safeIdAttr}')" ondragover="handleCardDragOver(event, '\${safeIdAttr}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '\${safeIdAttr}')" ondragend="handleDragEnd(event)" onclick="handleCardClick('\${safeIdAttr}', event)" class="task-card bg-[var(--card,#1e293b)] border \${cardBorder} rounded-xl \${isCollapsed ? 'px-3 py-2' : 'p-3'} shadow-sm transition group cursor-grab active:cursor-grabbing \${task.isResidualChild || task.parentId ? 'bg-slate-900/90 border-cyan-500/40' : ''}">
           <div class="flex items-start justify-between gap-2 \${isCollapsed ? '' : 'mb-1.5'}">
             <div class="flex items-center gap-1.5 flex-wrap">
+              \${selectCheckboxHtml}
               \${collapseBtnHtml}
               <span class="text-slate-500 hover:text-slate-300 cursor-grab select-none text-xs px-0.5" title="Drag to reorder or move between columns">⠿</span>
               <span class="font-mono text-xs font-bold \${task.isResidualChild || task.parentId ? 'text-cyan-300' : 'text-blue-400'}">\${safeIdHtml}</span>
@@ -4382,6 +4741,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       document.getElementById('count-ready').textContent = readyTasks.length;
       document.getElementById('count-inprogress').textContent = allInProgressTasks.length;
       document.getElementById('count-done').textContent = doneTasks.length;
+      updateMultiSelectBar();
     }
 
     let lastTaskSignature = JSON.stringify((rawData.tasks || []).map(t => t.id + ':' + t.status + ':' + (t.liveActivity || '') + ':' + Boolean(t.collapsed) + ':' + t.title + ':' + (t.waitingOn || '') + ':' + JSON.stringify(t.actionItems || [])));
@@ -5125,7 +5485,7 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 }
 
-const BRIDGE_VERSION = '1.8.0';
+const BRIDGE_VERSION = '1.9.0';
 
 function spawnBridgeDaemon() {
   try {
@@ -5765,41 +6125,58 @@ function startBridgeServer(port = DEFAULT_PORT) {
       }
 
       if (endpoint === '/api/kickoff') {
-        const id = String(body.id || '').trim();
-        const prompt = String(body.prompt || (id ? `/backlog-start ${id}` : '')).trim();
+        const ids = Array.isArray(body.ids) && body.ids.length > 0
+          ? body.ids.map(x => String(x || '').trim()).filter(Boolean)
+          : String(body.id || '').split(/[\s,]+/).filter(Boolean);
+        const idLabel = ids.join(', ');
+        const prompt = String(body.prompt || (idLabel ? `/backlog-start ${idLabel}` : '')).trim();
         const copied = prompt ? copyToNativeOsClipboard(prompt) : false;
 
-        if (id) {
+        if (ids.length > 0) {
           const data = loadBacklog(targetRoot);
-          const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
-          if (task) {
-            if (task.status === 'todo' || task.status === 'ready') {
-              task.status = 'in_progress';
-              saveBacklog(data, targetRoot);
-              renderMigrationBoard(data, targetRoot);
-              writeReviewPaneArtifacts(data, targetRoot);
+          let changed = false;
+          for (const oneId of ids) {
+            const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
+            if (task) {
+              if (task.status === 'todo' || task.status === 'ready') {
+                recordTaskStateTransition(task, 'in_progress', 'coding');
+                changed = true;
+              }
+              unpackTaskAttachments(task, targetRoot);
             }
-            unpackTaskAttachments(task, targetRoot);
+          }
+          if (changed) {
+            saveBacklog(data, targetRoot);
+            renderMigrationBoard(data, targetRoot);
+            writeReviewPaneArtifacts(data, targetRoot);
           }
         }
-        return { status: 200, payload: { ok: true, copied, prompt, id } };
+        return { status: 200, payload: { ok: true, copied, prompt, id: ids[0] || '', ids } };
       }
 
       if (endpoint === '/api/plan') {
-        const id = String(body.id || '').trim();
-        const prompt = String(body.prompt || (id ? `/backlog-plan ${id}` : '/backlog-plan')).trim();
+        const ids = Array.isArray(body.ids) && body.ids.length > 0
+          ? body.ids.map(x => String(x || '').trim()).filter(Boolean)
+          : String(body.id || '').split(/[\s,]+/).filter(Boolean);
+        const idLabel = ids.join(', ');
+        const prompt = String(body.prompt || (idLabel ? `/backlog-plan ${idLabel}` : '/backlog-plan')).trim();
         const copied = prompt ? copyToNativeOsClipboard(prompt) : false;
 
         const data = loadBacklog(targetRoot);
-        if (id) {
-          const task = data.tasks.find(t => t.id.toLowerCase() === id.toLowerCase());
-          if (task) {
-            if (task.status === 'todo') {
-              task.status = 'ready';
-              task.plannedAt = new Date().toISOString();
+        if (ids.length > 0) {
+          const matchedCanonicalIds = [];
+          for (const oneId of ids) {
+            const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
+            if (task) {
+              if (task.status === 'todo') {
+                recordTaskStateTransition(task, 'ready', 'awaiting_approval');
+              }
+              matchedCanonicalIds.push(task.id);
+              unpackTaskAttachments(task, targetRoot);
             }
-            data.activePlanTaskIds = [task.id];
-            unpackTaskAttachments(task, targetRoot);
+          }
+          if (matchedCanonicalIds.length > 0) {
+            data.activePlanTaskIds = matchedCanonicalIds;
           }
         }
         saveBacklog(data, targetRoot);
@@ -5811,7 +6188,8 @@ function startBridgeServer(port = DEFAULT_PORT) {
             ok: true,
             copied,
             prompt,
-            id,
+            id: ids[0] || '',
+            ids,
             planPath: path.join(targetRoot, 'docs', 'planning', 'implementation_plan.md')
           }
         };
@@ -6919,7 +7297,7 @@ function main() {
     if (hasFromPlan) {
       let planFile = explicitPlanPath ? resolveAttachmentPath(explicitPlanPath, REPO_ROOT) : '';
       if (!planFile || !fs.existsSync(planFile)) {
-        const brainDirs = findWorkspaceBrainDirs(REPO_ROOT);
+        const brainDirs = findTargetBrainDirs(data, REPO_ROOT);
         const brainCandidate = brainDirs.length > 0 ? path.join(brainDirs[0], 'implementation_plan.md') : '';
         const wsCandidate = path.join(REPO_ROOT, 'docs', 'planning', 'implementation_plan.md');
         if (brainCandidate && fs.existsSync(brainCandidate)) planFile = brainCandidate;

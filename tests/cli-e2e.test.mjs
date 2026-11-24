@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import vm from 'node:vm';
 import { execFileSync, execSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -1051,10 +1052,29 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.doesNotMatch(html, /webkitSpeechRecognition/, '#todoIdeaModal must not rely on Chromium cloud webkitSpeechRecognition which fails in Electron');
     const bridgeSrc = fs.readFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'utf8');
     assert.match(bridgeSrc, /import os from 'node:os'/, 'backlog.mjs must import node:os for ASR config & host-mic temp helpers');
-    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.8\.0'/, 'Bridge version must be bumped to 1.8.0 so stale daemons restart automatically');
+    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.9\.0'/, 'Bridge version must be bumped to 1.9.0 so stale daemons restart automatically');
     assert.match(bridgeSrc, /transcribeViaGemini/, 'Bridge server must include Gemini multimodal audio transcription');
     assert.match(bridgeSrc, /transcribeViaWhisperEndpoint/, 'Bridge server must include Whisper ASR transcription failover');
     assert.doesNotMatch(html, /id="todoIdeaType"/, '#todoIdeaModal must not clutter UI with manual Type/Priority dropdowns');
+
+    // FEAT-144 / 145 / 146 assertions on rendered HTML
+    assert.match(html, /title="Record Audio"/, '#todoVoiceBtn must use AGY Record Audio tooltip');
+    assert.match(html, /AGY_RECORD_AUDIO_SVG/, 'backlog.html must include native AGY Record Audio vector SVG iconography');
+    assert.doesNotMatch(html, /id="todoVoiceIcon"[^>]*>🎙️/, '#todoVoiceIcon must use AGY vector SVG instead of microphone emoji');
+    assert.match(html, /id="inspectorHeaderPlanBtn"[\s\S]*PLAN NOW/, 'Opened ticket modal header must include PLAN NOW button');
+    assert.match(html, /id="inspectorHeaderCodeBtn"[\s\S]*CODE NOW/, 'Opened ticket modal header must include CODE NOW button');
+    assert.match(html, /id="inspectorFooterPlanBtn"[\s\S]*PLAN NOW/, 'Opened ticket modal footer must include PLAN NOW button');
+    assert.match(html, /id="inspectorFooterCodeBtn"[\s\S]*CODE NOW/, 'Opened ticket modal footer must include CODE NOW button');
+    assert.match(html, /openPlanFromInspector/, 'Opened ticket modal must wire openPlanFromInspector');
+    assert.match(html, /id="inspectorEffortBadge"/, 'Opened ticket modal must include Suggested Execution Effort badge');
+    assert.match(html, /getRecommendedExecutionEffort/, 'backlog.html must compute Suggested Execution Effort (HIGH/MEDIUM/LOW)');
+    assert.match(html, /id="select-all-todo"/, 'TO DO column header must provide Select All multi-select toggle');
+    assert.match(html, /id="select-all-ready"/, 'READY column header must provide Select All multi-select toggle');
+    assert.match(html, /id="multiSelectActionBar"/, 'backlog.html must provide floating multi-ticket batch action bar');
+    assert.match(html, /toggleTicketMultiSelect/, 'TO DO & READY cards must wire multi-select checkboxes');
+    assert.match(html, /openBatchModelSelector/, 'Multi-select bar must open batch Plan / Orchestrator Code selector');
+    assert.match(html, /orchestrator-carbon-high/, 'Model selector must offer Google Orchestrator simultaneous execution');
+    assert.match(bridgeSrc, /myCount >= c\.maxOther/, 'findTargetBrainDirs must never allow sibling-mention hijack across repos');
 
     // 2. Verify live POST /api/backlog-add-isolated adds an annotated TO DO ticket while leaving activePlanTaskIds, WIP, and implementation_plan.md untouched
     const planPath = path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md');
@@ -1105,6 +1125,59 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       /endpoint === '\/api\/backlog-add-isolated'/,
       'Local bridge must expose /api/backlog-add-isolated for out-of-band UI capture'
     );
+  });
+
+  test('3k. FEAT-145/146: findTargetBrainDirs blocks sibling-repo overwrite & script JS executes cleanly in vm', () => {
+    const mockHome = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'agy-brain-iso-')));
+    const brainRoot = path.join(mockHome, '.gemini', 'antigravity', 'brain');
+    const dirA = path.join(mockHome, 'SnapCal');
+    const dirB = path.join(mockHome, 'SnapCal-Base44');
+    const sharedCid = path.join(brainRoot, 'shared-convo-111');
+    try {
+      fs.mkdirSync(path.join(sharedCid, '.system_generated', 'logs'), { recursive: true });
+      fs.mkdirSync(path.join(dirA, 'docs'), { recursive: true });
+      fs.mkdirSync(path.join(dirA, 'scripts'), { recursive: true });
+      fs.mkdirSync(path.join(dirB, 'docs'), { recursive: true });
+      fs.mkdirSync(path.join(dirB, 'scripts'), { recursive: true });
+
+      fs.copyFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), path.join(dirA, 'scripts', 'backlog.mjs'));
+      fs.copyFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), path.join(dirB, 'scripts', 'backlog.mjs'));
+
+      fs.writeFileSync(path.join(dirA, 'docs', 'backlog.json'), JSON.stringify({
+        project: 'snapcal',
+        tasks: [{ id: 'FEAT-1', type: 'feature', title: 'SnapCal Task', status: 'todo', priority: 'high' }],
+        meta: { lastBrainDir: sharedCid }
+      }, null, 2));
+      fs.writeFileSync(path.join(dirB, 'docs', 'backlog.json'), JSON.stringify({
+        project: 'snapcal_base44',
+        tasks: [{ id: 'FEAT-2', type: 'feature', title: 'Base44 Task', status: 'todo', priority: 'medium' }],
+        meta: { lastBrainDir: sharedCid }
+      }, null, 2));
+
+      // Dominant SnapCal transcript (12 mentions) vs minor SnapCal-Base44 mention (2 mentions)
+      const transcriptLines = Array(12).fill(JSON.stringify({ content: dirA })).concat(
+        Array(2).fill(JSON.stringify({ content: dirB }))
+      ).join('\n');
+      fs.writeFileSync(path.join(sharedCid, '.system_generated', 'logs', 'transcript.jsonl'), transcriptLines, 'utf8');
+
+      const isoEnv = { ...testEnv, HOME: mockHome, USERPROFILE: mockHome, ANTIGRAVITY_BRAIN_DIR: '' };
+      execFileSync(process.execPath, [path.join(dirA, 'scripts', 'backlog.mjs'), 'render'], { cwd: dirA, env: isoEnv, stdio: 'pipe' });
+      const ownedHtml = fs.readFileSync(path.join(sharedCid, 'backlog.html'), 'utf8');
+      assert.equal(ownedHtml.includes(`"repoRoot":${JSON.stringify(dirA)}`), true, 'SnapCal must own shared brain artifact');
+
+      // Validate generated script block in VM
+      const scriptMatch = ownedHtml.match(/<script>([\s\S]*?)<\/script>/);
+      assert.ok(scriptMatch, 'Rendered backlog.html must include inline controller script');
+      new vm.Script(scriptMatch[1]);
+
+      // Rendering SnapCal-Base44 must NOT overwrite SnapCal's brain/backlog.html!
+      execFileSync(process.execPath, [path.join(dirB, 'scripts', 'backlog.mjs'), 'render'], { cwd: dirB, env: isoEnv, stdio: 'pipe' });
+      const afterBase44Html = fs.readFileSync(path.join(sharedCid, 'backlog.html'), 'utf8');
+      assert.match(afterBase44Html, /"project":"snapcal"/, 'SnapCal-Base44 must NEVER overwrite SnapCal brain artifact');
+      assert.doesNotMatch(afterBase44Html, /"project":"snapcal_base44"/, 'Sibling project must not hijack owned brain dir');
+    } finally {
+      try { fs.rmSync(mockHome, { recursive: true, force: true }); } catch {}
+    }
   });
 
   test('3i. backlog children: retrieves children tickets of non-completed parents only, supports --open-only and <PARENT_ID>, and renders parent/child badges', () => {

@@ -615,6 +615,45 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-144: AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/archive/BUG_FIX_RECORDS.md`, `docs/quality/BUG_FIX_RECORDS.md`
+- **Description:** AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI
+- **Technical Specification:**
+  AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI
+- **Acceptance Criteria:**
+  - [x] Implement and verify AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI across bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/archive/BUG_FIX_RECORDS.md, docs/quality/BUG_FIX_RECORDS.md
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
+### FEAT-145: Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/sync-living-docs.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/PLANNING_GUIDE.md`
+- **Description:** Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync
+- **Technical Specification:**
+  Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync
+- **Acceptance Criteria:**
+  - [x] Implement and verify Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync across scripts/sync-living-docs.mjs, scripts/sync-memory-context.mjs, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/PLANNING_GUIDE.md
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
+### FEAT-146: Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `bricks/user-profile/core/oauth/google.verifier.ts`
+- **Description:** Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution
+- **Technical Specification:**
+  Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution
+- **Acceptance Criteria:**
+  - [x] Implement and verify Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution across bricks/user-profile/core/oauth/google.verifier.ts
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

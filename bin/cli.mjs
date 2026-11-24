@@ -9,6 +9,7 @@
  */
 
 import fsSync, { promises as fs } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline/promises';
@@ -1802,6 +1803,29 @@ async function runFleetCommand(opts) {
     for (const entry of fsSync.readdirSync(workspaceParent, { withFileTypes: true })) {
       if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
       tryAddMain(path.join(workspaceParent, entry.name));
+    }
+  } catch {}
+
+  // Also discover any active Memory Bank installations outside workspaceParent referenced in Antigravity brain artifacts (e.g. ~/Pictures/JBB.PM CV)
+  try {
+    const brainBase = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
+    if (fsSync.existsSync(brainBase)) {
+      for (const bEntry of fsSync.readdirSync(brainBase, { withFileTypes: true })) {
+        if (!bEntry.isDirectory() || bEntry.name.startsWith('.')) continue;
+        const bHtml = path.join(brainBase, bEntry.name, 'backlog.html');
+        if (!fsSync.existsSync(bHtml)) continue;
+        const txt = fsSync.readFileSync(bHtml, 'utf8');
+        const m = txt.match(/"repoRoot":("(?:[^"\\]|\\.)*")/);
+        if (!m) continue;
+        let rr = JSON.parse(m[1]);
+        if (!fsSync.existsSync(rr) && /[/\\]RemoveBackGround$/i.test(rr)) {
+          const rbgdCandidate = path.join(workspaceParent, 'rbgd');
+          if (fsSync.existsSync(rbgdCandidate)) rr = rbgdCandidate;
+        }
+        if (fsSync.existsSync(rr) && !rr.includes('/.gemini/antigravity/worktrees/') && !rr.includes('/T/') && !rr.includes('/var/folders/')) {
+          tryAddMain(rr);
+        }
+      }
     }
   } catch {}
 

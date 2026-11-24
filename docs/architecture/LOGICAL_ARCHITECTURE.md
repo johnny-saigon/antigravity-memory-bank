@@ -34,9 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-124`** | Add per-column and global Sort (Oldest to Newest and vice versa) and manual drag-and-drop / up-down ticket reordering across all Backlog instances | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
-| **`FEAT-125`** | Verbose AGY Model Roster, Quota-Pool & Ticket Quality-to-Credit ROI Engine | 🟢 DONE | `scripts/lint-memory.mjs`, `tests/cli-e2e.test.mjs` |
-| **`FEAT-126`** | Interactive Kanban Credit-Saving & AGY Model Advisor UI and CLI | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-127`** | Verbose Credit-Saving Skills, Prescriptive Footer, Living Guides & Cross-Repo Rollout | 🟢 DONE | `skills/effort/SKILL.md`, `skills/credits/SKILL.md`, `skills/usage/SKILL.md` |
 | **`FEAT-128`** | Add Credits CheatSheet (docs/CREDITS_CHEATSHEET.md) to Memory Bank & Deploy to All Projects | 🟢 DONE | `docs/CREDITS_CHEATSHEET.md`, `templates/docs/CREDITS_CHEATSHEET.md`, `bin/cli.mjs` |
 | **`FEAT-129`** | Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization | 🟢 DONE | `lib/backlog-adapter.mjs`, `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
@@ -54,6 +51,9 @@ flowchart LR
 | **`FEAT-141`** | Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees | 🟢 DONE | — |
 | **`FEAT-142`** | Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors | 🟢 DONE | — |
 | **`FEAT-143`** | Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) | 🟢 DONE | `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md` |
+| **`FEAT-144`** | AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI | 🟢 DONE | `bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/archive/BUG_FIX_RECORDS.md` |
+| **`FEAT-145`** | Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync | 🟢 DONE | `scripts/sync-living-docs.mjs`, `scripts/sync-memory-context.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx` |
+| **`FEAT-146`** | Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution | 🟢 DONE | `bricks/user-profile/core/oauth/google.verifier.ts` |
 <!-- ag-section:logical-features:end -->
 
 ---

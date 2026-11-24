@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T10:27:39.552Z",
+  "lastUpdated": "2026-11-24T10:56:00.390Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -2002,6 +2002,219 @@
       "plannedAt": "2026-11-24T09:58:45.129Z",
       "startedAt": "2026-11-24T09:58:45.343Z",
       "completedAt": "2026-11-24T10:24:09.676Z"
+    },
+    {
+      "id": "FEAT-144",
+      "type": "ux",
+      "title": "AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift",
+        "bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx",
+        "docs/archive/BUG_FIX_RECORDS.md",
+        "docs/quality/BUG_FIX_RECORDS.md"
+      ],
+      "attachments": [],
+      "description": "AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI",
+      "spec": "AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI",
+      "acceptanceCriteria": [
+        "Implement and verify AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI across bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/archive/BUG_FIX_RECORDS.md, docs/quality/BUG_FIX_RECORDS.md",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T10:38:23.467Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T10:38:23.467Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T10:38:23.604Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T10:46:03.982Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T10:56:00.308Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T10:38:23.605Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-144-ACT-1",
+          "text": "Implement and verify AGY-Correlated Branding & Native Record Audio Vector Icon in TO DO Idea Modal & Kanban UI across bricks/user-profile/platforms/ios/headless/NativeSocialOAuthCoordinator.swift, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/archive/BUG_FIX_RECORDS.md, docs/quality/BUG_FIX_RECORDS.md",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-144-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T10:38:23.604Z",
+      "startedAt": "2026-11-24T10:46:03.982Z",
+      "completedAt": "2026-11-24T10:56:00.308Z"
+    },
+    {
+      "id": "FEAT-145",
+      "type": "ux",
+      "title": "Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/sync-living-docs.mjs",
+        "scripts/sync-memory-context.mjs",
+        "bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx",
+        "docs/PLANNING_GUIDE.md"
+      ],
+      "attachments": [],
+      "description": "Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync",
+      "spec": "Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync",
+      "acceptanceCriteria": [
+        "Implement and verify Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync across scripts/sync-living-docs.mjs, scripts/sync-memory-context.mjs, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/PLANNING_GUIDE.md",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T10:38:23.651Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T10:38:23.651Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T10:39:39.060Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T10:46:04.025Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T10:56:00.349Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T10:39:39.061Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-145-ACT-1",
+          "text": "Implement and verify Universal Opened-Ticket PLAN NOW & CODE NOW Modal Actions, High-Effort Execution Badge & 100% Fleet/Brain Sync across scripts/sync-living-docs.mjs, scripts/sync-memory-context.mjs, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/PLANNING_GUIDE.md",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-145-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T10:39:39.060Z",
+      "startedAt": "2026-11-24T10:46:04.025Z",
+      "completedAt": "2026-11-24T10:56:00.349Z"
+    },
+    {
+      "id": "FEAT-146",
+      "type": "feature",
+      "title": "Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "bricks/user-profile/core/oauth/google.verifier.ts"
+      ],
+      "attachments": [],
+      "description": "Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution",
+      "spec": "Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution",
+      "acceptanceCriteria": [
+        "Implement and verify Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution across bricks/user-profile/core/oauth/google.verifier.ts",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T10:41:34.114Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T10:41:34.114Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T10:43:10.516Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T10:46:04.066Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T10:56:00.389Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T10:43:10.517Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-146-ACT-1",
+          "text": "Implement and verify Multi-Ticket Selection on TO DO & READY Columns with Google Orchestrator Simultaneous Batch Plan/Code Execution across bricks/user-profile/core/oauth/google.verifier.ts",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-146-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T10:43:10.516Z",
+      "startedAt": "2026-11-24T10:46:04.066Z",
+      "completedAt": "2026-11-24T10:56:00.389Z"
     }
   ],
   "milestones": [
