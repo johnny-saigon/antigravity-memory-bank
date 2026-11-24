@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T09:09:23.591Z",
+  "lastUpdated": "2026-11-24T09:26:58.558Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1859,6 +1859,78 @@
       "plannedAt": "2026-11-24T09:05:00.479Z",
       "startedAt": "2026-11-24T09:05:41.222Z",
       "completedAt": "2026-11-24T09:09:22.634Z"
+    },
+    {
+      "id": "FEAT-143",
+      "type": "ux",
+      "title": "Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx",
+        "docs/BACKLOG.md",
+        "docs/backlog.html"
+      ],
+      "attachments": [],
+      "description": "Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)",
+      "spec": "Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)",
+      "acceptanceCriteria": [
+        "Implement and verify Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) across scripts/backlog.mjs, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/BACKLOG.md, docs/backlog.html",
+        "Pass deterministic lint, typecheck, and automated test verification (npm test)"
+      ],
+      "planningStartedAt": "2026-11-24T09:19:40.516Z",
+      "stateHistory": [
+        {
+          "status": "todo",
+          "activity": "planning",
+          "at": "2026-11-24T09:19:40.516Z"
+        },
+        {
+          "status": "ready",
+          "activity": "awaiting_approval",
+          "at": "2026-11-24T09:20:44.008Z"
+        },
+        {
+          "status": "in_progress",
+          "activity": "coding",
+          "at": "2026-11-24T09:22:51.622Z"
+        },
+        {
+          "status": "done",
+          "activity": null,
+          "at": "2026-11-24T09:26:57.672Z"
+        }
+      ],
+      "annotations": {
+        "annotatedAt": "2026-11-24T09:20:44.009Z",
+        "complexityTier": "tier3_two_stage_plan",
+        "recommendedPlanModel": "Gemini 4 Argon (High) / Gemini 4 Carbon (High)",
+        "recommendedCodeModel": "Gemini 4 Neon (Medium) / Claude Sonnet 5.5 (Medium)",
+        "estimatedSavings": "55%–80% via Two-Stage Split Routing (Plan -> READY -> Code)"
+      },
+      "actionItems": [
+        {
+          "id": "FEAT-143-ACT-1",
+          "text": "Implement and verify Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) across scripts/backlog.mjs, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/BACKLOG.md, docs/backlog.html",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-143-ACT-2",
+          "text": "Pass deterministic lint, typecheck, and automated test verification (npm test)",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "branch": "main",
+      "worktree": "antigravity-memory-bank",
+      "activeBranches": [
+        "main"
+      ],
+      "plannedAt": "2026-11-24T09:20:44.008Z",
+      "startedAt": "2026-11-24T09:22:51.622Z",
+      "completedAt": "2026-11-24T09:26:57.672Z"
     }
   ],
   "milestones": [

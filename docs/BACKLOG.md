@@ -589,6 +589,19 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-143: Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md`, `docs/backlog.html`
+- **Description:** Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)
+- **Technical Specification:**
+  Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)
+- **Acceptance Criteria:**
+  - [x] Implement and verify Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) across scripts/backlog.mjs, bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx, docs/BACKLOG.md, docs/backlog.html
+  - [x] Pass deterministic lint, typecheck, and automated test verification (npm test)
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

@@ -4,7 +4,7 @@
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
 > - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-> - **Backlog Progress**: `51/51` tickets completed (`0` in progress, `0` queued).
+> - **Backlog Progress**: `52/52` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline
 - [x] Ingest Three-Tier Memory Hierarchy (`~/.gemini/GEMINI.md`, `.agents/rules/infra.md`, `memory-bank/*.md`)
@@ -70,3 +70,4 @@
 - [x] **[FEAT-141]** Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees
 - [x] **[BUG-110]** ### [BUG-110] Sandbox <brainDir>/backlog.html Fallback in findTargetBrainDirs() & Worktree Roster Badge (HIGH)
 - [x] **[FEAT-142]** Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors
+- [x] **[FEAT-143]** Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn)

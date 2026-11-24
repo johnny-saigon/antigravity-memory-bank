@@ -935,7 +935,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
 }
 
 // Load backlog JSON
-function loadBacklog(rootDir = REPO_ROOT) {
+function loadBacklog(rootDir = REPO_ROOT, opts = {}) {
   const jsonPath = path.join(rootDir, 'docs', 'backlog.json');
   const fallbackName = path.basename(rootDir);
   if (!fs.existsSync(jsonPath)) {
@@ -954,7 +954,9 @@ function loadBacklog(rootDir = REPO_ROOT) {
         ensureTaskActionItems(t);
       }
     }
-    selfHealPlanTicketsIntoBacklog(parsed, rootDir);
+    if (!opts.skipSelfHeal) {
+      selfHealPlanTicketsIntoBacklog(parsed, rootDir);
+    }
     return parsed;
   } catch (err) {
     console.error(`❌ Failed to parse ${jsonPath}:`, err.message);
@@ -1969,22 +1971,87 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
     </div>
   </div>
 
+  <!-- Isolated TO DO-Only /backlog-add Idea Modal (FEAT-143: 0 AI Tokens · Zero Disruption to Active Turn / WIP) -->
+  <div id="todoIdeaModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeTodoIdeaModal()">
+    <div class="bg-[var(--card,#1e293b)] border border-amber-500/45 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+      <div class="p-4 border-b border-[var(--border,#334155)] flex items-start justify-between gap-3 bg-slate-900/75">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap mb-1">
+            <span class="badge bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded px-2 py-0.5 text-[11px] font-bold">➕ TO DO ONLY · /backlog-add</span>
+            <span class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 rounded px-2 py-0.5 text-[11px]">🛡️ Isolated from Current Turn · 0 Tokens</span>
+          </div>
+          <h2 class="text-sm font-bold text-white leading-snug">Capture Idea into TO DO Without Disturbing Work in Progress</h2>
+          <p class="text-[11px] text-slate-400 mt-0.5">Runs out-of-band via the local bridge — never interrupts your active agent turn or modifies IN PROGRESS / READY tickets.</p>
+        </div>
+        <button onclick="closeTodoIdeaModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-800 cursor-pointer">✕</button>
+      </div>
+      <div class="p-4 space-y-3 text-xs">
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-1">Idea Title <span class="text-slate-400 font-normal">(auto-annotated in TO DO)</span></label>
+          <input id="todoIdeaTitle" type="text" oninput="updateTodoIdeaRoiPreview()" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter') submitIsolatedTodoIdea()" placeholder="e.g. Add keyboard shortcut for quick theme switching..." class="w-full bg-slate-950 border border-amber-500/40 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400">
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Type</label>
+            <select id="todoIdeaType" onchange="updateTodoIdeaRoiPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+              <option value="feature">Feature (FEAT)</option>
+              <option value="ux">UX Improvement (UX)</option>
+              <option value="bug">Bug Fix (BUG)</option>
+              <option value="qa">QA / Validation (QA)</option>
+              <option value="refactor">Refactor</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Priority</label>
+            <select id="todoIdeaPriority" onchange="updateTodoIdeaRoiPreview()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-medium text-slate-400 mb-1">Optional Context / Notes</label>
+          <textarea id="todoIdeaDesc" rows="2" oninput="updateTodoIdeaRoiPreview()" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter') submitIsolatedTodoIdea()" placeholder="Optional details or acceptance criteria..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"></textarea>
+        </div>
+        <div id="todoIdeaRoiPreview" class="bg-emerald-950/35 border border-emerald-500/30 rounded-lg p-2.5 text-[11px] text-emerald-200 leading-relaxed">
+          🛡️ <strong>Isolated Zero-Token Capture:</strong> Saves &amp; auto-annotates strictly into <code>TO DO</code> while your active turn and <code>IN PROGRESS</code> work stay 100% untouched.
+        </div>
+      </div>
+      <div class="p-3.5 border-t border-[var(--border,#334155)] bg-slate-900/80 flex items-center justify-between gap-2 flex-wrap">
+        <button onclick="copyIsolatedBacklogAddCmd()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600/60 text-xs font-medium px-2.5 py-1.5 rounded-lg transition cursor-pointer" title="Copy /backlog-add command without sending to chat">
+          📋 Copy /backlog-add
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeTodoIdeaModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg cursor-pointer">Cancel</button>
+          <button onclick="submitIsolatedTodoIdea()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition cursor-pointer">
+            ➕ Add to TO DO (Isolated · 0 Tokens)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Kanban Grid (4-Column Lifecycle: To-Do -> Ready (Planned) -> In Progress -> Done) -->
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
     
-    <!-- Column 1: Backlog / To-Do (Needs Planning) -->
-    <div id="wrap-todo" ondragover="handleColumnDragOver(event, 'todo')" ondragleave="handleColumnDragLeave(event, 'todo')" ondrop="handleColumnDrop(event, 'todo')" class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] rounded-xl p-3 flex flex-col transition-colors">
+    <!-- Column 1: Backlog / To-Do (Needs Planning — Click empty space to /backlog-add isolated idea, FEAT-143) -->
+    <div id="wrap-todo" onclick="handleTodoColumnClick(event)" ondragover="handleColumnDragOver(event, 'todo')" ondragleave="handleColumnDragLeave(event, 'todo')" ondrop="handleColumnDrop(event, 'todo')" class="bg-[var(--card,#1e293b)]/40 border border-[var(--border,#334155)] hover:border-amber-500/45 rounded-xl p-3 flex flex-col transition-colors cursor-pointer" title="Click empty space in TO DO to /backlog-add a new idea (isolated from active turn)">
       <div class="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border,#334155)] gap-1">
         <div class="flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-amber-400"></span>
           <h2 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground,#f8fafc)]">To-Do / Backlog</h2>
         </div>
         <div class="flex items-center gap-1.5">
+          <button onclick="openTodoIdeaModal(event)" class="text-[11px] bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-500/40 px-2 py-0.5 rounded font-semibold transition cursor-pointer" title="Open isolated /backlog-add Idea Modal (0 tokens · does not disturb active turn)">+ Idea</button>
           <button id="sort-btn-todo" onclick="cycleColumnSort('todo')" class="text-[11px] bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-600/60 px-2 py-0.5 rounded font-medium transition cursor-pointer" title="Click to toggle column sort: Newest → Oldest / Oldest → Newest / Manual Order">✋ Manual</button>
           <span id="count-todo" class="text-xs bg-[var(--card,#1e293b)] px-1.5 py-0.5 rounded font-mono text-[var(--muted-foreground,#94a3b8)]">${initialTodo.length}</span>
         </div>
       </div>
       <div id="col-todo" class="space-y-2.5 flex-1 overflow-y-auto max-h-[70vh] pr-1 min-h-[120px]">${todoHtml}</div>
+      <div onclick="openTodoIdeaModal(event)" class="mt-2.5 pt-2 border-t border-dashed border-amber-500/30 text-center text-[11px] text-amber-300/80 hover:text-amber-200 py-1.5 rounded-lg hover:bg-amber-500/10 transition cursor-pointer select-none">
+        ➕ Click anywhere in TO DO to <code>/backlog-add</code> an idea (0 tokens · isolated)
+      </div>
     </div>
 
     <!-- Column 2: Ready (Planned — Switch Model Down & Execute) -->
@@ -2823,6 +2890,114 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         }
       } catch (e) {}
       setBridgeBadge(false);
+    }
+
+    function handleTodoColumnClick(event) {
+      if (event && event.target && event.target.closest('.task-card, button, a, input, select, textarea, label')) {
+        return;
+      }
+      openTodoIdeaModal(event);
+    }
+
+    function openTodoIdeaModal(event) {
+      if (event && typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+      }
+      const modal = document.getElementById('todoIdeaModal');
+      if (!modal) return;
+      const titleInput = document.getElementById('todoIdeaTitle');
+      const descInput = document.getElementById('todoIdeaDesc');
+      if (titleInput) titleInput.value = '';
+      if (descInput) descInput.value = '';
+      updateTodoIdeaRoiPreview();
+      modal.classList.remove('hidden');
+      if (titleInput) setTimeout(() => titleInput.focus(), 20);
+    }
+
+    function closeTodoIdeaModal() {
+      const modal = document.getElementById('todoIdeaModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function updateTodoIdeaRoiPreview() {
+      const box = document.getElementById('todoIdeaRoiPreview');
+      if (!box) return;
+      const title = (document.getElementById('todoIdeaTitle') && document.getElementById('todoIdeaTitle').value.trim()) || '';
+      const type = (document.getElementById('todoIdeaType') && document.getElementById('todoIdeaType').value) || 'feature';
+      const priority = (document.getElementById('todoIdeaPriority') && document.getElementById('todoIdeaPriority').value) || 'medium';
+      const desc = (document.getElementById('todoIdeaDesc') && document.getElementById('todoIdeaDesc').value.trim()) || '';
+      if (!title) {
+        box.innerHTML = '🛡️ <strong>Isolated Zero-Token Capture:</strong> Saves &amp; auto-annotates strictly into <code>TO DO</code> while your active turn and <code>IN PROGRESS</code> work stay 100% untouched.';
+        return;
+      }
+      const adv = computeTicketCreditAdvice({ id: 'NEW', title, type, priority, description: desc, components: [] });
+      box.innerHTML = '🛡️ <strong>Isolated TO DO Capture (0 Tokens):</strong> ' + escapeHtml(adv.planVerdict) + '<br>• <strong>Next-step AGY Model:</strong> ' + escapeHtml(adv.stageBGoogle);
+    }
+
+    function copyIsolatedBacklogAddCmd() {
+      const title = (document.getElementById('todoIdeaTitle') && document.getElementById('todoIdeaTitle').value.trim()) || '';
+      if (!title) {
+        showToast('⚠️ Enter an idea title first');
+        return;
+      }
+      const cmd = '/backlog-add ' + title;
+      copyTextToClipboard(cmd, false);
+      callLocalBridge('/api/clipboard', { text: cmd });
+      showToast('📋 Copied "' + cmd + '" (current turn undisturbed)');
+    }
+
+    async function submitIsolatedTodoIdea() {
+      const titleEl = document.getElementById('todoIdeaTitle');
+      const descEl = document.getElementById('todoIdeaDesc');
+      const typeEl = document.getElementById('todoIdeaType');
+      const prioEl = document.getElementById('todoIdeaPriority');
+      const title = titleEl ? titleEl.value.trim() : '';
+      if (!title) {
+        showToast('⚠️ Please enter an idea title');
+        if (titleEl) titleEl.focus();
+        return;
+      }
+      const desc = descEl ? descEl.value.trim() : '';
+      const type = typeEl ? typeEl.value : 'feature';
+      const priority = prioEl ? prioEl.value : 'medium';
+
+      closeTodoIdeaModal();
+      const bridgeRes = await callLocalBridge('/api/backlog-add-isolated', {
+        repoRoot: rawData.repoRoot,
+        title,
+        description: desc,
+        type,
+        priority
+      });
+      if (bridgeRes && bridgeRes.ok && bridgeRes.task) {
+        if (!rawData.tasks.some(t => t.id === bridgeRes.task.id)) {
+          rawData.tasks.unshift(bridgeRes.task);
+        }
+        renderBoard();
+        showToast('✅ Captured [' + bridgeRes.task.id + '] in TO DO (0 tokens · active turn untouched)!');
+      } else {
+        const prefix = type === 'bug' ? 'BUG' : 'FEAT';
+        const maxNum = rawData.tasks.reduce((max, t) => {
+          const m = String(t.id || '').match(new RegExp('^' + prefix + '-(\\\\d+)$', 'i'));
+          return m ? Math.max(max, parseInt(m[1], 10)) : max;
+        }, 100);
+        const fallbackId = prefix + '-' + (maxNum + 1);
+        rawData.tasks.unshift({
+          id: fallbackId,
+          type,
+          title,
+          status: 'todo',
+          priority,
+          components: [],
+          attachments: [],
+          description: desc || title,
+          branch: (rawData.gitContext && rawData.gitContext.branch) || 'main'
+        });
+        renderBoard();
+        const cmd = '/backlog-add ' + title;
+        copyTextToClipboard(cmd, false);
+        showToast('📋 Bridge offline — added locally & copied "' + cmd + '" (current turn untouched)');
+      }
     }
 
     function toggleQuickAdd() {
@@ -4862,6 +5037,58 @@ function startBridgeServer(port = DEFAULT_PORT) {
         return { status: 200, payload: { ok: true, copied } };
       }
 
+      if (endpoint === '/api/backlog-add-isolated') {
+        const rawTitle = String(body.title || body.idea || '').trim();
+        if (!rawTitle) return { status: 400, payload: { ok: false, error: 'Idea title is required' } };
+        const data = loadBacklog(targetRoot, { skipSelfHeal: true });
+        const rawType = String(body.type || 'feature').toLowerCase();
+        const isBug = rawType === 'bug' || /\b(bug|fix|regression|crash|broken)\b/i.test(rawTitle);
+        const type = rawType === 'feat' ? 'feature' : (rawType === 'fix' ? 'bug' : (isBug && rawType === 'feature' ? 'bug' : rawType));
+        const prioRaw = String(body.priority || 'medium').toLowerCase();
+        const priority = (prioRaw === 'p0' || prioRaw === 'p1' || prioRaw === 'high') ? 'high' : (prioRaw === 'p3' || prioRaw === 'low' ? 'low' : 'medium');
+        const prefix = type === 'bug' ? 'BUG' : 'FEAT';
+        let id = body.id ? String(body.id).trim().toUpperCase() : '';
+        if (!id) {
+          const idRe = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+          const maxNum = (data.tasks || []).reduce((max, t) => {
+            const m = String(t.id || '').match(idRe);
+            return m ? Math.max(max, parseInt(m[1], 10)) : max;
+          }, 100);
+          id = `${prefix}-${maxNum + 1}`;
+        }
+        const desc = String(body.description || '').trim() || rawTitle;
+        const newTask = {
+          id,
+          type,
+          title: rawTitle,
+          status: 'todo',
+          priority,
+          components: Array.isArray(body.components) ? body.components : [],
+          attachments: [],
+          description: desc,
+          spec: desc,
+          acceptanceCriteria: [],
+          createdAt: new Date().toISOString()
+        };
+        autoAnnotateTicket(newTask, targetRoot);
+        stampTaskBranch(newTask, targetRoot);
+        // Strictly isolated: prepend to tasks WITHOUT modifying activePlanTaskIds, any in_progress/ready ticket, or planning artifacts!
+        data.tasks.unshift(newTask);
+        data.lastUpdated = new Date().toISOString();
+        fs.writeFileSync(path.join(targetRoot, 'docs', 'backlog.json'), JSON.stringify(data, null, 2) + '\n', 'utf8');
+        renderMigrationBoard(data, targetRoot);
+        // Refresh docs/backlog.html & <brainDir>/backlog.html ONLY (never touch implementation_plan.md, task.md, or walkthrough.md!)
+        try {
+          const htmlContent = generateReviewArtifactHtml(data, targetRoot);
+          fs.writeFileSync(path.join(targetRoot, 'docs', 'backlog.html'), htmlContent, 'utf8');
+          const brainDirs = findTargetBrainDirs(data, targetRoot);
+          for (const bd of brainDirs) {
+            fs.writeFileSync(path.join(bd, 'backlog.html'), htmlContent, 'utf8');
+          }
+        } catch {}
+        return { status: 200, payload: { ok: true, isolated: true, task: newTask } };
+      }
+
       if (endpoint === '/api/done-residual') {
         const id = String(body.id || '').trim();
         const residuals = Array.isArray(body.residuals) ? body.residuals : [];
@@ -5238,7 +5465,7 @@ function main() {
     return;
   }
 
-  const data = loadBacklog();
+  const data = loadBacklog(REPO_ROOT, { skipSelfHeal: command === 'add-isolated' });
 
   if (command === 'children') {
     const showAllBranches = args.includes('--all-branches');
@@ -5347,6 +5574,68 @@ function main() {
     }
     console.log('='.repeat(70));
     console.log(`💡 To kickoff a task with 0 token waste: npm run backlog prompt <ID>\n`);
+    return;
+  }
+
+  if (command === 'add-isolated') {
+    let rawTitle = '';
+    let desc = '';
+    let rawType = 'feature';
+    let rawPrio = 'medium';
+    let explicitId = '';
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '--id' && args[i + 1]) explicitId = args[++i];
+      else if (args[i] === '--type' && args[i + 1]) rawType = args[++i];
+      else if (args[i] === '--priority' && args[i + 1]) rawPrio = args[++i];
+      else if ((args[i] === '--desc' || args[i] === '--description') && args[i + 1]) desc = args[++i];
+      else if (!args[i].startsWith('--') && !rawTitle) rawTitle = args[i];
+    }
+    if (!rawTitle) {
+      console.error('❌ Usage: npm run backlog add-isolated "<idea title>" [--desc "<notes>"] [--type <feature|bug|ux|qa|refactor>] [--priority <high|medium|low>]');
+      process.exit(1);
+    }
+    const isBug = rawType === 'bug' || /\b(bug|fix|regression|crash|broken)\b/i.test(rawTitle);
+    const type = rawType === 'feat' ? 'feature' : (rawType === 'fix' ? 'bug' : (isBug && rawType === 'feature' ? 'bug' : rawType));
+    const prioNorm = String(rawPrio || 'medium').toLowerCase();
+    const priority = (prioNorm === 'p0' || prioNorm === 'p1' || prioNorm === 'high') ? 'high' : (prioNorm === 'p3' || prioNorm === 'low' ? 'low' : 'medium');
+    const prefix = type === 'bug' ? 'BUG' : 'FEAT';
+    let id = explicitId ? explicitId.toUpperCase() : '';
+    if (!id) {
+      const idRe = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+      const maxNum = (data.tasks || []).reduce((max, t) => {
+        const m = String(t.id || '').match(idRe);
+        return m ? Math.max(max, parseInt(m[1], 10)) : max;
+      }, 100);
+      id = `${prefix}-${maxNum + 1}`;
+    }
+    const newTask = {
+      id,
+      type,
+      title: rawTitle,
+      status: 'todo',
+      priority,
+      components: [],
+      attachments: [],
+      description: desc || rawTitle,
+      spec: desc || rawTitle,
+      acceptanceCriteria: [],
+      createdAt: new Date().toISOString()
+    };
+    autoAnnotateTicket(newTask, REPO_ROOT);
+    stampTaskBranch(newTask, REPO_ROOT);
+    data.tasks.unshift(newTask);
+    data.lastUpdated = new Date().toISOString();
+    fs.writeFileSync(path.join(REPO_ROOT, 'docs', 'backlog.json'), JSON.stringify(data, null, 2) + '\n', 'utf8');
+    renderMigrationBoard(data, REPO_ROOT);
+    try {
+      const htmlContent = generateReviewArtifactHtml(data, REPO_ROOT);
+      fs.writeFileSync(path.join(REPO_ROOT, 'docs', 'backlog.html'), htmlContent, 'utf8');
+      const brainDirs = findTargetBrainDirs(data, REPO_ROOT);
+      for (const bd of brainDirs) {
+        fs.writeFileSync(path.join(bd, 'backlog.html'), htmlContent, 'utf8');
+      }
+    } catch {}
+    console.log(`\n🛡️  ISOLATED TO DO CAPTURE: Added [${newTask.id}] "${newTask.title}" (0 tokens · active WIP & planning artifacts untouched)\n`);
     return;
   }
 

@@ -34,7 +34,6 @@ flowchart LR
 <!-- ag-section:logical-features:start -->
 | Feature ID | Capability / Title | Status | Target Components |
 | :--- | :--- | :--- | :--- |
-| **`FEAT-123`** | Auto-Execute /clear & /compact Pre-Flight on Every /start Workflow Across All Installed Memory Banks | 🟢 DONE | `skills/start/SKILL.md`, `.agents/skills/start/SKILL.md`, `scripts/lint-memory.mjs` |
 | **`FEAT-124`** | Add per-column and global Sort (Oldest to Newest and vice versa) and manual drag-and-drop / up-down ticket reordering across all Backlog instances | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
 | **`FEAT-125`** | Verbose AGY Model Roster, Quota-Pool & Ticket Quality-to-Credit ROI Engine | 🟢 DONE | `scripts/lint-memory.mjs`, `tests/cli-e2e.test.mjs` |
 | **`FEAT-126`** | Interactive Kanban Credit-Saving & AGY Model Advisor UI and CLI | 🟢 DONE | `scripts/backlog.mjs`, `templates/scripts/backlog.mjs` |
@@ -54,6 +53,7 @@ flowchart LR
 | **`FEAT-140`** | ### [FEAT-140] Strict 4-Stage Kanban State Machine, stage-plan CLI & Live Activity Badges (🧠 Planning... / ⏳ Awaiting Proceed / ⚡ Coding Live...) (HIGH) | 🟢 DONE | — |
 | **`FEAT-141`** | Explicit Worktree Fleet Installation & Upgrade Reporting Across All Main & Linked Worktrees | 🟢 DONE | — |
 | **`FEAT-142`** | Upstream Trickle-Up Fix Harvester: Auto-Accept johnny-saigon Fixes & Create TO DO Notification Tickets for External Authors | 🟢 DONE | — |
+| **`FEAT-143`** | Isolated TO DO Column Click-to-Add Idea Modal (Zero-Token /backlog-add Without Disturbing Active Turn) | 🟢 DONE | `scripts/backlog.mjs`, `bricks/user-profile/platforms/web/themed-ui/AvatarCropUploadModal.tsx`, `docs/BACKLOG.md` |
 <!-- ag-section:logical-features:end -->
 
 ---

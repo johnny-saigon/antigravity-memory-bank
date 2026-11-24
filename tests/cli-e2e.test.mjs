@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync, execSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1026,6 +1026,71 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       try { fs.rmSync(mockMainDir, { recursive: true, force: true }); } catch {}
       try { fs.rmSync(mockDownstreamDir, { recursive: true, force: true }); } catch {}
     }
+  });
+
+  test('3j. FEAT-143: TO DO-only click-to-add idea modal & isolated /api/backlog-add-isolated without disturbing active WIP', async () => {
+    // 1. Verify HTML binds handleTodoColumnClick ONLY on #wrap-todo (never on ready/in_progress/done)
+    execFileSync(
+      process.execPath,
+      [path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'render'],
+      { cwd: tmpRepo, env: testEnv, stdio: 'pipe' }
+    );
+    const html = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(html, /id="wrap-todo"[^>]*onclick="handleTodoColumnClick\(event\)"/, '#wrap-todo must trigger isolated idea modal on click');
+    assert.doesNotMatch(html, /id="wrap-ready"[^>]*handleTodoColumnClick/, '#wrap-ready must NOT trigger idea modal');
+    assert.doesNotMatch(html, /id="wrap-in_progress"[^>]*handleTodoColumnClick/, '#wrap-in_progress must NOT trigger idea modal');
+    assert.doesNotMatch(html, /id="wrap-done"[^>]*handleTodoColumnClick/, '#wrap-done must NOT trigger idea modal');
+    assert.match(html, /id="todoIdeaModal"/, 'backlog.html must include dedicated isolated #todoIdeaModal');
+
+    // 2. Verify live POST /api/backlog-add-isolated adds an annotated TO DO ticket while leaving activePlanTaskIds, WIP, and implementation_plan.md untouched
+    const planPath = path.join(tmpRepo, 'docs', 'planning', 'implementation_plan.md');
+    const sentinelPlan = '# Sentinel Active Plan\nDo not disturb during isolated /backlog-add.\n';
+    fs.writeFileSync(planPath, sentinelPlan, 'utf8');
+
+    const beforeData = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    beforeData.activePlanTaskIds = ['FEAT-ACTIVE-WIP'];
+    beforeData.tasks.push({
+      id: 'FEAT-ACTIVE-WIP',
+      type: 'feature',
+      title: 'Ongoing Active Work',
+      status: 'in_progress',
+      priority: 'high',
+      components: [],
+      attachments: [],
+      description: 'Must remain untouched'
+    });
+    fs.writeFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), JSON.stringify(beforeData, null, 2) + '\n', 'utf8');
+
+    const out = execFileSync(
+      process.execPath,
+      [
+        path.join(tmpRepo, 'scripts', 'backlog.mjs'),
+        'add-isolated',
+        'Isolated Background Idea From TO DO Click',
+        '--desc',
+        'Captured without interrupting current turn',
+        '--type',
+        'ux',
+        '--priority',
+        'medium'
+      ],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    assert.match(out, /ISOLATED TO DO CAPTURE/);
+
+    const afterData = JSON.parse(fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.json'), 'utf8'));
+    const addedIdea = afterData.tasks.find((t) => t.title === 'Isolated Background Idea From TO DO Click');
+    assert.ok(addedIdea, 'Isolated idea must be added to docs/backlog.json');
+    assert.equal(addedIdea.status, 'todo', 'Isolated idea must land strictly in TO DO');
+    assert.ok(addedIdea.annotations, 'Isolated idea must be auto-annotated with 0 AI tokens');
+    assert.deepEqual(afterData.activePlanTaskIds, ['FEAT-ACTIVE-WIP'], 'activePlanTaskIds must remain 100% untouched');
+    assert.equal(afterData.tasks.find((t) => t.id === 'FEAT-ACTIVE-WIP').status, 'in_progress', 'Active WIP ticket must remain IN PROGRESS');
+    assert.equal(fs.readFileSync(planPath, 'utf8'), sentinelPlan, 'Active implementation_plan.md must remain 100% untouched');
+    assert.match(
+      fs.readFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'utf8'),
+      /endpoint === '\/api\/backlog-add-isolated'/,
+      'Local bridge must expose /api/backlog-add-isolated for out-of-band UI capture'
+    );
   });
 
   test('3i. backlog children: retrieves children tickets of non-completed parents only, supports --open-only and <PARENT_ID>, and renders parent/child badges', () => {
