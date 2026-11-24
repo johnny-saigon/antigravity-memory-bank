@@ -666,6 +666,24 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.match(readyAdviseOut, /READY \(PLANNED\)/);
     assert.match(readyAdviseOut, /SWITCH DOWN NOW/);
 
+    // 1e. FEAT-133..135: autoAnnotateTicket in TO DO + PLAN/CODE interactive model-selector modals in backlog.html
+    execFileSync(
+      process.execPath,
+      [backlogScriptPath, 'add', '--id', 'FEAT-902', '--title', 'Add OAuth token refresh modal in backlog.mjs', '--priority', 'high'],
+      { cwd: tmpRepo, env: testEnv, encoding: 'utf8' }
+    );
+    const afterAddJson = JSON.parse(fs.readFileSync(backlogJsonPath, 'utf8'));
+    const feat902 = afterAddJson.tasks.find(t => t.id === 'FEAT-902');
+    assert.ok(feat902, 'FEAT-902 should exist in docs/backlog.json');
+    assert.equal(feat902.status, 'todo', 'backlog add must strictly default to status: todo');
+    assert.ok(feat902.annotations && feat902.annotations.recommendedPlanModel, 'autoAnnotateTicket should populate annotations');
+    assert.ok(Array.isArray(feat902.acceptanceCriteria) && feat902.acceptanceCriteria.length >= 2, 'autoAnnotateTicket should populate acceptanceCriteria');
+
+    const updatedHtml = fs.readFileSync(path.join(tmpRepo, 'docs', 'backlog.html'), 'utf8');
+    assert.match(updatedHtml, /id="modelSelectorModal"/);
+    assert.match(updatedHtml, /openModelSelectorModal/);
+    assert.match(updatedHtml, /confirmModelAndRun/);
+
     // Re-add FEAT-244 for step 2
     execFileSync(
       process.execPath,

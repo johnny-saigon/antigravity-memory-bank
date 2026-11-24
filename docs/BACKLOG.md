@@ -447,6 +447,36 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-133: Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `skills/backlog-add/SKILL.md`, `scripts/backlog.mjs`, `bin/cli.mjs`, `scripts/lint-memory.mjs`, `AGENTS.md`
+- **Description:** Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.
+- **Technical Specification:**
+  Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.
+
+---
+
+### FEAT-134: Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`
+- **Description:** Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.
+- **Technical Specification:**
+  Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.
+
+---
+
+### FEAT-135: Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `skills/backlog-plan/SKILL.md`, `skills/backlog-start/SKILL.md`, `docs/CREDITS_CHEATSHEET.md`, `docs/BACKLOG_GUIDE.md`, `tests/cli-e2e.test.mjs`
+- **Description:** Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.
+- **Technical Specification:**
+  Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

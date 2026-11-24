@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[FEAT-135] Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects** (`HIGH` · Status: `done`): Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.
+  - **[FEAT-134] Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers** (`HIGH` · Status: `done`): Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.
+  - **[FEAT-133] Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant** (`HIGH` · Status: `done`): Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.
   - **[FEAT-132] Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects** (`HIGH` · Status: `done`): Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.
-  - **[FEAT-131] Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine** (`HIGH` · Status: `done`): Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.
-  - **[FEAT-130] Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split** (`HIGH` · Status: `done`): Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.
-  - **[FEAT-129] Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization** (`HIGH` · Status: `done`): Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before rendering backlog.html in SnapMail and Design Engineering Website), unify SSR/client card ROI rendering in scripts/backlog.mjs, auto-prune duplicate non-canonical backlog_kanban.html/root backlog.html artifacts, and re-render identical Kanban boards across all 10 projects.
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -21,6 +21,30 @@
 > - **Package Whitelist (`"files"`)**: `package.json` strictly restricts published package contents to `bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, and `install.sh`, excluding dogfood files (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`).
 
 ## 3. Proposed Changes
+### [FEAT-135] Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects *(Completed & Verified Baseline)*
+- **Specification**: Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md) (`skills/backlog-plan/SKILL.md`)
+  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-start/SKILL.md) (`skills/backlog-start/SKILL.md`)
+  - `[VERIFIED]` [CREDITS_CHEATSHEET.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/CREDITS_CHEATSHEET.md) (`docs/CREDITS_CHEATSHEET.md`)
+  - `[VERIFIED]` [BACKLOG_GUIDE.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG_GUIDE.md) (`docs/BACKLOG_GUIDE.md`)
+  - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
+
+### [FEAT-134] Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers *(Completed & Verified Baseline)*
+- **Specification**: Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
+
+### [FEAT-133] Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant *(Completed & Verified Baseline)*
+- **Specification**: Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-add/SKILL.md) (`skills/backlog-add/SKILL.md`)
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+  - `[VERIFIED]` [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs) (`bin/cli.mjs`)
+  - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
+  - `[VERIFIED]` [AGENTS.md](file:///Users/jbb/Documents/antigravity-memory-bank/AGENTS.md) (`AGENTS.md`)
+
 ### [FEAT-132] Update Credits CheatSheet, Guides, Skills, E2E Tests & Deploy 4-Column Kanban Across All 10 Projects *(Completed & Verified Baseline)*
 - **Specification**: Document the 4-column To-Do -> Ready -> In Progress -> Done credit-saving workflow across CheatSheet, guides, and skills, add E2E tests, verify 15/15 parity, and deploy to all 10 installed Memory Bank projects.
 - **Component Modifications (Dependencies First)**:
@@ -31,28 +55,6 @@
   - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-plan/SKILL.md) (`skills/backlog-plan/SKILL.md`)
   - `[VERIFIED]` [SKILL.md](file:///Users/jbb/Documents/antigravity-memory-bank/skills/backlog-start/SKILL.md) (`skills/backlog-start/SKILL.md`)
   - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
-
-### [FEAT-131] Integrate To-Do -> Ready -> In Progress Lifecycle into Save Credits & AGY Model ROI Engine *(Completed & Verified Baseline)*
-- **Specification**: Add ready status validation in lint-memory.mjs, make Credit ROI advisor status-aware (Stage A frontier planning for unplanned todo vs Stage B workhorse model-downgrade trigger for ready tickets), and add 4-column workflow guide to Save Credits modal.
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [lint-memory.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/lint-memory.mjs) (`scripts/lint-memory.mjs`)
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
-
-### [FEAT-130] Add 4th READY (Planned) Column to Backlog Kanban with Auto-Promotion on /backlog-plan & Split *(Completed & Verified Baseline)*
-- **Specification**: Evolve the Backlog Kanban into a 4-column board (To-Do / Backlog -> Ready (Planned) -> In Progress / QA -> Completed (Done)) with auto-promotion to status:ready on plan/split, drag-and-drop, per-column sort, filter pill, and CLI ready command.
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
-
-### [FEAT-129] Enforce Identical Canonical Backlog Kanban Design Across All Projects & Harden backlog-adapter Schema Normalization *(Completed & Verified Baseline)*
-- **Specification**: Fix TypeError in lib/backlog-adapter.mjs when existing docs/backlog.json uses tickets[] or omits milestones[] (which aborted upgrade before rendering backlog.html in SnapMail and Design Engineering Website), unify SSR/client card ROI rendering in scripts/backlog.mjs, auto-prune duplicate non-canonical backlog_kanban.html/root backlog.html artifacts, and re-render identical Kanban boards across all 10 projects.
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [backlog-adapter.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/lib/backlog-adapter.mjs) (`lib/backlog-adapter.mjs`)
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
-  - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
-  - `[VERIFIED]` [BUG_FIX_RECORDS.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/quality/BUG_FIX_RECORDS.md) (`docs/quality/BUG_FIX_RECORDS.md`)
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

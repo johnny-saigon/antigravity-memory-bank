@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-11-24T06:39:05.461Z",
+  "lastUpdated": "2026-11-24T07:17:37.535Z",
   "project": "antigravity-memory-bank",
   "tasks": [
     {
@@ -1261,6 +1261,102 @@
         }
       ],
       "completedAt": "2026-11-24T06:39:05.294Z"
+    },
+    {
+      "id": "FEAT-133",
+      "type": "feature",
+      "title": "Add /backlog-add Skill (TO DO Auto-Annotation Only) & Direct-to-READY /backlog-plan Invariant",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "skills/backlog-add/SKILL.md",
+        "scripts/backlog.mjs",
+        "bin/cli.mjs",
+        "scripts/lint-memory.mjs",
+        "AGENTS.md"
+      ],
+      "attachments": [],
+      "description": "Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.",
+      "spec": "Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-133-ACT-1",
+          "text": "Create /backlog-add skill strictly for TO DO auto-annotation (0 plan/code credits), add autoAnnotateTicket() in scripts/backlog.mjs, and enforce that /backlog-plan creates/plans directly into READY and never auto-jumps to IN PROGRESS.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-133-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-133 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-24T07:17:37.186Z"
+    },
+    {
+      "id": "FEAT-134",
+      "type": "feature",
+      "title": "Add Interactive PLAN (TO DO -> READY) & CODE (READY -> IN PROGRESS) Model-Selector Modals + Symmetric Drag-and-Drop Triggers",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "scripts/backlog.mjs",
+        "templates/scripts/backlog.mjs"
+      ],
+      "attachments": [],
+      "description": "Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.",
+      "spec": "Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-134-ACT-1",
+          "text": "Add PLAN button on TO DO cards and CODE button on READY cards, build #modelSelectorModal ranking credit-optimal AGY models, and wire symmetric drag-and-drop triggers (TO DO -> READY opens PLAN model selector; READY -> IN PROGRESS opens CODE model selector) committing status transitions only after model selection.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-134-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-134 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-24T07:17:37.289Z"
+    },
+    {
+      "id": "FEAT-135",
+      "type": "feature",
+      "title": "Add Chat-Side Model Switching (swarm model + ask_question), Update CheatSheet & Roll Out Across All 10 Projects",
+      "status": "done",
+      "priority": "high",
+      "components": [
+        "skills/backlog-plan/SKILL.md",
+        "skills/backlog-start/SKILL.md",
+        "docs/CREDITS_CHEATSHEET.md",
+        "docs/BACKLOG_GUIDE.md",
+        "tests/cli-e2e.test.mjs"
+      ],
+      "attachments": [],
+      "description": "Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.",
+      "spec": "Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.",
+      "acceptanceCriteria": [],
+      "actionItems": [
+        {
+          "id": "FEAT-135-ACT-1",
+          "text": "Support --model switching via swarm(action:'model') and ask_question fallback in /backlog-plan and /backlog-start, document all 5 workflows in CREDITS_CHEATSHEET.md and BACKLOG_GUIDE.md, add E2E tests, and deploy to all 10 projects.",
+          "owner": "antigravity",
+          "done": true
+        },
+        {
+          "id": "FEAT-135-ACT-2",
+          "text": "Run deterministic & live E2E verification and mark FEAT-135 done",
+          "owner": "antigravity",
+          "done": true
+        }
+      ],
+      "completedAt": "2026-11-24T07:17:37.380Z"
     }
   ],
   "milestones": [

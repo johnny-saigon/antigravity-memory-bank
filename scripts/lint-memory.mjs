@@ -743,6 +743,7 @@ const parityPairs = [
   ['scripts/sync-memory-context.mjs', 'templates/scripts/sync-memory-context.mjs'],
   ['scripts/sync-living-docs.mjs', 'templates/scripts/sync-living-docs.mjs'],
   ['skills/start/SKILL.md', '.agents/skills/start/SKILL.md'],
+  ['skills/backlog-add/SKILL.md', '.agents/skills/backlog-add/SKILL.md'],
   ['skills/backlog-start/SKILL.md', '.agents/skills/backlog-start/SKILL.md'],
   ['skills/backlog-plan/SKILL.md', '.agents/skills/backlog-plan/SKILL.md'],
   ['skills/context/SKILL.md', '.agents/skills/context/SKILL.md'],

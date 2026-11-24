@@ -5,9 +5,27 @@ description: Structured Antigravity Planning Mode workflow (/backlog-plan FEAT-1
 
 # Backlog-Correlated Planning Mode (`/backlog-plan`)
 
-Triggered when the user invokes `/backlog-plan [TICKET_IDS] [optional_attachments]` (e.g., `/backlog-plan FEAT-101`, `/backlog-plan FEAT-101 @ux-ui.zip`, or `/backlog-plan` in Planning Mode).
+Triggered when the user invokes `/backlog-plan [TICKET_IDS or "<new ticket idea>"] [--model <model_id>] [optional_attachments]` (e.g., `/backlog-plan FEAT-101 --model gemini-4-argon-high`, `/backlog-plan "Add multi-account OAuth"`, or via the **`📐 Plan`** button / **Drag `TO DO` → `READY`** on the Kanban board).
 
-Transforms the agent into an autonomous software architect that explores the codebase, maps dependencies, and aligns with the user on a formal architectural blueprint (`task.md` + `implementation_plan.md`) **before** modifying production code, while keeping 100% correlation with `docs/backlog.json` and `memory-bank/*.md`.
+Transforms the agent into an autonomous software architect that selects the best credit-optimized AGY Planning Model, explores the codebase, drafts `implementation_plan.md` & `task.md`, and places the ticket(s) into the **`READY (Planned)`** column (`status: "ready"`).
+
+> **Strict State-Machine Invariant (`TO DO` → `READY` · Never Auto-`IN PROGRESS`)**:
+> - `/backlog-plan` creates (if new) or promotes existing `TO DO` tickets into the **`READY (Planned)`** column (`status: "ready"`).
+> - **NEVER** transition a ticket to `in_progress` automatically during `/backlog-plan`. A ticket only enters `IN PROGRESS` when the user explicitly triggers coding (`/backlog-start <ID>`, pushing **`💻 Code`** on a `READY` card, or dragging **`READY` → `IN PROGRESS`**).
+
+---
+
+## Phase 0: Credit-Optimal AGY Planning Model Selection (`--model` or `ask_question`)
+
+1. **If `--model <model_id>` Was Passed in the Prompt** (from selecting a model in `backlog.html`'s **`📐 Plan`** or **Drag `TO DO` → `READY`** modal):
+   - Switch the active agent to the user's chosen planning model by calling `swarm({ action: "model", model: "<model_id>" })` (if supported by the active runtime) and proceed immediately to Phase 1 without re-asking.
+2. **If `--model` Was Omitted** (user typed `/backlog-plan ...` directly in the prompt window):
+   - First inspect the ticket's complexity (`node scripts/lint-memory.mjs --advise [TICKET_ID]`), then call **`ask_question`** to present the 4 ranked AGY Planning Model options so the user chooses their preferred credit/quality trade-off:
+     - `(Recommended) Gemini 4 Argon (High) [5–7x · Google Pool] — Best for 3+ file architecture & P0 root-cause planning`
+     - `Gemini 4 Carbon (High) [3.5–4.5x · Google Pool] — Best Q/C balance for 2–3 file backend/OAuth/DB planning`
+     - `Claude Opus 5.5 (High) [6–9x · External Pool] — External quota pool frontier architect & security review`
+     - `Gemini 4 Neon (Medium) [2–3x · Google Pool] — Fast, lightweight plan for 1–2 file UI/feature tickets`
+   - Once the user selects an option, call `swarm({ action: "model", model: "<selected_model_id>" })` and execute Phase 1!
 
 ---
 

@@ -5,9 +5,23 @@ description: Automated, frugal execution of backlog tickets (e.g. /backlog-start
 
 # Backlog Sprint Execution (`/backlog-start`)
 
-Triggered when the user invokes `/backlog-start <TICKET_IDS> [optional_attachments]` (e.g., `/backlog-start FEAT-101`, `/backlog-start FEAT-101 @ux-ui.zip`, or `/backlog-start FEAT-101, BUG-102`).
+Triggered when the user invokes `/backlog-start <TICKET_IDS> [--model <model_id>] [optional_attachments]` (e.g., `/backlog-start FEAT-101 --model gemini-4-neon-medium`, via the **`💻 Code`** button on a `READY` card, or via **Drag `READY` → `IN PROGRESS`** on the Kanban board).
 
-Execute the following 3 phases autonomously:
+Execute the following phases autonomously:
+
+---
+
+## Phase 0: Credit-Optimal Stage B Coding Model Selection (`--model` or `ask_question`)
+
+1. **If `--model <model_id>` Was Passed in the Prompt** (from selecting a model in `backlog.html`'s **`💻 Code`** or **Drag `READY` → `IN PROGRESS`** modal):
+   - Switch the active agent to the user's chosen Stage B coding model via `swarm({ action: "model", model: "<model_id>" })` (if supported by the active runtime) and proceed immediately to Phase 1 without re-asking.
+2. **If `--model` Was Omitted** (user typed `/backlog-start <ID>` directly in the prompt window):
+   - Call **`ask_question`** to present the 4 ranked Stage B AGY Coding Model options (saving `55%–80%` credits vs. frontier planning models):
+     - `(Recommended) Gemini 4 Neon (Medium) [2–3x · Google Pool] — Best daily Stage B workhorse for 80% of READY tickets`
+     - `Claude Sonnet 5.5 (Medium) [2.5–4x · External Pool] — Surgical TypeScript/React/UI code on separate quota clock`
+     - `Gemini 3.8 Flash (Medium) [1.0x · Google Pool] — Lowest credit burn for 1–2 file UI, CSS, copy, docs, or simple CRUD`
+     - `GPT-OSS 120B (Medium) [1.5x · External Pool] — Cost-effective open-weight external quota offload`
+   - Once the user selects a coding model, call `swarm({ action: "model", model: "<selected_model_id>" })` and execute Phase 1!
 
 ---
 

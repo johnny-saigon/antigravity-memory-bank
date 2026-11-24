@@ -742,7 +742,7 @@ async function installSyncAndHooks(targetDir, detected) {
   }
 
   // 6. Install .agents/skills/ (and global ~/.gemini/config/skills/ if present) for backlog & credit/context controls
-  const allManagedSkills = ['start', 'backlog-start', 'backlog-plan', 'context', 'clear', 'effort', 'credits', 'usage'];
+  const allManagedSkills = ['start', 'backlog-add', 'backlog-start', 'backlog-plan', 'context', 'clear', 'effort', 'credits', 'usage'];
   const globalSkillsRoot = path.join(process.env.HOME || process.env.USERPROFILE || '', '.gemini', 'config', 'skills');
   const hasGlobalConfig = fsSync.existsSync(path.join(process.env.HOME || process.env.USERPROFILE || '', '.gemini', 'config'));
   for (const skName of allManagedSkills) {

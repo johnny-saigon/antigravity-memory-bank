@@ -78,7 +78,15 @@ flowchart LR
 
 ---
 
-## ⚡ 4. Quick-Reference Controls & Anti-Bleed Checklist
+## ⚡ 4. The 5 Kanban State-Machine Workflows & Quick-Reference Controls
+
+| # | Workflow / Trigger | Model Selection Gate | Target Column | What Happens |
+| :---: | :--- | :--- | :---: | :--- |
+| **1** | **`/backlog-add <idea>`**<br>*(or Quick Capture in `backlog.html`)* | None (`0` plan/code credits) | **`TO DO`** | Auto-annotates `components`, `acceptanceCriteria` & Credit-ROI tier (`🏷️ Annotated`) in `TO DO` and **stops in `≤ 2` turns**. |
+| **2** | **`/backlog-plan <new idea or ID>`**<br>*(Direct-to-`READY` from prompt)* | `ask_question` picker (or `--model`) selects **Planning Model** | **`READY`** | Creates/loads ticket, plans `implementation_plan.md` on selected model, places ticket in **`READY`**, and **stops** (never auto-enters `IN PROGRESS`). |
+| **3** | **Drag `READY` → `IN PROGRESS`** | Opens **`💻 Select Coding Model`** Modal | **`IN PROGRESS`** | After model selection (`Neon`, `Sonnet 5.5`, `Flash`, `GPT-OSS`), moves ticket to `IN PROGRESS` and runs `/backlog-start` according to plan. |
+| **4** | **Push `📐 Plan` (on `TO DO`)**<br>**Push `💻 Code` (on `READY`)** | Opens **`📐 Plan`** or **`💻 Code`** Model Selector Modal | **`READY`** (`Plan`)<br>**`IN PROGRESS`** (`Code`) | Pushing `📐 Plan` → select model → moves to `READY` & runs `/backlog-plan`. Pushing `💻 Code` → select model → moves to `IN PROGRESS` & runs `/backlog-start`. |
+| **5** | **Drag `TO DO` → `READY`** | Opens **`📐 Select Planning Model`** Modal | **`READY`** | After model selection (`Argon`, `Carbon`, `Opus 5.5`, `Neon`), moves ticket to `READY` and executes `/backlog-plan`. |
 
 | Command / Control | What It Does | When to Run It |
 | :--- | :--- | :--- |
