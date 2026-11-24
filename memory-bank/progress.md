@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112)** (`c296aaf`)
 - [x] **fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112)** (`2d78b4b`)
 - [x] **docs: sync memory-bank context after BUG-111 resolution** (`7ee0802`)
 - [x] **fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111)** (`cfd803c`)
