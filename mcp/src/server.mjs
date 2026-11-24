@@ -219,19 +219,6 @@ function getPinnedRepoRoot() {
   return raw && fs.existsSync(raw) ? path.resolve(raw) : null;
 }
 
-function getServerMode() {
-  const arg = process.argv.find((a) => a.startsWith('--mode='));
-  if (!arg) return 'both';
-  const m = arg.slice('--mode='.length).trim().toLowerCase();
-  return m === 'workspace' || m === 'global' ? m : 'both';
-}
-
-function getPluginDataDir() {
-  const arg = process.argv.find((a) => a.startsWith('--data-dir='));
-  if (arg) return path.resolve(arg.slice('--data-dir='.length));
-  return path.join(process.env.HOME || os.homedir(), '.gemini', 'antigravity', 'plugin_data', 'memory-bank');
-}
-
 function fileUriToPath(uriOrPath) {
   if (!uriOrPath || typeof uriOrPath !== 'string') return null;
   const trimmed = uriOrPath.trim();
@@ -292,19 +279,7 @@ function resolveWorkspaceRoot(requestedRoot) {
   const isAllowedWorkspacePath = (rr) =>
     Boolean(rr && fs.existsSync(rr) && (!rr.includes('/var/folders/') || rr.startsWith(homePrefix)));
 
-  // 1. Check last_active_workspace.json (written by real /start & backlog sessions; never clobbered by fleet upgrade)
-  try {
-    const markerPath = path.join(getPluginDataDir(), 'last_active_workspace.json');
-    if (fs.existsSync(markerPath)) {
-      const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
-      const rr = marker?.repoRoot;
-      if (isAllowedWorkspacePath(rr)) {
-        return path.resolve(rr);
-      }
-    }
-  } catch {}
-
-  // 2. Fallback: most recently active conversation by transcript.jsonl mtime (NEVER backlog.html mtime!)
+  // Fallback: most recently active conversation by transcript.jsonl mtime (NEVER backlog.html mtime!)
   try {
     const brainBase = path.join(homePrefix, '.gemini', 'antigravity', 'brain');
     if (fs.existsSync(brainBase)) {
@@ -812,23 +787,12 @@ function createServer() {
   // MODEL-VISIBLE ENTRYPOINT TOOLS (2 ONLY -> < 250 tokens total)
   // =========================================================================
 
-  const serverMode = getServerMode();
-  const dashboardEntrypoints =
-    serverMode === 'workspace'
-      ? [{ type: 'aux_pane', title: 'Memory Bank' }]
-      : serverMode === 'global'
-        ? [{ type: 'global', title: 'Memory Bank Fleet' }]
-        : [
-            { type: 'aux_pane', title: 'Memory Bank' },
-            { type: 'global', title: 'Memory Bank Fleet' }
-          ];
-
   registerAppTool(
     server,
     'memory_bank_dashboard',
     {
-      title: serverMode === 'global' ? 'Memory Bank Fleet' : 'Memory Bank',
-      description: 'Open the interactive Antigravity Memory Bank Control Plane (Kanban Board with zero-permission PLAN/CODE execution, Memory & Rules Inspector, Credits & Usage Telemetry, Fleet Worktrees, and Hexagonal Bricks).',
+      title: 'Memory Bank',
+      description: 'Open the interactive Antigravity Memory Bank Control Plane (Kanban Board with zero-permission PLAN/CODE execution, Memory & Rules Inspector, Credits & Usage Telemetry, and Hexagonal Bricks).',
       inputSchema: z.object({
         repoRoot: z.string().optional().describe('Optional absolute path to a repository or linked worktree'),
         tab: z.enum(['kanban', 'memory', 'credits', 'fleet', 'bricks']).optional().describe('Initial tab to open')
@@ -836,7 +800,7 @@ function createServer() {
       _meta: {
         ui: { resourceUri: APP_URI },
         'com.google.antigravity/ui': {
-          entrypoints: dashboardEntrypoints
+          entrypoints: [{ type: 'aux_pane', title: 'Memory Bank' }]
         }
       }
     },

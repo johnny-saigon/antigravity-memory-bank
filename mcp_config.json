@@ -3,9 +3,7 @@
     "memory-bank": {
       "command": "node",
       "args": [
-        "${PLUGIN_ROOT}/mcp/dist/server.mjs",
-        "--data-dir=${PLUGIN_DATA}",
-        "--mode=global"
+        "${PLUGIN_ROOT}/mcp/dist/server.mjs"
       ]
     }
   }

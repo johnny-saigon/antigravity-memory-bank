@@ -1903,20 +1903,20 @@ async function runFleetCommand(opts) {
   console.log('='.repeat(110) + '\n');
   if (opts.fleetAction === 'upgrade') {
     const homeDir = process.env.HOME || os.homedir();
-    const installedPluginManifest = path.join(homeDir, '.gemini', 'config', 'plugins', 'memory-bank', 'plugin.json');
-    if (fsSync.existsSync(installedPluginManifest)) {
-      await runPluginCommand({ pluginAction: 'sync', pluginDir: path.dirname(installedPluginManifest) });
+    const oldGlobalPluginDir = path.join(homeDir, '.gemini', 'config', 'plugins', 'memory-bank');
+    const oldGlobalDataDir = path.join(homeDir, '.gemini', 'antigravity', 'plugin_data', 'memory-bank');
+    if (fsSync.existsSync(oldGlobalPluginDir)) {
+      await fs.rm(oldGlobalPluginDir, { recursive: true, force: true });
+    }
+    if (fsSync.existsSync(oldGlobalDataDir)) {
+      await fs.rm(oldGlobalDataDir, { recursive: true, force: true });
     }
   }
   return reportRows;
 }
 
 async function installWorkspaceBoardPlugin(targetDir) {
-  const homeDir = process.env.HOME || os.homedir();
-  const globalServer = path.join(homeDir, '.gemini', 'config', 'plugins', 'memory-bank', 'mcp', 'dist', 'server.mjs');
-  const resolvedServer = fsSync.existsSync(globalServer)
-    ? globalServer
-    : path.join(pkgRoot, 'mcp', 'dist', 'server.mjs');
+  const resolvedServer = path.join(pkgRoot, 'mcp', 'dist', 'server.mjs');
   if (!fsSync.existsSync(resolvedServer)) return;
 
   const absTarget = path.resolve(targetDir);
@@ -1934,7 +1934,7 @@ async function installWorkspaceBoardPlugin(targetDir) {
     mcpServers: {
       board: {
         command: 'node',
-        args: [resolvedServer, `--repo-root=${absTarget}`, '--mode=workspace']
+        args: [resolvedServer, `--repo-root=${absTarget}`]
       }
     }
   };

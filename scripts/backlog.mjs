@@ -5980,19 +5980,6 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   fs.mkdirSync(path.dirname(localHtmlPath), { recursive: true });
   fs.writeFileSync(localHtmlPath, htmlContent, 'utf8');
 
-  // Stamp last_active_workspace.json for MCP App Side Pane auto-binding (never during fleet upgrade or temp test repos)
-  if (!process.env.ANTIGRAVITY_FLEET_UPGRADE && !rootDir.includes('/var/folders/') && !rootDir.includes('/T/')) {
-    try {
-      const markerDir = path.join(process.env.HOME || os.homedir(), '.gemini', 'antigravity', 'plugin_data', 'memory-bank');
-      fs.mkdirSync(markerDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(markerDir, 'last_active_workspace.json'),
-        JSON.stringify({ repoRoot: path.resolve(rootDir), updatedAt: new Date().toISOString() }, null, 2) + '\n',
-        'utf8'
-      );
-    } catch {}
-  }
-
   // If a legacy/ad-hoc root backlog.html or backlog_kanban.html exists in the repo, remove or replace it so only the canonical Kanban design is served
   for (const legacyRootHtml of ['backlog.html', 'backlog_kanban.html', 'docs/backlog_kanban.html']) {
     const legacyFull = path.join(rootDir, legacyRootHtml);

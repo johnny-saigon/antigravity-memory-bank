@@ -1664,7 +1664,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       assert.equal(appTools.length, 15, 'All 15 UI backend tools must carry visibility: ["app"]');
       const dash = tools.find((t) => t.name === 'memory_bank_dashboard');
       const entryTypes = (dash?._meta?.['com.google.antigravity/ui']?.entrypoints || []).map((e) => e.type).sort();
-      assert.deepEqual(entryTypes, ['aux_pane', 'global']);
+      assert.deepEqual(entryTypes, ['aux_pane']);
 
       // 2. Resource read: ui://memory-bank/app.html returns SEP-1865 MIME
       const resRead = await rpc('resources/read', { uri: 'ui://memory-bank/app.html' });
@@ -2028,20 +2028,15 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'b116-e2e', version: '1.0' } });
       mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
 
-      // 1. Without last_active_workspace.json, MUST pick repoA (newest transcript.jsonl) NOT repoB (newest backlog.html)
+      // 1. Without --repo-root, MUST pick repoA (newest transcript.jsonl) NOT repoB (newest backlog.html)
       const snap1 = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: {} });
       assert.equal(snap1.result?.structuredContent?.project, 'Binaryday', 'Must pick newest transcript.jsonl (Binaryday), not fleet-clobbered backlog.html (JBB.PM CV)');
       assert.equal(snap1.result?.structuredContent?.boundByHost, false);
-
-      // 2. With last_active_workspace.json pointing to repoB, MUST honor it when unpinned
-      fs.writeFileSync(path.join(dataDir, 'last_active_workspace.json'), JSON.stringify({ repoRoot: repoB, updatedAt: new Date().toISOString() }));
-      const snap2 = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: {} });
-      assert.equal(snap2.result?.structuredContent?.project, 'JBB.PM CV');
       mcpProc.kill('SIGKILL');
       mcpProc = null;
 
-      // 3. Per-workspace pinned mode (--repo-root=repoA --mode=workspace) MUST ALWAYS lock to repoA (boundByHost: true, aux_pane only)
-      mcpProc = spawn(process.execPath, [distServer, `--repo-root=${repoA}`, '--mode=workspace', `--data-dir=${dataDir}`], {
+      // 2. Per-workspace pinned mode (--repo-root=repoA) MUST ALWAYS lock to repoA (boundByHost: true, aux_pane only)
+      mcpProc = spawn(process.execPath, [distServer, `--repo-root=${repoA}`], {
         cwd: os.tmpdir(),
         env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
         stdio: ['pipe', 'pipe', 'pipe']
@@ -2069,7 +2064,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       const wsDash = (wsList.result?.tools || []).find((t) => t.name === 'memory_bank_dashboard');
       assert.deepEqual((wsDash?._meta?.['com.google.antigravity/ui']?.entrypoints || []).map((e) => e.type), ['aux_pane']);
       const wsSnap = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: {} });
-      assert.equal(wsSnap.result?.structuredContent?.project, 'Binaryday', 'Pinned --repo-root must ALWAYS return Binaryday even when last_active_workspace points to JBB.PM CV');
+      assert.equal(wsSnap.result?.structuredContent?.project, 'Binaryday');
       assert.equal(wsSnap.result?.structuredContent?.boundByHost, true);
     } finally {
       if (mcpProc && !mcpProc.killed) { try { mcpProc.kill('SIGKILL'); } catch {} }

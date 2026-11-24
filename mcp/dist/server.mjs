@@ -36853,17 +36853,6 @@ function getPinnedRepoRoot() {
   const raw = arg.slice("--repo-root=".length).trim();
   return raw && fs.existsSync(raw) ? path.resolve(raw) : null;
 }
-function getServerMode() {
-  const arg = process.argv.find((a) => a.startsWith("--mode="));
-  if (!arg) return "both";
-  const m = arg.slice("--mode=".length).trim().toLowerCase();
-  return m === "workspace" || m === "global" ? m : "both";
-}
-function getPluginDataDir() {
-  const arg = process.argv.find((a) => a.startsWith("--data-dir="));
-  if (arg) return path.resolve(arg.slice("--data-dir=".length));
-  return path.join(process.env.HOME || os.homedir(), ".gemini", "antigravity", "plugin_data", "memory-bank");
-}
 function fileUriToPath(uriOrPath) {
   if (!uriOrPath || typeof uriOrPath !== "string") return null;
   const trimmed = uriOrPath.trim();
@@ -36915,17 +36904,6 @@ function resolveWorkspaceRoot(requestedRoot) {
   }
   const homePrefix = process.env.HOME || os.homedir();
   const isAllowedWorkspacePath = (rr) => Boolean(rr && fs.existsSync(rr) && (!rr.includes("/var/folders/") || rr.startsWith(homePrefix)));
-  try {
-    const markerPath = path.join(getPluginDataDir(), "last_active_workspace.json");
-    if (fs.existsSync(markerPath)) {
-      const marker = JSON.parse(fs.readFileSync(markerPath, "utf8"));
-      const rr = marker?.repoRoot;
-      if (isAllowedWorkspacePath(rr)) {
-        return path.resolve(rr);
-      }
-    }
-  } catch {
-  }
   try {
     const brainBase = path.join(homePrefix, ".gemini", "antigravity", "brain");
     if (fs.existsSync(brainBase)) {
@@ -37377,17 +37355,12 @@ function createServer() {
       };
     }
   );
-  const serverMode = getServerMode();
-  const dashboardEntrypoints = serverMode === "workspace" ? [{ type: "aux_pane", title: "Memory Bank" }] : serverMode === "global" ? [{ type: "global", title: "Memory Bank Fleet" }] : [
-    { type: "aux_pane", title: "Memory Bank" },
-    { type: "global", title: "Memory Bank Fleet" }
-  ];
   j(
     server,
     "memory_bank_dashboard",
     {
-      title: serverMode === "global" ? "Memory Bank Fleet" : "Memory Bank",
-      description: "Open the interactive Antigravity Memory Bank Control Plane (Kanban Board with zero-permission PLAN/CODE execution, Memory & Rules Inspector, Credits & Usage Telemetry, Fleet Worktrees, and Hexagonal Bricks).",
+      title: "Memory Bank",
+      description: "Open the interactive Antigravity Memory Bank Control Plane (Kanban Board with zero-permission PLAN/CODE execution, Memory & Rules Inspector, Credits & Usage Telemetry, and Hexagonal Bricks).",
       inputSchema: external_exports.object({
         repoRoot: external_exports.string().optional().describe("Optional absolute path to a repository or linked worktree"),
         tab: external_exports.enum(["kanban", "memory", "credits", "fleet", "bricks"]).optional().describe("Initial tab to open")
@@ -37395,7 +37368,7 @@ function createServer() {
       _meta: {
         ui: { resourceUri: APP_URI },
         "com.google.antigravity/ui": {
-          entrypoints: dashboardEntrypoints
+          entrypoints: [{ type: "aux_pane", title: "Memory Bank" }]
         }
       }
     },
