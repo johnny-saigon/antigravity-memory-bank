@@ -98,6 +98,10 @@ Execute the following phases autonomously:
        1. A **Non-Regression Unit/Component Test** specifically asserting the fixed function, state transition, or UI behavior so the exact regression can never recur silently.
        2. An **End-to-End (E2E) Test** integrating the fix into the live API / full-stack / browser / mobile E2E suite.
      - Record the root cause, fix, Non-Regression test path, and E2E test path in `docs/BUG_FIX_RECORDS.md` (if present) or `docs/backlog.json` before marking the ticket `done`.
+6. **Mandatory Root Viewport & Compiled Bundle Proof for UI Layout Changes (Non-Negotiable)**:
+   - For ANY UI layout, alignment, overflow, or visual layout-shift change:
+     - **Inspect the root rendering context** (`html`/`body` viewport, scroll container, and stacking context) rather than inner container approximations.
+     - **Provide exact CSS selector proof and compiled production bundle inspection** (confirming the exact compiled CSS rule/output in `dist/` or live DOM) before claiming the fix is complete so user credits are never burned on unverified layout claims.
 
 ---
 
