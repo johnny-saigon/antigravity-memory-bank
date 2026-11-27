@@ -78,7 +78,56 @@ flowchart LR
 
 ---
 
-## ⚡ 4. The 5 Kanban State-Machine Workflows & Quick-Reference Controls
+## 🧠 4. `/effort` Slash Command vs. Model Thinking Effort (Two Different Knobs)
+
+Antigravity gives you **two independent effort controls**. Understanding how they differ — and pairing them intentionally — is one of the fastest ways to eliminate wasted credits without sacrificing engineering quality.
+
+1. **Model Thinking Effort *(Inference-Level Parameter — AGY Model Picker: `(Low)` / `(Medium)` / `(High)` / `(XHigh)`)*:**
+   - **What it controls:** The neural network's **internal reasoning token budget** (the private chain-of-thought scratchpad computed *before* emitting the first visible token — e.g., Gemini thinking budget, Claude `thinking.budget_tokens`, OpenAI `reasoning_effort`).
+   - **Behavior:** `Low` caps internal reasoning tokens for fast, low-cost turns; `High` / `XHigh` unlocks deep multi-step simulation, constraint checking, and internal self-correction at higher latency and per-turn token cost.
+   - **Scope:** Applies to each **individual model call**.
+
+2. **Antigravity `/effort [low|medium|high|xhigh]` *(Agent Workflow & Governance Control — `.agents/skills/effort/SKILL.md` & `scripts/lint-memory.mjs --effort`)*:**
+   - **What it controls:** **Agent behavior across the full ticket lifecycle** — hard tool-turn budgets (`≤ 4` / `≤ 6` / `≤ 8` turns), whether a separate `/backlog-plan` gate is required before editing files, diagnostic/exploration rigor, and model-routing prescriptions across Google, External, and Orchestrator pools.
+   - **Important:** Typing `/effort low` or `/effort high` does **not** automatically change the AGY model dropdown — it governs how the agent plans, explores, batches tools, and advises you to shift your model picker.
+
+| Dimension | Model Thinking Effort *(Inference Knob)* | Antigravity `/effort` *(Agent Skill & Workflow Rule)* |
+| :--- | :--- | :--- |
+| **Layer** | LLM provider decoding / reasoning loop | Workspace orchestration & prompt governance |
+| **Primary Metric** | Internal chain-of-thought token budget | Tool turns, file-read breadth, planning gates & verification depth |
+| **Scope** | Single generation turn | End-to-end ticket lifecycle across multiple tool turns |
+| **Configured Via** | AGY Model Picker dropdown *(e.g., `Gemini 4 Neon (Medium)`)* | Chat slash command (`/effort low \| medium \| high \| xhigh`) |
+| **Credit Impact** | Scales token consumption per model call | Prevents credit bleed by capping diagnostic loops & enforcing model matching |
+
+### 🎯 Recommended Knob Pairings (Model Picker + `/effort`)
+
+| Ticket Profile | AGY Model Picker *(Thinking Effort)* | Workspace Command | Why This Pairing Wins |
+| :--- | :--- | :--- | :--- |
+| **Micro-tasks, CSS, copy, docs, unit tests** | `Gemini 3.8 Flash (Low/Med)` · `GPT-OSS 120B (Med)` | `/effort low` | Skips paid `/plan` (`≤ 4` turns) and keeps per-turn reasoning cost at baseline `1.0x–1.5x` |
+| **Standard features & single-component bugs** | `Gemini 4 Neon (Medium)` · `Claude Sonnet 5.5 (Medium)` | `/effort medium` | Best daily `Q/C ROI` (`≤ 6` turns); balanced internal reasoning without frontier overhead |
+| **Stage A: Multi-file / Schema / OAuth / P0 Plan** | `Gemini 4 Argon (High)` · `Carbon (High)` · `Claude Opus 5.5 (Med/High)` | `/effort high /backlog-plan <ID>` | Concentrates frontier thinking tokens into `1–2` planning turns to lock `implementation_plan.md` |
+| **Stage B: Execute Approved Plan** | **Switch DOWN** → `Gemini 4 Neon (Med/High)` · `Claude Sonnet 5.5 (Med)` | `/effort medium /backlog-start <ID>` | Plan is already paid for; cuts execution credit burn by **`55%–80%`** |
+| **Deep single-module algorithm / state math** | `Gemini 4 Neon (XHigh)` · `Gemini 4 Hydrogen (XHigh)` | `/effort xhigh` | Maximum per-turn reasoning depth on one focused module without full Argon/Opus rates |
+| **Parallel multi-subsystem swarms (`5+` modules)** | `Orchestrator (Neon/Carbon/Argon)` *(workers on Flash/Neon)* | `/effort xhigh` | High-leverage fan-out only when modules are independent — **switch model picker down immediately after** |
+
+---
+
+## 🏆 5. Credit & Quality Best Practices (The 10 Golden Rules)
+
+1. **Align Both Knobs — Never Over-Pay or Under-Power**: Never leave `Argon (High)` or `Opus (High)` selected for CSS/docs/boilerplate, and never force `Flash (Low)` to architect a multi-file OAuth/DB migration (failed retry loops burn more credits than planning once cleanly).
+2. **Always Separate Planning Credits from Execution Credits (Two-Stage Split)**: For any `3+` file feature, schema migration, or P0 bug, run `/effort high /backlog-plan <ID>` on a frontier model for `1–2` turns, approve the blueprint, then **immediately switch the model picker down** to `Gemini 4 Neon (Medium)` or `Claude Sonnet 5.5 (Medium)` for `/backlog-start` (`55%–80%` savings).
+3. **Capture Tickets & Context Offline First (`0` AI Tokens)**: Log scope, target files (`--components`), and spec/mockup attachments in `backlog.html` or `npm run backlog add` *before* starting chat — eliminates `2–4` exploratory discovery turns (`~15k–30k` tokens saved upfront).
+4. **Reset Context Immediately After Every Ticket (`/start`)**: Run `/start` (auto-runs `/clear` & `/compact` pre-flight) the moment a ticket closes so `50k+` token build/test logs are never re-billed on every turn of your next task (`~95%` per-turn cost reduction).
+5. **Batch Tool Calls & Honor the Hard Turn Budget (`≤ 4/6/8` Turns)**: Every extra agent turn re-sends the entire conversation history. Batch independent file reads into `1` turn, edits into `1–2` turns, and verification/deploy commands into `1–2` chained shell calls (`&&`).
+6. **Work Memory-First — Never Re-Discover Recorded State**: Check `memory-bank/activeContext.md` and `docs/backlog.json` before grepping or running diagnostics; never scrape `.system_generated/logs/transcript*.jsonl` or unrelated sibling repositories.
+7. **Balance Dual Quota Pools Proactively**: Google Gemini + Orchestrators (**Pool 1**) and Claude + GPT-OSS (**Pool 2**) run on independent 4-hour reset clocks. Shift routine coding to `Claude Sonnet 5.5 (Med)` or `GPT-OSS 120B (Med)` whenever Pool 1 drops below `30%`.
+8. **Switch Off Orchestrators Immediately After Swarms**: Google Orchestrators apply a `3x–6x` fan-out multiplier. Reserve them for `3–5+` independent parallel modules and switch your model picker back to `Neon` or `Flash` as soon as the swarm wraps up.
+9. **Keep Progressive Disclosure Lean (`/context`)**: Keep root `AGENTS.md` `< 50` lines (no `@[...]` inline expansion), `memory-bank/*.md` `< 150` lines, and `.agents/rules/*.md` on `trigger: model_decision` so idle rules never inflate your baseline token tax.
+10. **Keep Overage `OFF` & Audit Regularly**: Leave Google One / Antigravity **"Toggle for overage"** disabled for a hard stop at your `20x` baseline limit, and run `npm run backlog advise [ID]`, `/credits`, or `/usage` whenever sessions feel slow or heavy.
+
+---
+
+## ⚡ 6. The 5 Kanban State-Machine Workflows & Quick-Reference Controls
 
 | # | Workflow / Trigger | Model Selection Gate | Target Column | What Happens |
 | :---: | :--- | :--- | :---: | :--- |
@@ -92,6 +141,7 @@ flowchart LR
 | :--- | :--- | :--- |
 | **`npm run backlog advise [ID]`** | Prints verbose ticket-specific AGY model & Q/C ROI prescription | Before starting any ticket |
 | **`/start`** | Auto-runs `/clear` & `/compact` pre-flight (`0.0 KB` active delta, 100% archive kept) | Immediately after finishing **every** ticket |
-| **`/effort [low\|medium\|high\|xhigh]`** | Sets reasoning depth, turn cap (`≤ 4/6/8`), and outputs model guide | Whenever task complexity shifts |
+| **`/effort [low\|medium\|high\|xhigh]`** | Sets agent workflow depth, turn cap (`≤ 4/6/8`), planning gate & model guide | Whenever task complexity shifts |
+| **Model Picker `(Low\|Med\|High\|XHigh)`** | Sets the LLM's actual internal reasoning token budget per generation turn | Pair with `/effort` (e.g., downgrade after `/backlog-plan`) |
 | **`/credits`** · **`/usage`** · **`/context`** | Audits per-turn token drain, progressive disclosure savings & quota tips | Weekly or if responses feel slow/heavy |
 | **Overage Toggle = `OFF`** | Enforces a hard stop at your 20x baseline limit (zero surprise top-up burn) | Keep **OFF** in Google One / Antigravity Settings |

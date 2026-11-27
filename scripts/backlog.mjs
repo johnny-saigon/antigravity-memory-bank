@@ -513,76 +513,248 @@ function copyToNativeOsClipboard(text) {
   }
 }
 
+const BRIDGE_ANTIGRAVITY_CTX = {
+  lsAddress: process.env.ANTIGRAVITY_LS_ADDRESS || '',
+  csrfToken: process.env.ANTIGRAVITY_CSRF_TOKEN || '',
+  projectsByRoot: new Map()
+};
+if (process.env.ANTIGRAVITY_PROJECT_ID) {
+  try { BRIDGE_ANTIGRAVITY_CTX.projectsByRoot.set(path.resolve(REPO_ROOT), process.env.ANTIGRAVITY_PROJECT_ID); } catch {}
+}
+
+function mapModelToConversationTier(prompt = '', mode = 'code') {
+  const m = String(prompt || '').match(/--model\s+([^\s]+)/i);
+  const hint = String(m ? m[1] : '').toLowerCase();
+  if (/flash[_-]?lite/.test(hint)) return 'flash_lite';
+  if (/argon|carbon|opus|pro\b/.test(hint)) return 'pro';
+  if (/flash|neon|hydrogen|sonnet|gpt-oss/.test(hint)) return 'flash';
+  return mode === 'plan' ? 'pro' : 'flash';
+}
+
+function callConversationService(method, payload, ctx = BRIDGE_ANTIGRAVITY_CTX) {
+  return new Promise((resolve) => {
+    const lsAddress = String(ctx && ctx.lsAddress || '').trim();
+    const csrfToken = String(ctx && ctx.csrfToken || '').trim();
+    if (!lsAddress || !csrfToken) return resolve(null);
+    const bodyStr = JSON.stringify(payload || {});
+    let host = '127.0.0.1';
+    let port = 80;
+    const colonIdx = lsAddress.lastIndexOf(':');
+    if (colonIdx > 0) {
+      host = lsAddress.slice(0, colonIdx);
+      port = parseInt(lsAddress.slice(colonIdx + 1), 10) || 80;
+    } else {
+      host = lsAddress;
+    }
+    try {
+      const req = http.request({
+        hostname: host,
+        port,
+        path: `/product.v1.ConversationService/${method}`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Connect-Protocol-Version': '1',
+          'x-antigravity-csrf-token': csrfToken,
+          'Content-Length': Buffer.byteLength(bodyStr)
+        },
+        timeout: 3500
+      }, (res) => {
+        let raw = '';
+        res.on('data', chunk => { raw += chunk; });
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try { return resolve(JSON.parse(raw || '{}')); } catch { return resolve({}); }
+          }
+          resolve(null);
+        });
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.write(bodyStr);
+      req.end();
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function resolveProjectIdForRepoRoot(targetRoot, ctx = BRIDGE_ANTIGRAVITY_CTX) {
+  const absRoot = path.resolve(targetRoot || REPO_ROOT);
+  let realRoot = absRoot;
+  try { realRoot = fs.realpathSync(absRoot); } catch {}
+  if (ctx.projectsByRoot.has(absRoot)) return ctx.projectsByRoot.get(absRoot);
+  if (ctx.projectsByRoot.has(realRoot)) return ctx.projectsByRoot.get(realRoot);
+  if (!ctx.lsAddress || !ctx.csrfToken) return '';
+
+  const listed = await callConversationService('ListConversations', { pageSize: 50, includeArchived: false }, ctx);
+  const convs = Array.isArray(listed && listed.conversations) ? listed.conversations : [];
+  const brainBase = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
+  const baseNameLower = path.basename(absRoot).toLowerCase();
+
+  // Pass 1: Match conversation whose brain artifacts explicitly reference targetRoot
+  for (const conv of convs) {
+    const pid = conv && conv.metadata && conv.metadata.projectId;
+    if (!pid || !conv.id) continue;
+    try {
+      const bHtml = path.join(brainBase, conv.id, 'backlog.html');
+      if (fs.existsSync(bHtml)) {
+        const snippet = fs.readFileSync(bHtml, 'utf8').slice(0, 12000);
+        if (snippet.includes(absRoot) || snippet.includes(realRoot)) {
+          ctx.projectsByRoot.set(absRoot, pid);
+          ctx.projectsByRoot.set(realRoot, pid);
+          return pid;
+        }
+      }
+    } catch {}
+  }
+
+  // Pass 2: Match conversation title containing repository basename (e.g. "WinorBuy Core")
+  for (const conv of convs) {
+    const pid = conv && conv.metadata && conv.metadata.projectId;
+    const title = String((conv && conv.annotations && conv.annotations.title) || '').toLowerCase();
+    if (pid && title && baseNameLower && title.includes(baseNameLower)) {
+      ctx.projectsByRoot.set(absRoot, pid);
+      ctx.projectsByRoot.set(realRoot, pid);
+      return pid;
+    }
+  }
+  return '';
+}
+
 /**
- * Copy a slash command prompt to clipboard and attempt native OS auto-paste + submit into
- * Antigravity's Prompt Window (`Ask anything` input), with graceful Accessibility fallback (BUG-115).
+ * Copy a slash command prompt to clipboard and execute it in the SAME Antigravity conversation:
+ *   - Default (same-conversation only): macOS osascript targets the active Prompt Window (never spawns
+ *     a separate new conversation). If macOS blocks assistive access (-25211 / -1719), returns
+ *     `dispatched: false, needsAccessibility: true` so callers keep the ticket unlocked and let the user
+ *     paste (⌘V + Enter), grant Accessibility to Antigravity, or use the MCP App Side Pane (`app.sendMessage()`).
+ *   - Explicit opt-in only (`opts.allowNewConversation === true`): uses `ConversationService/CreateConversation`.
  */
-function dispatchPromptToAntigravity(prompt) {
+async function dispatchPromptToAntigravity(prompt, opts = {}) {
   const cleanPrompt = String(prompt || '').trim();
   if (!cleanPrompt) {
     return { dispatched: false, copied: false, needsAccessibility: false, error: 'Empty prompt' };
   }
-  if (process.env.ANTIGRAVITY_SKIP_PROMPT_DISPATCH === '1' || process.env.NODE_TEST_CONTEXT) {
+  if (!opts.forceDispatchInTest && (process.env.ANTIGRAVITY_SKIP_PROMPT_DISPATCH === '1' || process.env.NODE_TEST_CONTEXT)) {
     return { dispatched: false, copied: false, skipped: true, reason: 'test_env', needsAccessibility: false };
   }
 
   const copied = copyToNativeOsClipboard(cleanPrompt);
+  const ctx = opts.ctx || BRIDGE_ANTIGRAVITY_CTX;
+  const targetRoot = opts.repoRoot || REPO_ROOT;
+
+  // Optional opt-in only: NEVER spawn a new conversation by default when user clicked PLAN/CODE in current conversation
+  if (opts.allowNewConversation === true && ctx.lsAddress && ctx.csrfToken) {
+    const projectId = await resolveProjectIdForRepoRoot(targetRoot, ctx);
+    if (projectId) {
+      const modeLabel = opts.mode === 'plan' ? 'Plan' : 'Code';
+      const idStr = Array.isArray(opts.ids) && opts.ids.length > 0 ? opts.ids.join(', ') : '';
+      const shortTitle = opts.title ? `${modeLabel} ${idStr}: ${String(opts.title).slice(0, 60)}` : `${modeLabel} ${idStr || path.basename(targetRoot)}`;
+      const created = await callConversationService('CreateConversation', {
+        projectId,
+        title: shortTitle.trim(),
+        model: mapModelToConversationTier(cleanPrompt, opts.mode),
+        tags: ['memory-bank', 'backlog-dispatch'],
+        prompt: [{ text: cleanPrompt }]
+      }, ctx);
+      if (created && created.conversation && created.conversation.id) {
+        return {
+          dispatched: true,
+          copied,
+          method: 'conversation_service',
+          conversationId: created.conversation.id,
+          projectId,
+          needsAccessibility: false
+        };
+      }
+    }
+  }
+
+  if (opts.skipOsascript) {
+    return {
+      dispatched: false,
+      copied,
+      sameConversationOnly: true,
+      needsAccessibility: true,
+      error: 'Same-conversation Prompt Window dispatch requires macOS Accessibility (or MCP App Side Pane app.sendMessage).'
+    };
+  }
 
   if (process.platform === 'darwin') {
-    const appleScript = [
-      'tell application "Antigravity" to activate',
-      'delay 0.12',
-      'tell application "System Events"',
-      '  tell process "Antigravity"',
-      '    set foundPrompt to false',
-      '    try',
-      '      set uiElems to entire contents of front window',
-      '      repeat with el in uiElems',
-      '        try',
-      '          set elRole to role of el',
-      '          if elRole is "AXTextArea" or elRole is "AXTextField" then',
-      '            set elDesc to ""',
-      '            try',
-      '              set elDesc to elDesc & " " & (description of el as text)',
-      '            end try',
-      '            try',
-      '              set elDesc to elDesc & " " & (help of el as text)',
-      '            end try',
-      '            try',
-      '              set elDesc to elDesc & " " & (value of attribute "AXPlaceholderValue" of el as text)',
-      '            end try',
-      '            if elDesc contains "Ask anything" or elDesc contains "prompt" or elDesc contains "message" or elDesc contains "chat" then',
-      '              set focused of el to true',
-      '              set foundPrompt to true',
-      '              exit repeat',
-      '            end if',
-      '          end if',
-      '        end try',
-      '      end repeat',
-      '    end try',
-      '    if not foundPrompt then',
-      '      keystroke "l" using command down',
-      '    end if',
-      '    delay 0.1',
-      '    keystroke "v" using command down',
-      '    delay 0.12',
-      '    key code 36',
-      '  end tell',
-      'end tell'
+    const swiftScript = [
+      'import Cocoa',
+      'import ApplicationServices',
+      'if !AXIsProcessTrusted() { fputs("NEEDS_ACCESSIBILITY\\n", stderr); exit(2) }',
+      'guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.localizedName == "Antigravity" }) else { fputs("NO_ANTIGRAVITY_APP\\n", stderr); exit(3) }',
+      'app.activate(options: .activateIgnoringOtherApps)',
+      'let appEl = AXUIElementCreateApplication(app.processIdentifier)',
+      'AXUIElementSetAttributeValue(appEl, "AXManualAccessibility" as CFString, kCFBooleanTrue)',
+      'var winVal: AnyObject?',
+      'AXUIElementCopyAttributeValue(appEl, kAXFocusedWindowAttribute as CFString, &winVal)',
+      'if winVal == nil {',
+      '  var winsVal: AnyObject?',
+      '  AXUIElementCopyAttributeValue(appEl, kAXWindowsAttribute as CFString, &winsVal)',
+      '  if let wins = winsVal as? [AXUIElement], let first = wins.first { winVal = first }',
+      '}',
+      'guard let win = winVal else { fputs("NO_ANTIGRAVITY_WINDOW\\n", stderr); exit(3) }',
+      'var visited = 0',
+      'var exactMatch: AXUIElement? = nil',
+      'var fallbackArea: AXUIElement? = nil',
+      'func walk(_ el: AXUIElement, _ depth: Int) {',
+      '  if exactMatch != nil || visited > 12000 || depth > 45 { return }',
+      '  visited += 1',
+      '  var roleVal: AnyObject?',
+      '  AXUIElementCopyAttributeValue(el, kAXRoleAttribute as CFString, &roleVal)',
+      '  let role = (roleVal as? String) ?? ""',
+      '  if role == "AXTextArea" || role == "AXTextField" {',
+      '    var ph: AnyObject?; var desc: AnyObject?; var title: AnyObject?',
+      '    AXUIElementCopyAttributeValue(el, "AXPlaceholderValue" as CFString, &ph)',
+      '    AXUIElementCopyAttributeValue(el, kAXDescriptionAttribute as CFString, &desc)',
+      '    AXUIElementCopyAttributeValue(el, kAXTitleAttribute as CFString, &title)',
+      '    let combined = (((ph as? String) ?? "") + " " + ((desc as? String) ?? "") + " " + ((title as? String) ?? "")).lowercased()',
+      '    if combined.contains("message input") || combined.contains("ask anything") || combined.contains("prompt") {',
+      '      exactMatch = el',
+      '      return',
+      '    }',
+      '    if role == "AXTextArea" { fallbackArea = el }',
+      '  }',
+      '  var childrenVal: AnyObject?',
+      '  AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &childrenVal)',
+      '  if let children = childrenVal as? [AXUIElement] {',
+      '    for c in children { walk(c, depth + 1); if exactMatch != nil { return } }',
+      '  }',
+      '}',
+      'walk(win as! AXUIElement, 0)',
+      'guard let target = exactMatch ?? fallbackArea else { fputs("NO_PROMPT_INPUT_FOUND\\n", stderr); exit(4) }',
+      'AXUIElementSetAttributeValue(target, kAXFocusedAttribute as CFString, kCFBooleanTrue)',
+      'usleep(100_000)',
+      'func sendKey(_ code: CGKeyCode, _ flags: CGEventFlags) {',
+      '  let src = CGEventSource(stateID: .hidSystemState)',
+      '  if let down = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: true) {',
+      '    down.flags = flags; down.post(tap: .cghidEventTap)',
+      '  }',
+      '  if let up = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: false) {',
+      '    up.flags = flags; up.post(tap: .cghidEventTap)',
+      '  }',
+      '}',
+      'sendKey(9, .maskCommand)',
+      'usleep(140_000)',
+      'sendKey(36, [])',
+      'print("DISPATCHED_SAME_CONVERSATION")'
     ].join('\n');
 
     try {
-      const res = spawnSync('osascript', ['-e', appleScript], { encoding: 'utf8', timeout: 4000 });
+      const res = spawnSync('swift', ['-e', swiftScript], { encoding: 'utf8', timeout: 8000 });
       if (res.status === 0) {
-        return { dispatched: true, copied, method: 'osascript', needsAccessibility: false };
+        return { dispatched: true, copied, method: 'macos_ax_prompt', needsAccessibility: false };
       }
       const stderr = String(res.stderr || res.error?.message || '').trim();
-      const needsAccessibility = /-1719|assistive|not allowed/i.test(stderr);
+      const needsAccessibility = res.status === 2 || /NEEDS_ACCESSIBILITY|-1719|-25211|assistive|not allowed/i.test(stderr);
       return {
         dispatched: false,
         copied,
         needsAccessibility,
-        error: stderr || `osascript exited with status ${res.status}`
+        error: stderr || `swift AX dispatch exited with status ${res.status}`
       };
     } catch (err) {
       const msg = String(err && err.message || err || '');
@@ -1134,9 +1306,11 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
 
   let addedOrHealed = 0;
   const activePlanIds = [];
+  let foundPrimaryActivePlan = false;
+  let realRoot = path.resolve(rootDir);
+  try { realRoot = fs.realpathSync(realRoot); } catch {}
   for (let idx = 0; idx < candidateFiles.length; idx++) {
     const planFile = candidateFiles[idx];
-    const isPrimaryActivePlan = idx === 0;
     try {
       const raw = fs.readFileSync(planFile, 'utf8');
       if (raw.slice(0, 600).includes('<!-- antigravity-planning-sync -->')) {
@@ -1146,9 +1320,11 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
       try { planMtimeMs = fs.statSync(planFile).mtimeMs; } catch {}
       const resolvedRoot = path.resolve(rootDir);
       const hasFileLinks = /file:\/\/\/(?:Users|home)\/[^\s)"'`]+/.test(raw);
-      if (hasFileLinks && !raw.includes(resolvedRoot)) {
+      if (hasFileLinks && !raw.includes(resolvedRoot) && !raw.includes(realRoot)) {
         continue;
       }
+      const isPrimaryActivePlan = !foundPrimaryActivePlan;
+      foundPrimaryActivePlan = true;
       const extracted = extractPlanTicketsFromMarkdown(raw, rootDir, data.tasks);
       for (const item of extracted) {
         const existing = data.tasks.find(t => String(t.id).toUpperCase() === item.id);
@@ -1205,7 +1381,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             changed = true;
           }
           const planUpdatedSinceLock = !existing.planningStartedAt
-            || (planMtimeMs > 0 && Math.ceil(planMtimeMs) >= Date.parse(existing.planningStartedAt));
+            || (planMtimeMs > 0 && Math.ceil(planMtimeMs) >= (Date.parse(existing.planningStartedAt) - 1000));
           const isPlanningLocked = Boolean(existing.planningLocked || existing.liveActivity === 'planning');
           if (isPrimaryActivePlan && ((existing.status === 'todo' && !isPlanningLocked) || (isPlanningLocked && planUpdatedSinceLock))) {
             recordTaskStateTransition(existing, 'ready', 'awaiting_approval');
@@ -1223,20 +1399,28 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
         }
       }
 
-      if (isPrimaryActivePlan && planMtimeMs > 0 && Array.isArray(data.activePlanTaskIds)) {
-        for (const aid of data.activePlanTaskIds) {
-          const activeTask = data.tasks.find(t => String(t.id).toUpperCase() === String(aid).toUpperCase());
+      if (isPrimaryActivePlan && planMtimeMs > 0) {
+        const activeIdSet = new Set(
+          (Array.isArray(data.activePlanTaskIds) ? data.activePlanTaskIds : []).map(id => String(id).toUpperCase())
+        );
+        for (const activeTask of data.tasks) {
           if (!activeTask || activeTask.status === 'done') continue;
+          const upperId = String(activeTask.id || '').toUpperCase();
+          const isInActiveIds = activeIdSet.has(upperId);
           const isPlanningLocked = Boolean(activeTask.planningLocked || activeTask.liveActivity === 'planning');
-          const planUpdatedSinceLock = !activeTask.planningStartedAt || Math.ceil(planMtimeMs) >= Date.parse(activeTask.planningStartedAt);
-          if (isPlanningLocked && planUpdatedSinceLock) {
+          if (!isInActiveIds && !isPlanningLocked) continue;
+          const escapedId = upperId.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+          const rawMentionsTaskId = Boolean(upperId && new RegExp(`\\b${escapedId}\\b`, 'i').test(raw));
+          const planUpdatedSinceLock = !activeTask.planningStartedAt
+            || Math.ceil(planMtimeMs) >= (Date.parse(activeTask.planningStartedAt) - 1000);
+          if (isPlanningLocked && planUpdatedSinceLock && (isInActiveIds || rawMentionsTaskId)) {
             recordTaskStateTransition(activeTask, 'ready', 'awaiting_approval');
             ensureTaskActionItems(activeTask);
             autoAnnotateTicket(activeTask, rootDir);
             stampTaskBranch(activeTask, rootDir);
             addedOrHealed++;
           }
-          if (!activePlanIds.includes(activeTask.id)) {
+          if (isInActiveIds && !activePlanIds.includes(activeTask.id)) {
             activePlanIds.push(activeTask.id);
           }
         }
@@ -1864,8 +2048,7 @@ function renderCardServer(task, allTasks = []) {
             </div>
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
               ${isPlanningLocked
-                ? `<span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>
-                   <button onclick="openDeleteTicketModal('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [${safeIdAttr}] (0 turns)">🗑️</button>`
+                ? `<span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>`
                 : `<button onclick="moveTaskManual('${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
                    <button onclick="moveTaskManual('${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
                    <button onclick="openTaskInspector('${safeIdAttr}', event)" class="text-xs hover:text-amber-300 p-0.5" title="Examine Plan, Details &amp; Action Items">🎯</button>
@@ -1876,8 +2059,7 @@ function renderCardServer(task, allTasks = []) {
                      : `<button onclick="updateTaskStatus('${safeIdAttr}', 'todo')" class="text-xs hover:text-amber-400 p-0.5" title="Move to To-Do">↩️</button>`}
                    ${!isInProgress && !isDone
                      ? `<button onclick="openModelSelectorModal('${safeIdAttr}', 'code', event)" class="text-xs hover:text-blue-400 p-0.5" title="Code [${safeIdAttr}] &amp; move to IN PROGRESS">⚡</button>`
-                     : ''}
-                   <button onclick="openDeleteTicketModal('${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [${safeIdAttr}] (0 turns)">🗑️</button>`}
+                     : ''}`}
             </div>
           </div>
           <h3 class="text-xs font-semibold text-[var(--foreground,#f8fafc)] leading-snug ${isCollapsed ? 'truncate' : 'mb-1.5'} ${isDone ? 'line-through opacity-70' : ''}">
@@ -2143,7 +2325,7 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       <button onclick="setFilter('in_progress', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-[var(--muted-foreground,#94a3b8)]">In Progress</button>
       <button onclick="setFilter('high', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-rose-400">🔥 High Priority</button>
       <button onclick="setFilter('done', this)" class="filter-btn bg-[var(--card,#1e293b)] text-xs px-2.5 py-1 rounded-md border border-[var(--border,#334155)] hover:border-blue-500 text-emerald-400">Done</button>
-      <span id="branchFilterBadge" class="bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold" title="Strictly isolated to current branch (FEAT-151)">🌿 Branch: ${escapeHtmlServer(branchCtx.branch || 'main')}</span>
+      <button id="branchFilterToggle" onclick="toggleBranchFilter()" class="bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer" title="Toggle between current branch/worktree tickets only vs all branches (FEAT-137)">🌿 Branch Only</button>
       <span class="text-slate-600 px-1">|</span>
       <div class="flex items-center gap-1 bg-[var(--card,#1e293b)] border border-[var(--border,#334155)] rounded-md px-2 py-0.5">
         <span class="text-[11px] text-slate-400 font-medium">⇅ Sort All:</span>
@@ -2159,37 +2341,6 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-4 right-4 bg-blue-600 text-white text-xs px-3 py-2 rounded-lg shadow-xl hidden transition-all duration-300 z-50"></div>
-
-  <!-- Delete Ticket Confirmation Modal (FEAT-150) -->
-  <div id="deleteTicketModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeDeleteTicketModal()">
-    <div class="bg-[var(--card,#1e293b)] border border-rose-500/40 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-[var(--foreground,#f8fafc)]">
-      <div class="p-4 border-b border-[var(--border,#334155)] flex items-center justify-between bg-rose-950/25">
-        <div class="flex items-center gap-2">
-          <span class="text-base">🗑️</span>
-          <h3 class="text-sm font-bold text-rose-200">Delete Ticket Permanently?</h3>
-        </div>
-        <button onclick="closeDeleteTicketModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg hover:bg-slate-700/60 cursor-pointer">✕</button>
-      </div>
-      <div class="p-4 space-y-3">
-        <div class="bg-slate-900/80 border border-slate-700/70 rounded-xl p-3">
-          <div class="flex items-center gap-2 mb-1">
-            <span id="deleteModalTaskId" class="font-mono text-xs font-bold text-rose-300"></span>
-            <span id="deleteModalTaskStatus" class="badge border border-slate-600 text-slate-300 rounded px-1.5 py-0.5 text-[10px]"></span>
-          </div>
-          <p id="deleteModalTaskTitle" class="text-xs font-semibold text-slate-100 leading-snug"></p>
-        </div>
-        <label id="deleteModalCascadeWrap" class="hidden flex items-center gap-2 text-xs text-slate-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 cursor-pointer">
-          <input id="deleteModalCascadeCheck" type="checkbox" checked class="accent-rose-500" />
-          <span id="deleteModalCascadeLabel">Also delete child ticket(s)</span>
-        </label>
-        <p class="text-[11px] text-slate-400">Removes this ticket from <code class="text-slate-300">docs/backlog.json</code> with <strong>0 AI turns executed</strong>.</p>
-      </div>
-      <div class="p-3 border-t border-[var(--border,#334155)] flex items-center justify-end gap-2 bg-slate-900/50">
-        <button onclick="closeDeleteTicketModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">Cancel</button>
-        <button onclick="confirmDeleteTicket()" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow transition cursor-pointer">🗑️ Delete Permanently</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Ticket Action Items, Readiness & Execution Inspector Modal (FEAT-144 / FEAT-145 AGY Correlated) -->
   <div id="taskInspectorModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 flex items-center justify-center p-4" onclick="if(event.target===this) closeTaskInspector()">
@@ -2213,9 +2364,6 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           </button>
           <button id="inspectorHeaderCodeBtn" onclick="openCodeFromInspector(event)" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition flex items-center gap-1 cursor-pointer" title="Select Stage B AGY Coding Model, move to IN PROGRESS &amp; execute (FEAT-145)">
             <span>💻</span> CODE NOW
-          </button>
-          <button id="inspectorHeaderDeleteBtn" onclick="openDeleteTicketModal(activeInspectTaskId, event)" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 cursor-pointer" title="Delete this ticket permanently (0 AI turns)">
-            <span>🗑️</span> Delete
           </button>
           <button onclick="closeTaskInspector()" class="text-[var(--muted-foreground,#94a3b8)] hover:text-[var(--foreground,#f8fafc)] text-sm px-2 py-1 rounded-lg hover:bg-[var(--border,#334155)]/60 cursor-pointer">✕</button>
         </div>
@@ -2884,7 +3032,23 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       renderBoard();
     }
 
+    function toggleBranchFilter() {
+      branchOnlyMode = !branchOnlyMode;
+      const btn = document.getElementById('branchFilterToggle');
+      if (btn) {
+        if (branchOnlyMode) {
+          btn.textContent = '🌿 Branch Only';
+          btn.className = 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer';
+        } else {
+          btn.textContent = '🌐 All Branches';
+          btn.className = 'bg-slate-800 text-slate-300 border border-slate-600 text-xs px-2.5 py-1 rounded-md font-semibold cursor-pointer';
+        }
+      }
+      renderBoard();
+    }
+
     function isClientTaskInActiveBranch(task) {
+      if (!branchOnlyMode) return true;
       const ctx = rawData.gitContext;
       if (!ctx || !ctx.hasGit || !ctx.branch || ctx.branch === 'HEAD') return true;
       const activeBranches = Array.isArray(task.activeBranches) ? task.activeBranches : [];
@@ -4333,6 +4497,15 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       materializeColumnVisualOrder(targetColKey);
 
       const nowIso = new Date().toISOString();
+      const prevStates = tasks.map(t => ({
+        task: t,
+        status: t.status,
+        liveActivity: t.liveActivity,
+        planningLocked: t.planningLocked,
+        planningStartedAt: t.planningStartedAt,
+        plannedAt: t.plannedAt,
+        startedAt: t.startedAt
+      }));
       for (const task of tasks) {
         task.status = isPlan ? 'ready' : 'in_progress';
         if (isPlan) {
@@ -4383,7 +4556,18 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             prompt: cmd
           });
 
-      if (dropCtx) {
+      const didRevert = Boolean(bridgeRes && (bridgeRes.revertedLock || bridgeRes.revertedStatus));
+      if (didRevert) {
+        for (const p of prevStates) {
+          p.task.status = p.status;
+          if (p.liveActivity !== undefined) p.task.liveActivity = p.liveActivity; else delete p.task.liveActivity;
+          if (p.planningLocked !== undefined) p.task.planningLocked = p.planningLocked; else delete p.task.planningLocked;
+          if (p.planningStartedAt !== undefined) p.task.planningStartedAt = p.planningStartedAt; else delete p.task.planningStartedAt;
+          if (p.plannedAt !== undefined) p.task.plannedAt = p.plannedAt; else delete p.task.plannedAt;
+          if (p.startedAt !== undefined) p.task.startedAt = p.startedAt; else delete p.task.startedAt;
+        }
+        renderBoard();
+      } else if (dropCtx) {
         await callLocalBridge('/api/reorder', {
           repoRoot: rawData.repoRoot,
           orderedIds: rawData.tasks.map(t => t.id),
@@ -4393,10 +4577,16 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
 
       const titleEl = document.getElementById('kickoffBannerTitle');
       if (bridgeRes && bridgeRes.dispatched) {
+        const via = bridgeRes.method === 'conversation_service' ? 'Antigravity Conversation' : 'Prompt Window';
         if (titleEl) {
-          titleEl.textContent = (isPlan ? '📐 Auto-executed in Prompt Window: ' : '💻 Auto-executed in Prompt Window: ') + cmd;
+          titleEl.textContent = (isPlan ? '📐 Auto-executed in ' + via + ': ' : '💻 Auto-executed in ' + via + ': ') + cmd;
         }
-        showToast('🚀 Executed in Prompt Window: "' + cmd + '"');
+        showToast('🚀 Executed in ' + via + ': "' + cmd + '"');
+      } else if (didRevert) {
+        if (titleEl) {
+          titleEl.textContent = '⚠️ Copied "' + cmd + '" — Kept [' + idListStr + '] unlocked (paste ⌘V + Enter in Chat to start)';
+        }
+        showToast('⚠️ Prompt copied ("' + cmd + '") — kept [' + idListStr + '] unlocked since auto-dispatch could not submit. Press ⌘V + Enter in Chat!');
       } else if (bridgeRes && bridgeRes.needsAccessibility) {
         if (titleEl) {
           titleEl.textContent = '⚠️ Copied "' + cmd + '" — Enable Accessibility (System Settings → Privacy & Security → Accessibility → Antigravity) for auto-submit, or press ⌘V + Enter!';
@@ -4425,90 +4615,6 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
           }, '*');
         }
       } catch {}
-    }
-
-    let pendingDeleteTaskId = null;
-
-    function openDeleteTicketModal(taskId, event) {
-      if (event) event.stopPropagation();
-      const task = (rawData.tasks || []).find(t => t.id === taskId);
-      if (!task) return;
-      pendingDeleteTaskId = task.id;
-      const modal = document.getElementById('deleteTicketModal');
-      const idEl = document.getElementById('deleteModalTaskId');
-      const statusEl = document.getElementById('deleteModalTaskStatus');
-      const titleEl = document.getElementById('deleteModalTaskTitle');
-      const cascadeWrap = document.getElementById('deleteModalCascadeWrap');
-      const cascadeCheck = document.getElementById('deleteModalCascadeCheck');
-      const cascadeLabel = document.getElementById('deleteModalCascadeLabel');
-      if (idEl) idEl.textContent = task.id;
-      if (statusEl) statusEl.textContent = String(task.status || 'todo').toUpperCase();
-      if (titleEl) titleEl.textContent = task.title || '';
-      const children = (rawData.tasks || []).filter(c => c.parentId && String(c.parentId).toLowerCase() === task.id.toLowerCase());
-      if (cascadeWrap && cascadeCheck && cascadeLabel) {
-        if (children.length > 0) {
-          cascadeWrap.classList.remove('hidden');
-          cascadeCheck.checked = true;
-          cascadeLabel.textContent = 'Also delete ' + children.length + ' child ticket' + (children.length === 1 ? '' : 's') + ' (' + children.map(c => c.id).join(', ') + ')';
-        } else {
-          cascadeWrap.classList.add('hidden');
-        }
-      }
-      if (modal) modal.classList.remove('hidden');
-    }
-
-    function closeDeleteTicketModal() {
-      pendingDeleteTaskId = null;
-      const modal = document.getElementById('deleteTicketModal');
-      if (modal) modal.classList.add('hidden');
-    }
-
-    async function confirmDeleteTicket() {
-      if (!pendingDeleteTaskId) return;
-      const targetId = pendingDeleteTaskId;
-      const cascadeCheck = document.getElementById('deleteModalCascadeCheck');
-      const cascade = cascadeCheck ? Boolean(cascadeCheck.checked) : true;
-      closeDeleteTicketModal();
-      if (activeInspectTaskId && activeInspectTaskId === targetId) {
-        closeTaskInspector();
-      }
-      const deletedSet = new Set([targetId.toLowerCase()]);
-      if (cascade) {
-        for (const t of (rawData.tasks || [])) {
-          if (t.parentId && deletedSet.has(String(t.parentId).toLowerCase())) {
-            deletedSet.add(String(t.id).toLowerCase());
-          }
-        }
-      }
-      rawData.tasks = (rawData.tasks || []).filter(t => !deletedSet.has(String(t.id).toLowerCase()));
-      for (const t of rawData.tasks) {
-        if (!cascade && t.parentId && deletedSet.has(String(t.parentId).toLowerCase())) {
-          delete t.parentId;
-          delete t.isActionChild;
-          delete t.isResidualChild;
-        }
-        if (Array.isArray(t.childTicketIds)) {
-          t.childTicketIds = t.childTicketIds.filter(cid => !deletedSet.has(String(cid).toLowerCase()));
-        }
-      }
-      if (typeof selectedBatchIds !== 'undefined' && selectedBatchIds && selectedBatchIds.delete) {
-        for (const did of deletedSet) {
-          for (const sid of Array.from(selectedBatchIds)) {
-            if (String(sid).toLowerCase() === did) selectedBatchIds.delete(sid);
-          }
-        }
-      }
-      renderBoard();
-      const bridgeRes = await callLocalBridge('/api/delete', {
-        repoRoot: rawData.repoRoot,
-        id: targetId,
-        cascade
-      });
-      if (bridgeRes && bridgeRes.ok) {
-        showToast('🗑️ Deleted [' + (bridgeRes.deletedIds || [targetId]).join(', ') + '] from docs/backlog.json (0 turns run).');
-      } else {
-        showToast('🗑️ Deleted [' + targetId + '] locally (start bridge or click Save to persist).');
-      }
     }
 
     async function unlockPlanningTicket(taskId, event) {
@@ -4592,6 +4698,13 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
       const adv = computeTicketCreditAdvice(task);
       const prompt = id ? ('/effort high /backlog-plan ' + id) : '/effort high /backlog-plan';
 
+      const prevPlanState = task ? {
+        status: task.status,
+        liveActivity: task.liveActivity,
+        planningLocked: task.planningLocked,
+        planningStartedAt: task.planningStartedAt,
+        plannedAt: task.plannedAt
+      } : null;
       if (task && (task.status === 'todo' || task.status === 'ready')) {
         task.status = 'ready';
         task.liveActivity = 'planning';
@@ -4617,9 +4730,22 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
         prompt: prompt
       });
 
+      if (bridgeRes && bridgeRes.revertedLock && task && prevPlanState) {
+        task.status = prevPlanState.status;
+        if (prevPlanState.liveActivity !== undefined) task.liveActivity = prevPlanState.liveActivity; else delete task.liveActivity;
+        if (prevPlanState.planningLocked !== undefined) task.planningLocked = prevPlanState.planningLocked; else delete task.planningLocked;
+        if (prevPlanState.planningStartedAt !== undefined) task.planningStartedAt = prevPlanState.planningStartedAt; else delete task.planningStartedAt;
+        if (prevPlanState.plannedAt !== undefined) task.plannedAt = prevPlanState.plannedAt; else delete task.plannedAt;
+        renderBoard();
+      }
+
       if (bridgeRes && bridgeRes.dispatched) {
-        if (titleEl) titleEl.textContent = '📐 Auto-executed in Prompt Window: ' + prompt;
-        showToast('🚀 Executed "' + prompt + '" in Prompt Window & locked [' + (id || 'plan') + '] in READY!');
+        const via = bridgeRes.method === 'conversation_service' ? 'Antigravity Conversation' : 'Prompt Window';
+        if (titleEl) titleEl.textContent = '📐 Auto-executed in ' + via + ': ' + prompt;
+        showToast('🚀 Executed "' + prompt + '" in ' + via + ' & locked [' + (id || 'plan') + '] in READY!');
+      } else if (bridgeRes && bridgeRes.revertedLock) {
+        if (titleEl) titleEl.textContent = '⚠️ Copied "' + prompt + '" — Kept [' + (id || 'plan') + '] unlocked (paste ⌘V + Enter in Chat)';
+        showToast('⚠️ Copied "' + prompt + '" — kept [' + (id || 'plan') + '] unlocked since auto-dispatch did not execute. Press ⌘V + Enter in Chat!');
       } else if (bridgeRes && bridgeRes.needsAccessibility) {
         showToast('⚠️ Copied "' + prompt + '" — grant macOS Accessibility to Antigravity for auto-submit or press ⌘V + Enter!');
       } else if (bridgeRes && bridgeRes.ok) {
@@ -5167,7 +5293,6 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
             <div class="opacity-80 group-hover:opacity-100 flex items-center gap-0.5">
               \${isPlanningLocked ? \`
                 <span class="text-[11px] text-slate-400 font-medium px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60" title="Locked while planning in READY (BUG-114)">🔒 Locked</span>
-                <button onclick="openDeleteTicketModal('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [\${safeIdAttr}] (0 turns)">🗑️</button>
               \` : \`
                 <button onclick="moveTaskManual('\${safeIdAttr}', 'up', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket up">↑</button>
                 <button onclick="moveTaskManual('\${safeIdAttr}', 'down', event)" class="text-xs text-slate-400 hover:text-white px-1 py-0.5 rounded hover:bg-slate-700/60" title="Move ticket down">↓</button>
@@ -5182,7 +5307,6 @@ function generateReviewArtifactHtml(data, rootDir = REPO_ROOT) {
                 \${!isInProgress && !isDone ? \`
                   <button onclick="openModelSelectorModal('\${safeIdAttr}', 'code', event)" class="text-xs hover:text-blue-400 p-0.5" title="Code [\${safeIdAttr}] &amp; move to IN PROGRESS">⚡</button>
                 \` : ''}
-                <button onclick="openDeleteTicketModal('\${safeIdAttr}', event)" class="text-xs text-slate-400 hover:text-rose-400 p-0.5 cursor-pointer" title="Delete [\${safeIdAttr}] (0 turns)">🗑️</button>
               \`}
             </div>
           </div>
@@ -6068,7 +6192,31 @@ function writeReviewPaneArtifacts(data, rootDir = REPO_ROOT, forceOverwriteBrain
   }
 }
 
-const BRIDGE_VERSION = '1.9.2';
+const BRIDGE_VERSION = '1.9.5';
+
+function registerBridgeAntigravityContext() {
+  if (!process.env.ANTIGRAVITY_LS_ADDRESS || !process.env.ANTIGRAVITY_CSRF_TOKEN) return;
+  try {
+    const payload = JSON.stringify({
+      repoRoot: REPO_ROOT,
+      lsAddress: process.env.ANTIGRAVITY_LS_ADDRESS,
+      csrfToken: process.env.ANTIGRAVITY_CSRF_TOKEN,
+      projectId: process.env.ANTIGRAVITY_PROJECT_ID || ''
+    });
+    const regReq = http.request({
+      hostname: '127.0.0.1',
+      port: DEFAULT_PORT,
+      path: '/api/register-context',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+      timeout: 300
+    });
+    regReq.on('error', () => {});
+    regReq.on('timeout', () => regReq.destroy());
+    regReq.write(payload);
+    regReq.end();
+  } catch {}
+}
 
 function spawnBridgeDaemon() {
   try {
@@ -6105,20 +6253,29 @@ function ensureDaemonRunning() {
             headers: { 'Content-Type': 'application/json', 'Content-Length': 2 },
             timeout: 300
           }, () => {
-            setTimeout(spawnBridgeDaemon, 120);
+            setTimeout(() => {
+              spawnBridgeDaemon();
+              setTimeout(registerBridgeAntigravityContext, 350);
+            }, 120);
           });
           shutReq.on('error', () => {
             spawnSync('pkill', ['-f', 'backlog.mjs serve'], { timeout: 1000 });
-            setTimeout(spawnBridgeDaemon, 120);
+            setTimeout(() => {
+              spawnBridgeDaemon();
+              setTimeout(registerBridgeAntigravityContext, 350);
+            }, 120);
           });
           shutReq.write('{}');
           shutReq.end();
+        } else {
+          registerBridgeAntigravityContext();
         }
       } catch {}
     });
   });
   req.on('error', () => {
     spawnBridgeDaemon();
+    setTimeout(registerBridgeAntigravityContext, 350);
   });
   req.on('timeout', () => {
     req.destroy();
@@ -6595,6 +6752,24 @@ function startBridgeServer(port = DEFAULT_PORT) {
     const executeBridgeAction = async (endpoint, body) => {
       const targetRoot = resolveSafeRepoRoot(body.repoRoot);
 
+      if (endpoint === '/api/register-context') {
+        if (body.lsAddress) BRIDGE_ANTIGRAVITY_CTX.lsAddress = String(body.lsAddress).trim();
+        if (body.csrfToken) BRIDGE_ANTIGRAVITY_CTX.csrfToken = String(body.csrfToken).trim();
+        if (body.projectId && targetRoot) {
+          const absR = path.resolve(targetRoot);
+          BRIDGE_ANTIGRAVITY_CTX.projectsByRoot.set(absR, String(body.projectId).trim());
+          try { BRIDGE_ANTIGRAVITY_CTX.projectsByRoot.set(fs.realpathSync(absR), String(body.projectId).trim()); } catch {}
+        }
+        return {
+          status: 200,
+          payload: {
+            ok: true,
+            hasConversationService: Boolean(BRIDGE_ANTIGRAVITY_CTX.lsAddress && BRIDGE_ANTIGRAVITY_CTX.csrfToken),
+            registeredProjects: BRIDGE_ANTIGRAVITY_CTX.projectsByRoot.size
+          }
+        };
+      }
+
       if (endpoint === '/api/shutdown') {
         setTimeout(() => {
           if (activeHostVoiceSession) cleanupHostVoiceSession(activeHostVoiceSession);
@@ -6713,12 +6888,15 @@ function startBridgeServer(port = DEFAULT_PORT) {
           : String(body.id || '').split(/[\s,]+/).filter(Boolean);
         const idLabel = ids.join(', ');
         const prompt = String(body.prompt || (idLabel ? `/backlog-start ${idLabel}` : '')).trim();
+        let firstTitle = '';
+        let data = null;
 
         if (ids.length > 0) {
-          const data = loadBacklog(targetRoot);
+          data = loadBacklog(targetRoot);
           for (const oneId of ids) {
             const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
             if (!task) continue;
+            if (!firstTitle) firstTitle = task.title || '';
             if (task.planningLocked || (task.status === 'ready' && task.liveActivity === 'planning')) {
               return { status: 409, payload: { ok: false, error: `Ticket ${task.id} is locked in READY while planning (BUG-114).` } };
             }
@@ -6732,6 +6910,21 @@ function startBridgeServer(port = DEFAULT_PORT) {
               };
             }
           }
+        }
+        const dispatchRes = prompt
+          ? await dispatchPromptToAntigravity(prompt, {
+              repoRoot: targetRoot,
+              mode: 'code',
+              ids,
+              title: firstTitle,
+              forceDispatchInTest: Boolean(body._forceDispatchInTest),
+              skipOsascript: Boolean(body._skipOsascript),
+              allowNewConversation: Boolean(body.allowNewConversation)
+            })
+          : { dispatched: false, copied: false, needsAccessibility: false };
+
+        const allowMutation = Boolean(dispatchRes.dispatched || dispatchRes.skipped || !prompt);
+        if (allowMutation && ids.length > 0 && data) {
           let changed = false;
           for (const oneId of ids) {
             const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
@@ -6747,13 +6940,16 @@ function startBridgeServer(port = DEFAULT_PORT) {
             writeReviewPaneArtifacts(data, targetRoot);
           }
         }
-        const dispatchRes = prompt ? dispatchPromptToAntigravity(prompt) : { dispatched: false, copied: false, needsAccessibility: false };
         return {
           status: 200,
           payload: {
             ok: true,
             copied: Boolean(dispatchRes.copied),
             dispatched: Boolean(dispatchRes.dispatched),
+            skipped: Boolean(dispatchRes.skipped),
+            revertedStatus: !allowMutation,
+            method: dispatchRes.method || '',
+            conversationId: dispatchRes.conversationId || '',
             needsAccessibility: Boolean(dispatchRes.needsAccessibility),
             dispatchError: dispatchRes.error || '',
             prompt,
@@ -6771,10 +6967,12 @@ function startBridgeServer(port = DEFAULT_PORT) {
         const prompt = String(body.prompt || (idLabel ? `/backlog-plan ${idLabel}` : '/backlog-plan')).trim();
 
         const data = loadBacklog(targetRoot);
+        let firstTitle = '';
         if (ids.length > 0) {
           for (const oneId of ids) {
             const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
             if (!task) continue;
+            if (!firstTitle) firstTitle = task.title || '';
             if (task.status === 'done' || task.status === 'in_progress' || task.status === 'testing') {
               return {
                 status: 409,
@@ -6785,31 +6983,51 @@ function startBridgeServer(port = DEFAULT_PORT) {
               };
             }
           }
-          const matchedCanonicalIds = [];
-          for (const oneId of ids) {
-            const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
-            if (task) {
-              if (task.status === 'todo' || task.status === 'ready') {
-                recordTaskStateTransition(task, 'ready', 'planning');
+        }
+        const dispatchRes = prompt
+          ? await dispatchPromptToAntigravity(prompt, {
+              repoRoot: targetRoot,
+              mode: 'plan',
+              ids,
+              title: firstTitle,
+              forceDispatchInTest: Boolean(body._forceDispatchInTest),
+              skipOsascript: Boolean(body._skipOsascript),
+              allowNewConversation: Boolean(body.allowNewConversation)
+            })
+          : { dispatched: false, copied: false, needsAccessibility: false };
+
+        const allowLock = Boolean(dispatchRes.dispatched || dispatchRes.skipped || !prompt);
+        if (allowLock) {
+          if (ids.length > 0) {
+            const matchedCanonicalIds = [];
+            for (const oneId of ids) {
+              const task = data.tasks.find(t => t.id.toLowerCase() === oneId.toLowerCase());
+              if (task) {
+                if (task.status === 'todo' || task.status === 'ready') {
+                  recordTaskStateTransition(task, 'ready', 'planning');
+                }
+                matchedCanonicalIds.push(task.id);
+                unpackTaskAttachments(task, targetRoot);
               }
-              matchedCanonicalIds.push(task.id);
-              unpackTaskAttachments(task, targetRoot);
+            }
+            if (matchedCanonicalIds.length > 0) {
+              data.activePlanTaskIds = matchedCanonicalIds;
             }
           }
-          if (matchedCanonicalIds.length > 0) {
-            data.activePlanTaskIds = matchedCanonicalIds;
-          }
+          saveBacklog(data, targetRoot);
+          renderMigrationBoard(data, targetRoot);
+          writeReviewPaneArtifacts(data, targetRoot, true);
         }
-        saveBacklog(data, targetRoot);
-        renderMigrationBoard(data, targetRoot);
-        writeReviewPaneArtifacts(data, targetRoot, true);
-        const dispatchRes = prompt ? dispatchPromptToAntigravity(prompt) : { dispatched: false, copied: false, needsAccessibility: false };
         return {
           status: 200,
           payload: {
             ok: true,
             copied: Boolean(dispatchRes.copied),
             dispatched: Boolean(dispatchRes.dispatched),
+            skipped: Boolean(dispatchRes.skipped),
+            revertedLock: !allowLock,
+            method: dispatchRes.method || '',
+            conversationId: dispatchRes.conversationId || '',
             needsAccessibility: Boolean(dispatchRes.needsAccessibility),
             dispatchError: dispatchRes.error || '',
             prompt,
@@ -6818,22 +7036,6 @@ function startBridgeServer(port = DEFAULT_PORT) {
             planPath: path.join(targetRoot, 'docs', 'planning', 'implementation_plan.md')
           }
         };
-      }
-
-      if (endpoint === '/api/delete') {
-        const rawIds = Array.isArray(body.ids) && body.ids.length > 0
-          ? body.ids.map(x => String(x || '').trim()).filter(Boolean)
-          : (body.id ? [String(body.id).trim()] : []);
-        const cascade = body.cascade !== false;
-        const data = loadBacklog(targetRoot);
-        const delRes = deleteBacklogTickets(data, rawIds, { cascade });
-        if (delRes.deletedIds.length === 0) {
-          return { status: 404, payload: { ok: false, error: 'Task not found' } };
-        }
-        saveBacklog(data, targetRoot);
-        renderMigrationBoard(data, targetRoot);
-        writeReviewPaneArtifacts(data, targetRoot);
-        return { status: 200, payload: { ok: true, deletedIds: delRes.deletedIds, remainingCount: data.tasks.length } };
       }
 
       if (endpoint === '/api/unlock-plan') {
@@ -7169,67 +7371,6 @@ Usage:
   npm run backlog serve [--port 4199]
   npm run backlog prompt <id>
 `);
-}
-
-function deleteBacklogTickets(data, rawIds = [], { cascade = true } = {}) {
-  const tasks = Array.isArray(data.tasks) ? data.tasks : [];
-  const requested = new Set(rawIds.map(id => String(id || '').trim().toLowerCase()).filter(Boolean));
-  if (requested.size === 0) return { deletedIds: [], unlinkedIds: [] };
-
-  const toDeleteLower = new Set();
-  for (const t of tasks) {
-    if (requested.has(String(t.id || '').toLowerCase())) {
-      toDeleteLower.add(String(t.id).toLowerCase());
-    }
-  }
-  if (toDeleteLower.size === 0) return { deletedIds: [], unlinkedIds: [] };
-
-  if (cascade) {
-    let added = true;
-    while (added) {
-      added = false;
-      for (const t of tasks) {
-        const tid = String(t.id || '').toLowerCase();
-        const pid = String(t.parentId || '').toLowerCase();
-        if (pid && toDeleteLower.has(pid) && !toDeleteLower.has(tid)) {
-          toDeleteLower.add(tid);
-          added = true;
-        }
-      }
-    }
-  }
-
-  const deletedIds = [];
-  const unlinkedIds = [];
-  const remaining = [];
-  for (const t of tasks) {
-    const tid = String(t.id || '').toLowerCase();
-    if (toDeleteLower.has(tid)) {
-      deletedIds.push(t.id);
-      continue;
-    }
-    if (!cascade && t.parentId && toDeleteLower.has(String(t.parentId).toLowerCase())) {
-      delete t.parentId;
-      delete t.isActionChild;
-      delete t.actionIndex;
-      delete t.isResidualChild;
-      delete t.residualLetter;
-      unlinkedIds.push(t.id);
-    }
-    if (Array.isArray(t.childTicketIds)) {
-      t.childTicketIds = t.childTicketIds.filter(cid => !toDeleteLower.has(String(cid || '').toLowerCase()));
-    }
-    if (Array.isArray(t.actionItems)) {
-      t.actionItems = t.actionItems.filter(a => !a.childTicketId || !toDeleteLower.has(String(a.childTicketId).toLowerCase()));
-    }
-    remaining.push(t);
-  }
-
-  data.tasks = remaining;
-  if (Array.isArray(data.activePlanTaskIds)) {
-    data.activePlanTaskIds = data.activePlanTaskIds.filter(aid => !toDeleteLower.has(String(aid || '').toLowerCase()));
-  }
-  return { deletedIds, unlinkedIds };
 }
 
 function main() {
@@ -7755,26 +7896,6 @@ function main() {
     console.log(`💡 1-LINE PROMPT ${copied ? '(AUTO-COPIED TO CLIPBOARD — PRESS ⌘V IN CHAT)' : 'TO PASTE INTO ANTIGRAVITY'}:`);
     console.log(`   ${kickoffCmd}`);
     console.log(`------------------------------------------------------------------------\n`);
-    return;
-  }
-
-  if (command === 'delete' || command === 'rm' || command === 'remove') {
-    const cascade = !args.includes('--no-cascade');
-    const rawIdArgs = args.slice(1).filter(a => !a.startsWith('--'));
-    const rawIds = rawIdArgs.join(' ').split(/[\s,]+/).filter(Boolean);
-    if (rawIds.length === 0) {
-      console.error('❌ Usage: npm run backlog delete <id> [, <id2> ...] [--no-cascade]');
-      process.exit(1);
-    }
-    const delRes = deleteBacklogTickets(data, rawIds, { cascade });
-    if (delRes.deletedIds.length === 0) {
-      console.error(`❌ No matching ticket(s) found for: ${rawIds.join(', ')}`);
-      process.exit(1);
-    }
-    saveBacklog(data, REPO_ROOT);
-    renderMigrationBoard(data, REPO_ROOT);
-    writeReviewPaneArtifacts(data, REPO_ROOT);
-    console.log(`\n🗑️  Deleted ticket(s): [${delRes.deletedIds.join(', ')}]${delRes.unlinkedIds.length > 0 ? ` (unlinked children: ${delRes.unlinkedIds.join(', ')})` : ''}`);
     return;
   }
 
@@ -8337,29 +8458,51 @@ function main() {
       return `${prefix}-${maxNum + 1}`;
     };
 
+    const parseStagePlanTitle = (raw) => {
+      const trimmed = String(raw || '').trim();
+      const m = trimmed.match(/^\[?([A-Z]+-\d+[a-z]?)\]?(?:(?:\s*[:\-–—]\s*|\s+)(.*))?$/i);
+      if (m) {
+        return {
+          extractedId: m[1].toUpperCase(),
+          cleanTitle: (m[2] || '').trim(),
+        };
+      }
+      return { extractedId: null, cleanTitle: trimmed };
+    };
+
     for (let idx = 0; idx < titles.length; idx++) {
       const rawTitle = String(titles[idx] || '').trim();
       if (!rawTitle) continue;
+      const { extractedId, cleanTitle } = parseStagePlanTitle(rawTitle);
+      const effectiveTitle = cleanTitle || rawTitle;
       let task = null;
       if (explicitId && idx === 0) {
         task = data.tasks.find(t => String(t.id).toLowerCase() === explicitId.toLowerCase());
       }
-      if (!task) {
-        task = data.tasks.find(t => t.status !== 'done' && String(t.title || '').toLowerCase() === rawTitle.toLowerCase());
+      if (!task && extractedId) {
+        task = data.tasks.find(t => String(t.id).toLowerCase() === extractedId.toLowerCase());
       }
       if (!task) {
-        const isBug = type === 'bug' || /\b(bug|fix|regression|crash|broken)\b/i.test(rawTitle);
+        task = data.tasks.find(
+          t =>
+            t.status !== 'done' &&
+            (String(t.title || '').toLowerCase() === rawTitle.toLowerCase() ||
+              (cleanTitle && String(t.title || '').toLowerCase() === cleanTitle.toLowerCase()))
+        );
+      }
+      if (!task) {
+        const isBug = type === 'bug' || /\b(bug|fix|regression|crash|broken)\b/i.test(effectiveTitle);
         const newId = (explicitId && idx === 0) ? explicitId.toUpperCase() : nextIdFor(isBug ? 'BUG' : 'FEAT');
         task = {
           id: newId,
           type: isBug ? 'bug' : type,
-          title: rawTitle,
+          title: effectiveTitle,
           status: 'todo',
           priority,
           components: [],
           attachments: [],
-          description: rawTitle,
-          spec: rawTitle,
+          description: effectiveTitle,
+          spec: effectiveTitle,
           acceptanceCriteria: []
         };
         data.tasks.push(task);

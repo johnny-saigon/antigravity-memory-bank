@@ -24,6 +24,8 @@
 | **`BUG-114`** | Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning — Fix Tickets Entering IN PROGRESS During Planning — Keep Greyed-Out & Locked in READY While Planning | DONE | `docs/PLANNING_GUIDE.md` |
 | **`BUG-115`** | Auto-execute /backlog-plan & /backlog-start in Prompt Window on PLAN/CODE transitions and enforce TO DO return for IN PROGRESS/DONE re-plan — Recorded in backlog.json | DONE | `scripts/backlog.mjs, docs/BACKLOG.md, docs/backlog.html, docs/backlog.json` |
 | **`FEAT-152`** | Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) — Recorded in backlog.json | DONE | `mcp/src/server.mjs, mcp/src/ui/app.ts, mcp/src/ui/types.ts, scripts/backlog.mjs, bin/cli.mjs, tests/cli-e2e.test.mjs` |
+| **`FEAT-153`** | Fix ticket staying locked in READY column after planning completes — Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPl | DONE | `scripts/backlog.mjs, templates/scripts/backlog.mjs, scripts/sync-memory-context.mjs, templates/scripts/sync-memory-context.mjs, tests/cli-e2e.test.mjs` |
+| **`FEAT-154`** | Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails — Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via na | DONE | `scripts/backlog.mjs, templates/scripts/backlog.mjs, tests/cli-e2e.test.mjs` |
 | **`COMMIT-97b891c`** | fix(mcp-app): split global Fleet vs per-workspace --repo-root board plugin for 100% deterministic multi-project isolation — Git fix commit `97b891c` | DONE | `git history` |
 | **`COMMIT-1ccd2dc`** | fix(mcp-app): preserve unbound hostBound state for Switch Project button and auto-bind Side Pane in /start — Git fix commit `1ccd2dc` | DONE | `git history` |
 | **`COMMIT-74511da`** | fix(mcp-app): prevent fleet upgrade backlog.html mtime clobber and bind Side Pane to active workspace (FEAT-152) — Git fix commit `74511da` | DONE | `git history` |
@@ -31,8 +33,6 @@
 | **`COMMIT-8216efd`** | fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115) — Git fix commit `8216efd` | DONE | `git history` |
 | **`COMMIT-c296aaf`** | fix(backlog): implement PlayTask-parity Gemini/Whisper ASR & macOS host-mic bridge v1.8.0 (BUG-112) — Git fix commit `c296aaf` | DONE | `git history` |
 | **`COMMIT-cfd803c`** | fix(backlog): harden voice capture in TO DO idea modal with dual-engine fallback (BUG-111) — Git fix commit `cfd803c` | DONE | `git history` |
-| **`COMMIT-1881828`** | fix(worktree): prevent cross-worktree brain implementation_plan.md bleed and harden sandboxed worktree branch detection — Git fix commit `1881828` | DONE | `git history` |
-| **`COMMIT-079e448`** | fix(backlog): enforce identical canonical Backlog Kanban design across all projects & harden backlog-adapter (FEAT-129) [skip ci] — Git fix commit `079e448` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

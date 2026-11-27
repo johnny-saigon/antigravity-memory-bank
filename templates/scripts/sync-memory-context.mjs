@@ -746,10 +746,12 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
         ) {
           try {
             const rawArtifact = fsSync.readFileSync(fStr, 'utf8');
+            let realRootForArtifact = path.resolve(rootDir);
+            try { realRootForArtifact = fsSync.realpathSync(realRootForArtifact); } catch {}
             // Strict worktree/workspace path check: only mirror if artifact references this exact rootDir
             // (or has no absolute workspace file:// links at all), preventing main <-> worktree plan bleed
             const hasAnyAbsPath = /\/Users\/[^\s)"'`]+|\/home\/[^\s)"'`]+/.test(rawArtifact);
-            if (!hasAnyAbsPath || rawArtifact.includes(rootDir)) {
+            if (!hasAnyAbsPath || rawArtifact.includes(rootDir) || rawArtifact.includes(realRootForArtifact)) {
               const planDir = path.join(rootDir, 'docs', 'planning');
               fsSync.mkdirSync(planDir, { recursive: true });
               fsSync.copyFileSync(fStr, path.join(planDir, base));
@@ -757,7 +759,7 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
                 justSyncedBrainPlan = true;
                 const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
                 if (fsSync.existsSync(backlogScriptPath)) {
-                  execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
+                  execSync(`"${process.execPath}" scripts/backlog.mjs render`, { cwd: rootDir, stdio: 'ignore' });
                 }
               }
             }
@@ -818,38 +820,69 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
   }
 
   // Fallback: even if hookPayload stdin is empty or uses a different schema, detect when any brain
-  // implementation_plan.md for this workspace is newer than docs/planning/implementation_plan.md and auto-sync to READY!
+  // implementation_plan.md for this workspace is newer than docs/planning/implementation_plan.md (or newer
+  // than a locked planning ticket's planningStartedAt) and auto-sync + unlock in READY!
   let newestBrainPlanMs = 0;
   try {
     const brainBase = path.join(os.homedir(), '.gemini', 'antigravity', 'brain');
     const wsPlanPath = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
-    const wsPlanMtime = fsSync.existsSync(wsPlanPath) ? fsSync.statSync(wsPlanPath).mtimeMs : 0;
+    const wsPlanExists = fsSync.existsSync(wsPlanPath);
+    const wsPlanMtime = wsPlanExists ? fsSync.statSync(wsPlanPath).mtimeMs : 0;
+    const wsPlanIsReal = wsPlanExists && !fsSync.readFileSync(wsPlanPath, 'utf8').slice(0, 600).includes('<!-- antigravity-planning-sync -->');
     newestBrainPlanMs = wsPlanMtime;
+    let realRootDir = path.resolve(rootDir);
+    try { realRootDir = fsSync.realpathSync(realRootDir); } catch {}
+    let lockedTasks = [];
+    try {
+      const backlogPath = path.join(rootDir, 'docs', 'backlog.json');
+      if (fsSync.existsSync(backlogPath)) {
+        const bj = JSON.parse(fsSync.readFileSync(backlogPath, 'utf8'));
+        lockedTasks = (Array.isArray(bj.tasks) ? bj.tasks : []).filter(
+          t => t && t.status !== 'done' && (t.planningLocked === true || t.liveActivity === 'planning')
+        );
+      }
+    } catch {}
+    const earliestLockedMs = lockedTasks.reduce((min, t) => {
+      const ms = Date.parse(t.planningStartedAt || '') || 0;
+      return ms > 0 ? Math.min(min, ms) : min;
+    }, Infinity);
+
     if (fsSync.existsSync(brainBase)) {
       let newestBrainPlan = null;
-      let newestMtime = wsPlanMtime;
+      let newestMtime = wsPlanIsReal ? wsPlanMtime : 0;
       for (const entry of fsSync.readdirSync(brainBase, { withFileTypes: true })) {
         if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
         const bp = path.join(brainBase, entry.name, 'implementation_plan.md');
         if (!fsSync.existsSync(bp)) continue;
         const st = fsSync.statSync(bp);
-        if (st.mtimeMs > newestMtime + 500) {
+        const unlocksLockedTicket = lockedTasks.length > 0 && st.mtimeMs >= (earliestLockedMs - 1000) && (!wsPlanIsReal || st.mtimeMs >= wsPlanMtime - 500);
+        if (st.mtimeMs > newestMtime + 500 || (unlocksLockedTicket && st.mtimeMs >= newestMtime - 500)) {
           const content = fsSync.readFileSync(bp, 'utf8');
-          // Require exact rootDir match (never path.basename(rootDir), which matches across main & worktrees!)
-          if (content.includes(rootDir)) {
+          if (content.slice(0, 600).includes('<!-- antigravity-planning-sync -->')) continue;
+          const hasAnyAbsPath = /\/Users\/[^\s)"'`]+|\/home\/[^\s)"'`]+/.test(content);
+          const matchesRoot = content.includes(rootDir) || content.includes(realRootDir);
+          const matchesLockedId = lockedTasks.some(t => {
+            const esc = String(t.id || '').replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+            return esc && new RegExp(`\\b${esc}\\b`, 'i').test(content);
+          });
+          // Match exact rootDir (main vs worktree safe), OR relative-path plan explicitly mentioning an active locked ticket ID
+          if (matchesRoot || (!hasAnyAbsPath && matchesLockedId)) {
             newestMtime = st.mtimeMs;
             newestBrainPlan = bp;
           }
         }
       }
-      if (newestBrainPlan) {
-        newestBrainPlanMs = newestMtime;
+      const needsLockedUnlockFromWsPlan = !newestBrainPlan && wsPlanIsReal && lockedTasks.length > 0 && wsPlanMtime >= (earliestLockedMs - 1000);
+      if (newestBrainPlan || needsLockedUnlockFromWsPlan) {
+        newestBrainPlanMs = newestBrainPlan ? newestMtime : wsPlanMtime;
         justSyncedBrainPlan = true;
-        fsSync.mkdirSync(path.dirname(wsPlanPath), { recursive: true });
-        fsSync.copyFileSync(newestBrainPlan, wsPlanPath);
+        if (newestBrainPlan) {
+          fsSync.mkdirSync(path.dirname(wsPlanPath), { recursive: true });
+          fsSync.copyFileSync(newestBrainPlan, wsPlanPath);
+        }
         const backlogScriptPath = path.join(rootDir, 'scripts', 'backlog.mjs');
         if (fsSync.existsSync(backlogScriptPath)) {
-          execSync('node scripts/backlog.mjs render', { cwd: rootDir, stdio: 'ignore' });
+          execSync(`"${process.execPath}" scripts/backlog.mjs render`, { cwd: rootDir, stdio: 'ignore' });
         }
       }
     }
@@ -901,7 +934,7 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
               }
             });
             if (hasPostPlanEditedCodeFile) {
-              execSync('node scripts/backlog.mjs proceed --quiet', { cwd: rootDir, stdio: 'ignore' });
+              execSync(`"${process.execPath}" scripts/backlog.mjs proceed --quiet`, { cwd: rootDir, stdio: 'ignore' });
             }
           }
         }
@@ -1006,7 +1039,7 @@ async function runSync() {
                 }
               }
               if (shouldRenderBacklog) {
-                execSync('node scripts/backlog.mjs render', { cwd: targetDir, stdio: 'ignore' });
+                execSync(`"${process.execPath}" scripts/backlog.mjs render`, { cwd: targetDir, stdio: 'ignore' });
                 log('  ✓ Auto-rendered backlog.html & Review pane artifacts');
               }
             }

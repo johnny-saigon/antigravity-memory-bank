@@ -839,6 +839,32 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### FEAT-153: Fix ticket staying locked in READY column after planning completes
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `scripts/sync-memory-context.mjs`, `templates/scripts/sync-memory-context.mjs`, `tests/cli-e2e.test.mjs`
+- **Description:** Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPlanTicketsIntoBacklog used idx === 0 instead of first valid non-skipped plan, (2) sync-memory-context.mjs fallback brain scan required literal rootDir string even for relative-path plans referencing the locked ticket ID, (3) Stop/PostToolUse hooks invoked bare node instead of process.execPath and skipped re-render when wsPlan was already mirrored, and (4) selfHeal needed to unlock locked tickets referencing the finalized plan.
+- **Technical Specification:**
+  Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPlanTicketsIntoBacklog used idx === 0 instead of first valid non-skipped plan, (2) sync-memory-context.mjs fallback brain scan required literal rootDir string even for relative-path plans referencing the locked ticket ID, (3) Stop/PostToolUse hooks invoked bare node instead of process.execPath and skipped re-render when wsPlan was already mirrored, and (4) selfHeal needed to unlock locked tickets referencing the finalized plan.
+- **Acceptance Criteria:**
+  - [x] Implement and verify Fix ticket staying locked in READY column after planning completes across scripts/backlog.mjs, templates/scripts/backlog.mjs, scripts/sync-memory-context.mjs, templates/scripts/sync-memory-context.mjs, tests/cli-e2e.test.mjs
+  - [x] Add both a non-regression unit/component test and an E2E test verifying the fix
+
+---
+
+### FEAT-154: Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/backlog.mjs`, `templates/scripts/backlog.mjs`, `tests/cli-e2e.test.mjs`
+- **Description:** Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via native Antigravity ConversationService/CreateConversation (with automatic projectId discovery and /api/register-context) and revert/skip locking whenever prompt dispatch fails.
+- **Technical Specification:**
+  Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via native Antigravity ConversationService/CreateConversation (with automatic projectId discovery and /api/register-context) and revert/skip locking whenever prompt dispatch fails.
+- **Acceptance Criteria:**
+  - [x] Implement and verify Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails across scripts/backlog.mjs, templates/scripts/backlog.mjs, tests/cli-e2e.test.mjs
+  - [x] Add both a non-regression unit/component test and an E2E test verifying the fix
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

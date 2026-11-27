@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[FEAT-154] Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails** (`HIGH` · Status: `done`): Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via native Antigravity ConversationService/CreateConversation (with automatic projectId discovery and /api/register-context) and revert/skip locking whenever prompt dispatch fails.
+  - **[FEAT-153] Fix ticket staying locked in READY column after planning completes** (`HIGH` · Status: `done`): Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPlanTicketsIntoBacklog used idx === 0 instead of first valid non-skipped plan, (2) sync-memory-context.mjs fallback brain scan required literal rootDir string even for relative-path plans referencing the locked ticket ID, (3) Stop/PostToolUse hooks invoked bare node instead of process.execPath and skipped re-render when wsPlan was already mirrored, and (4) selfHeal needed to unlock locked tickets referencing the finalized plan.
   - **[FEAT-152] Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber)** (`HIGH` · Status: `done`): Implement and verify according to project architecture invariants.
   - **[FEAT-151-ACT-3] 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout** (`MEDIUM` · Status: `done`): 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
-  - **[FEAT-151-ACT-2] 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html** (`MEDIUM` · Status: `done`): 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
-  - **[FEAT-151-ACT-1] 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server** (`MEDIUM` · Status: `done`): 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -21,6 +21,28 @@
 > - **Package Whitelist (`"files"`)**: `package.json` strictly restricts published package contents to `bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, and `install.sh`, excluding dogfood files (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`).
 
 ## 3. Proposed Changes
+### [FEAT-154] Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails *(Completed & Verified Baseline)*
+- **Specification**: Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via native Antigravity ConversationService/CreateConversation (with automatic projectId discovery and /api/register-context) and revert/skip locking whenever prompt dispatch fails.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
+  - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
+- **Acceptance Criteria**:
+  - Implement and verify Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails across scripts/backlog.mjs, templates/scripts/backlog.mjs, tests/cli-e2e.test.mjs
+  - Add both a non-regression unit/component test and an E2E test verifying the fix
+
+### [FEAT-153] Fix ticket staying locked in READY column after planning completes *(Completed & Verified Baseline)*
+- **Specification**: Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPlanTicketsIntoBacklog used idx === 0 instead of first valid non-skipped plan, (2) sync-memory-context.mjs fallback brain scan required literal rootDir string even for relative-path plans referencing the locked ticket ID, (3) Stop/PostToolUse hooks invoked bare node instead of process.execPath and skipped re-render when wsPlan was already mirrored, and (4) selfHeal needed to unlock locked tickets referencing the finalized plan.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs) (`templates/scripts/backlog.mjs`)
+  - `[VERIFIED]` [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs) (`scripts/sync-memory-context.mjs`)
+  - `[VERIFIED]` [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/sync-memory-context.mjs) (`templates/scripts/sync-memory-context.mjs`)
+  - `[VERIFIED]` [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs) (`tests/cli-e2e.test.mjs`)
+- **Acceptance Criteria**:
+  - Implement and verify Fix ticket staying locked in READY column after planning completes across scripts/backlog.mjs, templates/scripts/backlog.mjs, scripts/sync-memory-context.mjs, templates/scripts/sync-memory-context.mjs, tests/cli-e2e.test.mjs
+  - Add both a non-regression unit/component test and an E2E test verifying the fix
+
 ### [FEAT-152] Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) *(Completed & Verified Baseline)*
 - **Component Modifications (Dependencies First)**:
   - `[VERIFIED]` [server.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/mcp/src/server.mjs) (`mcp/src/server.mjs`)
@@ -40,26 +62,6 @@
 - **Acceptance Criteria**:
   - Complete implementation and verification for 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
   - Verify deterministic tests and lint checks for [FEAT-151-ACT-3]
-
-### [FEAT-151-ACT-2] 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html *(Completed & Verified Baseline)*
-- **Specification**: 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
-  - `[VERIFIED]` [BACKLOG.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/BACKLOG.md) (`docs/BACKLOG.md`)
-  - `[VERIFIED]` [backlog.html](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.html) (`docs/backlog.html`)
-  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
-- **Acceptance Criteria**:
-  - Complete implementation and verification for 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
-  - Verify deterministic tests and lint checks for [FEAT-151-ACT-2]
-
-### [FEAT-151-ACT-1] 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server *(Completed & Verified Baseline)*
-- **Specification**: 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [src](file:///Users/jbb/Documents/antigravity-memory-bank/src) (`src/`)
-  - `[VERIFIED]` [backlog.json](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json) (`docs/backlog.json`)
-- **Acceptance Criteria**:
-  - Complete implementation and verification for 1. [FEAT-151-ACT-1] Strict Single-Branch Filtering in MCP Server
-  - Verify deterministic tests and lint checks for [FEAT-151-ACT-1]
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification

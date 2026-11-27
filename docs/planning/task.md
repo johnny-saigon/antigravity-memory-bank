@@ -4,7 +4,7 @@
 > [!NOTE]
 > **Correlated Backlog & Planning Mode**: Automatically synchronized with [`docs/backlog.json`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/backlog.json), [`implementation_plan.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/implementation_plan.md), and [`walkthrough.md`](file:///Users/jbb/Documents/antigravity-memory-bank/docs/planning/walkthrough.md).
 > - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-> - **Backlog Progress**: `74/74` tickets completed (`0` in progress, `0` queued).
+> - **Backlog Progress**: `76/76` tickets completed (`0` in progress, `0` queued).
 
 ## 1. Context Discovery & Architectural Baseline
 - [x] Ingest Three-Tier Memory Hierarchy (`~/.gemini/GEMINI.md`, `.agents/rules/infra.md`, `memory-bank/*.md`)
@@ -93,3 +93,5 @@
 - [x] **[FEAT-151-ACT-2]** 2. [FEAT-151-ACT-2] Remove Cross-Repo/Cross-Branch Controls from Side Pane UI & backlog.html
 - [x] **[FEAT-151-ACT-3]** 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
 - [x] **[FEAT-152]** Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber)
+- [x] **[FEAT-153]** Fix ticket staying locked in READY column after planning completes
+- [x] **[FEAT-154]** Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails

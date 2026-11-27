@@ -50,8 +50,6 @@ function parseCliArgs(argv) {
     noTrickleUp: false,
     brickAction: null,
     brickName: null,
-    pluginAction: null,
-    pluginDir: null,
     withSchema: false,
     targetDir: null,
     asPlugin: false,
@@ -101,17 +99,6 @@ function parseCliArgs(argv) {
       options.command = 'uninstall';
     } else if (a === 'upgrade' || a === 'update') {
       options.command = 'upgrade';
-    } else if (a === 'plugin') {
-      options.command = 'plugin';
-      const sub = args[i + 1];
-      if (sub && ['install', 'sync', 'upgrade', 'update', 'status', 'uninstall'].includes(sub)) {
-        options.pluginAction = (sub === 'upgrade' || sub === 'update') ? 'sync' : sub;
-        i++;
-      } else {
-        options.pluginAction = 'status';
-      }
-    } else if (a === '--plugin-dir' && args[i + 1]) {
-      options.pluginDir = path.resolve(args[++i]);
     } else if (a === 'fleet') {
       options.command = 'fleet';
       const sub = args[i + 1];
@@ -195,7 +182,6 @@ Commands:
   organize [options]     Coherently organize repository root, docs/, .gitignore, and AI-native structure
   sync [options]         Incrementally sync git history and accomplishments into context
   upgrade [options]      Upgrade Memory Bank to v1.5 (3-artifact planning mode, root organizer, zero-token backlog)
-  plugin [install|sync|status|uninstall]  Install or sync native Antigravity MCP App plugin (~/.gemini/config/plugins/memory-bank)
   export [options]       Export project memory & context to markdown and archive
   uninstall [options]    Cleanly uninstall Memory Bank (automatically exports context first)
 
@@ -1190,8 +1176,6 @@ async function initMemory(targetDir, opts, detected) {
     }
   }
 
-  await installWorkspaceBoardPlugin(targetDir);
-
   console.log('\n✅ Antigravity Memory Bank successfully activated on the fly!');
   console.log('⚡ Immediate In-Window Activation:');
   console.log('   Because workspace skills, rules, and lifecycle hooks (.agents/hooks.json) are dynamically ingested,');
@@ -1434,8 +1418,6 @@ Immediately after closing the previous session, initialize the new working cycle
       }
     } catch {}
   }
-
-  await installWorkspaceBoardPlugin(targetDir);
 
   console.log('\n✅ Antigravity Memory Bank successfully upgraded on the fly!');
   console.log('🛡️  Your domain files in memory-bank/ remain 100% intact.');
@@ -1850,11 +1832,6 @@ async function runFleetCommand(opts) {
   const reportRows = [];
   console.log(`\n🚀 Antigravity Memory Bank — Worktree-Aware Fleet ${opts.fleetAction.toUpperCase()} (${discoveredMains.length} Main Repositories Discovered)\n`);
 
-  const prevFleetEnv = process.env.ANTIGRAVITY_FLEET_UPGRADE;
-  if (opts.fleetAction === 'upgrade') {
-    process.env.ANTIGRAVITY_FLEET_UPGRADE = '1';
-  }
-  try {
   for (const mainDir of discoveredMains) {
     const projectName = path.basename(mainDir);
     const worktrees = listRepoWorktrees(mainDir);
@@ -1875,7 +1852,6 @@ async function runFleetCommand(opts) {
           await upgradeMemory(inst.path, { ...opts, isWorktreeChild: true, yes: true, noTrickleUp: true }, instDetected);
           statusLabel = '✅ Upgraded';
         } else {
-          await installWorkspaceBoardPlugin(inst.path);
           statusLabel = '✅ Upstream Main';
         }
       }
@@ -1888,10 +1864,6 @@ async function runFleetCommand(opts) {
       });
     }
   }
-  } finally {
-    if (prevFleetEnv === undefined) delete process.env.ANTIGRAVITY_FLEET_UPGRADE;
-    else process.env.ANTIGRAVITY_FLEET_UPGRADE = prevFleetEnv;
-  }
 
   const mainCount = reportRows.filter(r => r.role.includes('Main')).length;
   const wtCount = reportRows.filter(r => r.role.includes('Worktree')).length;
@@ -1901,193 +1873,13 @@ async function runFleetCommand(opts) {
     console.log(`  ${row.role.padEnd(13)} | ${row.project.padEnd(28)} | [${row.branch.padEnd(22)}] | ${row.status.padEnd(16)} | ${row.path}`);
   }
   console.log('='.repeat(110) + '\n');
-  if (opts.fleetAction === 'upgrade') {
-    const homeDir = process.env.HOME || os.homedir();
-    const oldGlobalPluginDir = path.join(homeDir, '.gemini', 'config', 'plugins', 'memory-bank');
-    const oldGlobalDataDir = path.join(homeDir, '.gemini', 'antigravity', 'plugin_data', 'memory-bank');
-    if (fsSync.existsSync(oldGlobalPluginDir)) {
-      await fs.rm(oldGlobalPluginDir, { recursive: true, force: true });
-    }
-    if (fsSync.existsSync(oldGlobalDataDir)) {
-      await fs.rm(oldGlobalDataDir, { recursive: true, force: true });
-    }
-  }
   return reportRows;
-}
-
-async function installWorkspaceBoardPlugin(targetDir) {
-  const resolvedServer = path.join(pkgRoot, 'mcp', 'dist', 'server.mjs');
-  if (!fsSync.existsSync(resolvedServer)) return;
-
-  const absTarget = path.resolve(targetDir);
-  const projectName = path.basename(absTarget);
-  const pluginDir = path.join(absTarget, '.agents', 'plugins', 'memory-bank-board');
-  await fs.mkdir(pluginDir, { recursive: true });
-
-  const pluginJson = {
-    name: 'memory-bank-board',
-    displayName: 'Memory Bank',
-    version: '2.0.0',
-    description: `Workspace-locked Memory Bank Kanban & Control Plane for ${projectName}.`
-  };
-  const mcpConfig = {
-    mcpServers: {
-      board: {
-        command: 'node',
-        args: [resolvedServer, `--repo-root=${absTarget}`]
-      }
-    }
-  };
-  await fs.writeFile(path.join(pluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2) + '\n', 'utf8');
-  await fs.writeFile(path.join(pluginDir, 'mcp_config.json'), JSON.stringify(mcpConfig, null, 2) + '\n', 'utf8');
-
-  // Ensure .agents/plugins/memory-bank-board/ is gitignored so absolute local paths are never committed
-  const gitignorePath = path.join(absTarget, '.gitignore');
-  try {
-    const existing = fsSync.existsSync(gitignorePath) ? await fs.readFile(gitignorePath, 'utf8') : '';
-    if (!existing.includes('.agents/plugins/memory-bank-board/')) {
-      const next = existing.trimEnd() + '\n.agents/plugins/memory-bank-board/\n';
-      await fs.writeFile(gitignorePath, next, 'utf8');
-    }
-  } catch {}
-}
-
-async function copyDirRecursive(srcDir, destDir) {
-  await fs.mkdir(destDir, { recursive: true });
-  const entries = await fs.readdir(srcDir, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = path.join(srcDir, entry.name);
-    const destPath = path.join(destDir, entry.name);
-    if (entry.isDirectory()) {
-      await copyDirRecursive(srcPath, destPath);
-    } else if (entry.isFile()) {
-      await fs.copyFile(srcPath, destPath);
-    }
-  }
-}
-
-async function runPluginCommand(opts = {}) {
-  const action = opts.pluginAction || 'status';
-  const homeDir = process.env.HOME || os.homedir();
-  const pluginDir = opts.pluginDir || path.join(homeDir, '.gemini', 'config', 'plugins', 'memory-bank');
-
-  if (action === 'status') {
-    const manifestPath = path.join(pluginDir, 'plugin.json');
-    const serverPath = path.join(pluginDir, 'mcp', 'dist', 'server.mjs');
-    const htmlPath = path.join(pluginDir, 'mcp', 'dist', 'app.html');
-    const skillsDir = path.join(pluginDir, 'skills');
-    const installed = fsSync.existsSync(manifestPath);
-    console.log(`\n🔌 Antigravity Memory Bank MCP App Plugin Status`);
-    console.log(`   Target Dir : ${pluginDir}`);
-    console.log(`   Installed  : ${installed ? '✅ YES' : '❌ NO (run: node bin/cli.mjs plugin install)'}`);
-    if (installed) {
-      try {
-        const manifest = JSON.parse(fsSync.readFileSync(manifestPath, 'utf8'));
-        const srvSize = fsSync.existsSync(serverPath) ? (fsSync.statSync(serverPath).size / 1024).toFixed(1) + ' KB' : 'MISSING';
-        const htmlSize = fsSync.existsSync(htmlPath) ? (fsSync.statSync(htmlPath).size / 1024).toFixed(1) + ' KB' : 'MISSING';
-        const skillCount = fsSync.existsSync(skillsDir)
-          ? fsSync.readdirSync(skillsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).length
-          : 0;
-        console.log(`   Version    : v${manifest.version || 'unknown'} (${manifest.displayName || manifest.name})`);
-        console.log(`   Server     : mcp/dist/server.mjs (${srvSize})`);
-        console.log(`   UI Bundle  : mcp/dist/app.html (${htmlSize})`);
-        console.log(`   Skills     : ${skillCount} slash skills`);
-      } catch {}
-    }
-    console.log('');
-    return { installed, pluginDir };
-  }
-
-  if (action === 'uninstall') {
-    if (fsSync.existsSync(pluginDir)) {
-      await fs.rm(pluginDir, { recursive: true, force: true });
-      console.log(`🧹 Removed Antigravity Memory Bank plugin from ${pluginDir}`);
-    } else {
-      console.log(`ℹ️  Plugin not installed at ${pluginDir}`);
-    }
-    return { installed: false, pluginDir };
-  }
-
-  // install or sync
-  const srcServer = path.join(pkgRoot, 'mcp', 'dist', 'server.mjs');
-  const srcHtml = path.join(pkgRoot, 'mcp', 'dist', 'app.html');
-  const buildScript = path.join(pkgRoot, 'scripts', 'build-mcp-plugin.mjs');
-  if ((!fsSync.existsSync(srcServer) || !fsSync.existsSync(srcHtml)) && fsSync.existsSync(buildScript)) {
-    console.log('🔨 Building MCP App plugin bundle (mcp/dist/server.mjs & mcp/dist/app.html)...');
-    execFileSync(process.execPath, [buildScript], { cwd: pkgRoot, stdio: 'inherit' });
-  }
-  if (!fsSync.existsSync(srcServer) || !fsSync.existsSync(srcHtml)) {
-    throw new Error('MCP App bundle missing (mcp/dist/server.mjs or mcp/dist/app.html). Run `npm run build:mcp` first.');
-  }
-
-  await fs.mkdir(path.join(pluginDir, 'assets'), { recursive: true });
-  await fs.mkdir(path.join(pluginDir, 'mcp', 'dist'), { recursive: true });
-
-  const filesToCopy = [
-    ['plugin.json', 'plugin.json'],
-    ['mcp_config.json', 'mcp_config.json'],
-    ['README.md', 'README.md'],
-    ['assets/logo.svg', 'assets/logo.svg'],
-    ['mcp/dist/server.mjs', 'mcp/dist/server.mjs'],
-    ['mcp/dist/app.html', 'mcp/dist/app.html']
-  ];
-  for (const [relSrc, relDest] of filesToCopy) {
-    const absSrc = path.join(pkgRoot, relSrc);
-    if (fsSync.existsSync(absSrc)) {
-      await fs.copyFile(absSrc, path.join(pluginDir, relDest));
-    }
-  }
-  try {
-    fsSync.chmodSync(path.join(pluginDir, 'mcp', 'dist', 'server.mjs'), 0o755);
-  } catch {}
-
-  const srcSkills = path.join(pkgRoot, 'skills');
-  const destSkills = path.join(pluginDir, 'skills');
-  if (fsSync.existsSync(srcSkills)) {
-    await fs.rm(destSkills, { recursive: true, force: true });
-    await copyDirRecursive(srcSkills, destSkills);
-  }
-
-  let refreshed = false;
-  if (process.env.ANTIGRAVITY_CSRF_TOKEN && !process.env.ANTIGRAVITY_SKIP_LS_REFRESH) {
-    try {
-      const lsAddr = process.env.ANTIGRAVITY_LS_ADDRESS || 'localhost:5387';
-      const resp = await fetch(`http://${lsAddr}/exa.language_server_pb.LanguageServerService/RefreshMcpServers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-codeium-csrf-token': process.env.ANTIGRAVITY_CSRF_TOKEN
-        },
-        body: JSON.stringify({ serverName: 'memory-bank_memory-bank' })
-      });
-      refreshed = resp.ok;
-    } catch {}
-  }
-
-  const skillCount = fsSync.existsSync(destSkills)
-    ? fsSync.readdirSync(destSkills, { withFileTypes: true }).filter((d) => d.isDirectory()).length
-    : 0;
-  console.log(`\n✅ ${action === 'sync' ? 'Synced' : 'Installed'} Antigravity Memory Bank MCP App Plugin!`);
-  console.log(`   Location : ${pluginDir}`);
-  console.log(`   Server   : mcp/dist/server.mjs (zero-runtime-dependency bundle)`);
-  console.log(`   UI App   : mcp/dist/app.html (single-file CSP-safe SEP-1865 bundle)`);
-  console.log(`   Skills   : ${skillCount} global slash skills synced`);
-  if (refreshed) {
-    console.log(`   Live LS  : Refreshed MCP server memory-bank_memory-bank`);
-  }
-  console.log(`   Open UI  : Side Pane "+" → "Memory Bank"  |  Left Sidebar → "Memory Bank Fleet"\n`);
-  return { installed: true, pluginDir, refreshed };
 }
 
 async function main() {
   const opts = parseCliArgs(process.argv);
   const targetDir = opts.targetDir || process.cwd();
   const detected = await detectProjectContext(targetDir);
-
-  if (opts.command === 'plugin') {
-    await runPluginCommand(opts);
-    return;
-  }
 
   if (opts.command === 'brick') {
     const action = opts.brickAction || 'list';

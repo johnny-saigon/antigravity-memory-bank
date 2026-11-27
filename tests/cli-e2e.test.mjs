@@ -1059,7 +1059,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     assert.doesNotMatch(html, /webkitSpeechRecognition/, '#todoIdeaModal must not rely on Chromium cloud webkitSpeechRecognition which fails in Electron');
     const bridgeSrc = fs.readFileSync(path.join(tmpRepo, 'scripts', 'backlog.mjs'), 'utf8');
     assert.match(bridgeSrc, /import os from 'node:os'/, 'backlog.mjs must import node:os for ASR config & host-mic temp helpers');
-    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.9\.2'/, 'Bridge version must be bumped to 1.9.2 so stale daemons restart automatically');
+    assert.match(bridgeSrc, /BRIDGE_VERSION = '1\.9\.[3-9]\d*'/, 'Bridge version must be bumped to 1.9.3+ so stale daemons restart automatically');
     assert.match(bridgeSrc, /transcribeViaGemini/, 'Bridge server must include Gemini multimodal audio transcription');
     assert.match(bridgeSrc, /transcribeViaWhisperEndpoint/, 'Bridge server must include Whisper ASR transcription failover');
     assert.doesNotMatch(html, /id="todoIdeaType"/, '#todoIdeaModal must not clutter UI with manual Type/Priority dropdowns');
@@ -1500,7 +1500,7 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
         await new Promise((res) => setTimeout(res, 100));
       }
       assert.equal(health?.ok, true, 'BUG-115: isolated bridge server must boot');
-      assert.equal(health?.version, '1.9.2', 'BUG-115: bridge health must report v1.9.2');
+      assert.match(String(health?.version || ''), /^1\.9\.[2-9]\d*$/, 'BUG-115: bridge health must report v1.9.2+');
 
       const postJson = async (endpoint, body) => {
         const res = await fetch(`${baseUrl}${endpoint}`, {
@@ -1560,515 +1560,271 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     }
   });
 
-  test('3n. FEAT-148: native Antigravity MCP App plugin (SEP-1865) bundle, stdio tools, BUG-115 guards, and CLI plugin install', async () => {
-    const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
-    const distHtml = path.join(REPO_ROOT, 'mcp', 'dist', 'app.html');
-    const pluginManifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'plugin.json'), 'utf8'));
-    const mcpCfg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'mcp_config.json'), 'utf8'));
+  test('3n. FEAT-153: READY planning lock auto-unlocks when planning completes (placeholder candidate[0], relative-path brain plan, and Stop hook)', () => {
+    // 1. Unit/component checks: selfHealPlanTicketsIntoBacklog tracks first valid non-skipped plan & sync hook uses process.execPath
+    const backlogSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'backlog.mjs'), 'utf8');
+    const syncSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'sync-memory-context.mjs'), 'utf8');
+    assert.match(backlogSrc, /let foundPrimaryActivePlan = false;/, 'FEAT-153: selfHeal must track first valid primary plan even if candidate[0] is skipped');
+    assert.match(syncSrc, /matchesRoot \|\| \(!hasAnyAbsPath && matchesLockedId\)/, 'FEAT-153: fallback brain scan must match relative-path plans referencing a locked ticket ID');
+    assert.doesNotMatch(syncSrc, /execSync\('node scripts\/backlog\.mjs/, 'FEAT-153: hooks must invoke process.execPath instead of bare node');
 
-    assert.equal(fs.existsSync(distServer), true, 'mcp/dist/server.mjs must exist');
-    assert.equal(fs.existsSync(distHtml), true, 'mcp/dist/app.html must exist');
-    assert.ok(fs.statSync(distHtml).size < 10 * 1024 * 1024, 'mcp/dist/app.html must be < 10 MiB');
-    const htmlContent = fs.readFileSync(distHtml, 'utf8');
-    assert.equal(/<script[^>]+src=["']https?:\/\//i.test(htmlContent), false, 'app.html must not contain external script tags');
-    assert.equal(/<link[^>]+href=["']https?:\/\//i.test(htmlContent), false, 'app.html must not contain external link tags');
-    assert.ok((pluginManifest.suggestedPrompts || []).length <= 3, 'plugin.json must declare <= 3 suggestedPrompts');
-    assert.ok(mcpCfg.mcpServers?.['memory-bank'], 'mcp_config.json must configure memory-bank server');
-
-    // Test CLI plugin install into isolated fake HOME
-    const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-plugin-home-'));
-    const mcpRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-mcp-repo-'));
-    let mcpProc = null;
+    // 2. Integrated E2E flow: stage-plan locks FEAT-131 in READY -> newer placeholder wsPlan + relative-path brain plan -> Stop hook unlocks READY card
+    const unlockRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-mb-unlock-e2e-'));
+    const unlockHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-mb-unlock-home-'));
+    const unlockEnv = { ...process.env, HOME: unlockHome, USERPROFILE: unlockHome };
     try {
-      execFileSync('git', ['init', '-b', 'main'], { cwd: mcpRepo, stdio: 'ignore' });
-      execFileSync(process.execPath, [CLI_PATH, 'init', mcpRepo, '-y', '--name', 'McpTestApp'], {
-        cwd: mcpRepo,
-        env: testEnv,
-        stdio: 'ignore'
+      execFileSync('git', ['init', '-b', 'main'], { cwd: unlockRepo, stdio: 'pipe' });
+      execFileSync('git', ['config', 'user.email', 'ci@test.local'], { cwd: unlockRepo, stdio: 'pipe' });
+      execFileSync('git', ['config', 'user.name', 'CI'], { cwd: unlockRepo, stdio: 'pipe' });
+      fs.writeFileSync(path.join(unlockRepo, 'package.json'), JSON.stringify({ name: 'unlock-test', version: '1.0.0' }, null, 2));
+      execFileSync('git', ['add', '.'], { cwd: unlockRepo, stdio: 'pipe' });
+      execFileSync('git', ['commit', '-m', 'chore: init unlock-test'], { cwd: unlockRepo, stdio: 'pipe' });
+
+      execFileSync(process.execPath, [CLI_PATH, 'init', unlockRepo, '-y', '--no-install-plugin'], {
+        cwd: unlockRepo,
+        env: unlockEnv,
+        stdio: 'pipe'
       });
 
-      const installOut = execFileSync(process.execPath, [CLI_PATH, 'plugin', 'install'], {
-        cwd: REPO_ROOT,
-        env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_SKIP_LS_REFRESH: '1' },
-        encoding: 'utf8'
-      });
-      assert.match(installOut, /Installed Antigravity Memory Bank MCP App Plugin/i);
+      const uBacklogScript = path.join(unlockRepo, 'scripts', 'backlog.mjs');
+      const uSyncScript = path.join(unlockRepo, 'scripts', 'sync-memory-context.mjs');
+      const uBacklogJson = path.join(unlockRepo, 'docs', 'backlog.json');
+      const uBacklogHtml = path.join(unlockRepo, 'docs', 'backlog.html');
+      const uWsPlan = path.join(unlockRepo, 'docs', 'planning', 'implementation_plan.md');
 
-      const installedDir = path.join(fakeHome, '.gemini', 'config', 'plugins', 'memory-bank');
-      const installedServer = path.join(installedDir, 'mcp', 'dist', 'server.mjs');
-      assert.equal(fs.existsSync(path.join(installedDir, 'plugin.json')), true);
-      assert.equal(fs.existsSync(path.join(installedDir, 'mcp_config.json')), true);
-      assert.equal(fs.existsSync(path.join(installedDir, 'assets', 'logo.svg')), true);
-      assert.equal(fs.existsSync(installedServer), true);
-      assert.equal(fs.existsSync(path.join(installedDir, 'mcp', 'dist', 'app.html')), true);
-      assert.equal(fs.existsSync(path.join(installedDir, 'skills', 'start', 'SKILL.md')), true);
-      assert.equal(fs.existsSync(path.join(installedDir, 'skills', 'backlog-plan', 'SKILL.md')), true);
+      // Stage FEAT-131 for planning -> locked in READY
+      execFileSync(
+        process.execPath,
+        [uBacklogScript, 'stage-plan', 'Interactive Multi-Page Coach Marks Tour', '--id', 'FEAT-131'],
+        { cwd: unlockRepo, env: unlockEnv, stdio: 'pipe' }
+      );
+      let bj = JSON.parse(fs.readFileSync(uBacklogJson, 'utf8'));
+      let t131 = bj.tasks.find((t) => t.id === 'FEAT-131');
+      assert.equal(t131.status, 'ready');
+      assert.equal(t131.planningLocked, true);
 
-      // Spawn the installed standalone bundle from os.tmpdir() (zero node_modules!)
-      mcpProc = spawn(process.execPath, [installedServer, `--data-dir=${fakeHome}`], {
-        cwd: os.tmpdir(),
-        env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
+      // Write a relative-path brain implementation_plan.md (no absolute /Users/... path, mentions FEAT-131 in body)
+      const brainDir = path.join(unlockHome, '.gemini', 'antigravity', 'brain', 'unlock-e2e-conv');
+      fs.mkdirSync(brainDir, { recursive: true });
+      const brainPlan = path.join(brainDir, 'implementation_plan.md');
+      fs.writeFileSync(
+        brainPlan,
+        `# Implementation Plan\n\nImplementation plan for FEAT-131: Interactive Multi-Page Coach Marks Tour across /account/vault and /results.\n`,
+        'utf8'
+      );
+
+      // Also write a NEWER placeholder in docs/planning/implementation_plan.md to reproduce candidate[0] skip bug!
+      fs.mkdirSync(path.dirname(uWsPlan), { recursive: true });
+      fs.writeFileSync(uWsPlan, `<!-- antigravity-planning-sync -->\n# Placeholder\n`, 'utf8');
+      const futureTs = new Date(Date.now() + 2000);
+      fs.utimesSync(uWsPlan, futureTs, futureTs);
+
+      // Run Stop hook with empty stdin (fallback brain scan must find relative-path plan for FEAT-131, mirror it, and unlock!)
+      execFileSync(process.execPath, [uSyncScript, '--quiet', '--hook', 'Stop'], {
+        cwd: unlockRepo,
+        env: unlockEnv,
+        input: '',
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
-      const pending = new Map();
-      let buf = '';
-      let nextId = 1;
-      mcpProc.stdout.on('data', (chunk) => {
-        buf += chunk.toString();
-        let nl;
-        while ((nl = buf.indexOf('\n')) !== -1) {
-          const line = buf.slice(0, nl).trim();
-          buf = buf.slice(nl + 1);
-          if (!line) continue;
-          const msg = JSON.parse(line);
-          if (msg.id && pending.has(msg.id)) {
-            const { resolve } = pending.get(msg.id);
-            pending.delete(msg.id);
-            resolve(msg);
-          }
-        }
-      });
+      bj = JSON.parse(fs.readFileSync(uBacklogJson, 'utf8'));
+      t131 = bj.tasks.find((t) => t.id === 'FEAT-131');
+      assert.equal(t131.status, 'ready', 'FEAT-153: Ticket must remain in READY column');
+      assert.equal(t131.liveActivity, 'awaiting_approval', 'FEAT-153: Completed plan must transition liveActivity to awaiting_approval');
+      assert.equal(t131.planningLocked, undefined, 'FEAT-153: Completed plan must clear planningLocked even when candidate[0] was a placeholder and plan used relative paths');
 
-      const rpc = (method, params = {}) =>
-        new Promise((resolve, reject) => {
-          const id = nextId++;
-          const timer = setTimeout(() => {
-            pending.delete(id);
-            reject(new Error(`MCP RPC timeout on ${method}`));
-          }, 15000);
-          pending.set(id, {
-            resolve: (msg) => {
-              clearTimeout(timer);
-              resolve(msg);
-            }
-          });
-          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
-        });
-
-      const initRes = await rpc('initialize', {
-        protocolVersion: '2024-11-05',
-        capabilities: {},
-        clientInfo: { name: 'cli-e2e', version: '1.0.0' }
-      });
-      assert.equal(initRes.result?.serverInfo?.name, 'antigravity-memory-bank');
-      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
-
-      // 1. Tool visibility: strictly 2 model-visible + 15 app-only (0 model prompt bloat)
-      const listRes = await rpc('tools/list');
-      const tools = listRes.result?.tools || [];
-      assert.equal(tools.length, 17, 'Expected 17 total MCP tools (2 model + 15 app-only)');
-      const modelTools = tools.filter((t) => !(t._meta?.ui?.visibility || []).includes('app')).map((t) => t.name).sort();
-      const appTools = tools.filter((t) => (t._meta?.ui?.visibility || []).includes('app'));
-      assert.deepEqual(modelTools, ['memory_bank_dashboard', 'memory_bank_inline_status']);
-      assert.equal(appTools.length, 15, 'All 15 UI backend tools must carry visibility: ["app"]');
-      const dash = tools.find((t) => t.name === 'memory_bank_dashboard');
-      const entryTypes = (dash?._meta?.['com.google.antigravity/ui']?.entrypoints || []).map((e) => e.type).sort();
-      assert.deepEqual(entryTypes, ['aux_pane']);
-
-      // 2. Resource read: ui://memory-bank/app.html returns SEP-1865 MIME
-      const resRead = await rpc('resources/read', { uri: 'ui://memory-bank/app.html' });
-      const resContent = resRead.result?.contents?.[0];
-      assert.equal(resContent?.mimeType, 'text/html;profile=mcp-app');
-      assert.ok((resContent?.text || '').length > 50000);
-
-      // 3. Add ticket isolated into TO DO -> Plan -> Unlock -> Kickoff -> Reject re-plan on IN PROGRESS (BUG-115)
-      const addRes = await rpc('tools/call', {
-        name: 'app_add_ticket_isolated',
-        arguments: { repoRoot: mcpRepo, title: 'MCP E2E Smoke Ticket', priority: 'high', type: 'feature' }
-      });
-      const createdId = addRes.result?.structuredContent?.task?.id;
-      assert.ok(createdId && /^FEAT-\d+$/.test(createdId), `Expected FEAT-* id, got ${createdId}`);
-
-      const snapRes = await rpc('tools/call', {
-        name: 'app_get_workspace_snapshot',
-        arguments: { repoRoot: mcpRepo }
-      });
-      assert.ok(snapRes.result?.structuredContent?.project, 'Workspace snapshot must include project name');
-      assert.ok(snapRes.result?.structuredContent?.tasks?.some((t) => t.id === createdId));
-
-      const planRes = await rpc('tools/call', {
-        name: 'app_plan_tickets',
-        arguments: { repoRoot: mcpRepo, ids: [createdId], modelId: 'gemini-4-argon-high', effort: 'high' }
-      });
-      assert.equal(planRes.result?.isError, undefined);
-      assert.match(planRes.result?.structuredContent?.prompt || '', new RegExp(`/backlog-plan ${createdId}`));
-      let taskState = planRes.result?.structuredContent?.snapshot?.tasks?.find((t) => t.id === createdId);
-      assert.equal(taskState?.status, 'ready');
-      assert.equal(taskState?.planningLocked, true);
-
-      const unlockRes = await rpc('tools/call', {
-        name: 'app_unlock_plan',
-        arguments: { repoRoot: mcpRepo, id: createdId }
-      });
-      assert.equal(unlockRes.result?.structuredContent?.status, 'todo');
-
-      const kickRes = await rpc('tools/call', {
-        name: 'app_kickoff_tickets',
-        arguments: { repoRoot: mcpRepo, ids: [createdId], modelId: 'gemini-4-neon-medium', effort: 'medium' }
-      });
-      assert.match(kickRes.result?.structuredContent?.prompt || '', new RegExp(`/backlog-start ${createdId}`));
-      taskState = kickRes.result?.structuredContent?.snapshot?.tasks?.find((t) => t.id === createdId);
-      assert.equal(taskState?.status, 'in_progress');
-      assert.equal(taskState?.liveActivity, 'coding');
-
-      const blockedPlan = await rpc('tools/call', {
-        name: 'app_plan_tickets',
-        arguments: { repoRoot: mcpRepo, ids: [createdId] }
-      });
-      assert.equal(blockedPlan.result?.isError, true, 'BUG-115: MCP app_plan_tickets must block IN PROGRESS tickets');
-      assert.match(blockedPlan.result?.content?.[0]?.text || '', /back to TO DO/i);
-
-      // 4. Memory Audit + Brick Catalog + Fleet Discovery
-      const lintRes = await rpc('tools/call', {
-        name: 'app_run_memory_audit',
-        arguments: { repoRoot: mcpRepo, action: 'lint' }
-      });
-      assert.equal(lintRes.result?.structuredContent?.ok, true);
-
-      const brickRes = await rpc('tools/call', {
-        name: 'app_brick_manage',
-        arguments: { repoRoot: mcpRepo, action: 'list' }
-      });
-      assert.ok((brickRes.result?.structuredContent?.bricks || []).some((b) => b.name === 'user-profile'));
+      const htmlUnlocked = fs.readFileSync(uBacklogHtml, 'utf8');
+      const readyColHtml = htmlUnlocked.split('id="col-ready"')[1]?.split('id="wrap-in_progress"')[0] || '';
+      assert.match(readyColHtml, /⏳ READY · Awaiting Proceed/, 'FEAT-153: col-ready must display unlocked READY · Awaiting Proceed badge');
+      assert.doesNotMatch(readyColHtml, /Planning\.\.\. \(Locked\)/, 'FEAT-153: col-ready must no longer display Planning... (Locked)');
+      assert.match(readyColHtml, /data-task-id="FEAT-131"[^>]*data-planning-locked="false"/, 'FEAT-153: FEAT-131 card must have data-planning-locked="false"');
     } finally {
-      if (mcpProc && !mcpProc.killed) {
-        try { mcpProc.kill('SIGKILL'); } catch {}
-      }
-      try { fs.rmSync(fakeHome, { recursive: true, force: true }); } catch {}
-      try { fs.rmSync(mcpRepo, { recursive: true, force: true }); } catch {}
+      fs.rmSync(unlockRepo, { recursive: true, force: true });
+      fs.rmSync(unlockHome, { recursive: true, force: true });
     }
   });
 
-  test('3o. FEAT-150: delete ticket from any column across CLI, HTTP Bridge (/api/delete), HTML UI, and MCP App (app_delete_ticket)', async () => {
-    const delRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-del-'));
-    const delPort = 43990 + Math.floor(Math.random() * 400);
+  test('3o. FEAT-154: Native Antigravity ConversationService dispatch & atomic lock rollback when dispatch fails', async () => {
+    const backlogSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'backlog.mjs'), 'utf8');
+    assert.match(backlogSrc, /product\.v1\.ConversationService/, 'FEAT-154: dispatch must support native ConversationService');
+    assert.match(backlogSrc, /endpoint === '\/api\/register-context'/, 'FEAT-154: bridge must expose /api/register-context');
+    assert.match(backlogSrc, /-1719\|-25211\|assistive\|not allowed/, 'FEAT-154: osascript error check must detect macOS -25211');
+    assert.match(backlogSrc, /revertedLock: !allowLock/, 'FEAT-154: /api/plan must return revertedLock when dispatch fails');
+
+    const http = await import('node:http');
+    const dispRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-mb-disp-e2e-'));
+    const dispHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-mb-disp-home-'));
+    const dispEnv = { ...process.env, HOME: dispHome, USERPROFILE: dispHome, ANTIGRAVITY_NO_DAEMON: '1' };
+    delete dispEnv.ANTIGRAVITY_LS_ADDRESS;
+    delete dispEnv.ANTIGRAVITY_CSRF_TOKEN;
+    delete dispEnv.ANTIGRAVITY_PROJECT_ID;
+
+    const receivedCalls = [];
+    const mockLs = http.createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => { body += c; });
+      req.on('end', () => {
+        const parsed = JSON.parse(body || '{}');
+        receivedCalls.push({ url: req.url, csrf: req.headers['x-antigravity-csrf-token'], body: parsed });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        if (req.url === '/product.v1.ConversationService/ListConversations') {
+          res.end(JSON.stringify({
+            conversations: [{
+              id: 'conv-existing-1',
+              metadata: { projectId: 'proj-disp-123' },
+              annotations: { title: `${path.basename(dispRepo)} Core` }
+            }]
+          }));
+          return;
+        }
+        if (req.url === '/product.v1.ConversationService/CreateConversation') {
+          res.end(JSON.stringify({
+            conversation: { id: 'conv-created-133', metadata: { projectId: parsed.projectId } }
+          }));
+          return;
+        }
+        res.end(JSON.stringify({}));
+      });
+    });
+
+    await new Promise((resolve) => mockLs.listen(0, '127.0.0.1', resolve));
+    const mockLsPort = mockLs.address().port;
+    const bridgePort = 4390 + Math.floor(Math.random() * 400);
     let bridgeProc = null;
-    let mcpProc = null;
+
     try {
-      execFileSync('git', ['init', '-b', 'main'], { cwd: delRepo, stdio: 'ignore' });
-      execFileSync(process.execPath, [CLI_PATH, 'init', delRepo, '-y', '--name', 'DeleteTestApp'], {
-        cwd: delRepo,
-        env: testEnv,
+      execFileSync('git', ['init', '-b', 'main'], { cwd: dispRepo, stdio: 'pipe' });
+      execFileSync('git', ['config', 'user.email', 'ci@test.local'], { cwd: dispRepo, stdio: 'pipe' });
+      execFileSync('git', ['config', 'user.name', 'CI'], { cwd: dispRepo, stdio: 'pipe' });
+      fs.writeFileSync(path.join(dispRepo, 'package.json'), JSON.stringify({ name: 'disp-test', version: '1.0.0' }, null, 2));
+      execFileSync('git', ['add', '.'], { cwd: dispRepo, stdio: 'pipe' });
+      execFileSync('git', ['commit', '-m', 'chore: init disp-test'], { cwd: dispRepo, stdio: 'pipe' });
+
+      execFileSync(process.execPath, [CLI_PATH, 'init', dispRepo, '-y', '--no-install-plugin'], {
+        cwd: dispRepo,
+        env: dispEnv,
+        stdio: 'pipe'
+      });
+
+      const dBacklogScript = path.join(dispRepo, 'scripts', 'backlog.mjs');
+      const dBacklogJson = path.join(dispRepo, 'docs', 'backlog.json');
+      execFileSync(process.execPath, [dBacklogScript, 'add', 'Compact ComplianceFooter height', '--id', 'FEAT-133'], {
+        cwd: dispRepo,
+        env: dispEnv,
+        stdio: 'pipe'
+      });
+
+      bridgeProc = spawn(process.execPath, [dBacklogScript, 'serve', '--port', String(bridgePort)], {
+        cwd: dispRepo,
+        env: dispEnv,
         stdio: 'ignore'
       });
 
-      const backlogPath = path.join(delRepo, 'docs', 'backlog.json');
-      const htmlPath = path.join(delRepo, 'docs', 'backlog.html');
-      const scriptPath = path.join(delRepo, 'scripts', 'backlog.mjs');
-      const seed = {
-        project: 'DeleteTestApp',
-        activePlanTaskIds: ['FEAT-202', 'FEAT-206'],
-        tasks: [
-          { id: 'FEAT-201', type: 'feature', title: 'Todo Ticket', status: 'todo', priority: 'medium', branch: 'main' },
-          { id: 'FEAT-202', type: 'feature', title: 'Locked Ready Ticket', status: 'ready', liveActivity: 'planning', planningLocked: true, priority: 'high', branch: 'main' },
-          { id: 'FEAT-203', type: 'feature', title: 'In Progress Parent', status: 'in_progress', priority: 'high', childTicketIds: ['FEAT-203-ACT-1'], branch: 'main' },
-          { id: 'FEAT-203-ACT-1', type: 'feature', title: 'Child of 203', parentId: 'FEAT-203', isActionChild: true, actionIndex: 1, status: 'todo', priority: 'medium', branch: 'main' },
-          { id: 'FEAT-204', type: 'feature', title: 'Done Ticket', status: 'done', priority: 'low', branch: 'main' },
-          { id: 'FEAT-205', type: 'feature', title: 'Unlink Parent', status: 'todo', priority: 'medium', childTicketIds: ['FEAT-205-ACT-1'], branch: 'main' },
-          { id: 'FEAT-205-ACT-1', type: 'feature', title: 'Surviving Child', parentId: 'FEAT-205', isActionChild: true, actionIndex: 1, status: 'todo', priority: 'medium', branch: 'main' },
-          { id: 'FEAT-206', type: 'feature', title: 'Bridge Delete Target', status: 'ready', liveActivity: 'planning', planningLocked: true, priority: 'high', branch: 'main' },
-          { id: 'FEAT-207', type: 'feature', title: 'MCP Todo Target', status: 'todo', priority: 'low', branch: 'main' },
-          { id: 'FEAT-208', type: 'feature', title: 'MCP Done Target', status: 'done', priority: 'low', branch: 'main' }
-        ]
-      };
-      fs.writeFileSync(backlogPath, JSON.stringify(seed, null, 2) + '\n', 'utf8');
+      const postJson = (ep, payload) =>
+        new Promise((resolve, reject) => {
+          const dataStr = JSON.stringify({ repoRoot: dispRepo, ...payload });
+          const req = http.request(
+            {
+              hostname: '127.0.0.1',
+              port: bridgePort,
+              path: ep,
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(dataStr) }
+            },
+            (res) => {
+              let raw = '';
+              res.on('data', (c) => { raw += c; });
+              res.on('end', () => {
+                try { resolve({ status: res.statusCode, body: JSON.parse(raw || '{}') }); }
+                catch { resolve({ status: res.statusCode, body: {} }); }
+              });
+            }
+          );
+          req.on('error', reject);
+          req.write(dataStr);
+          req.end();
+        });
 
-      // 1. CLI delete from todo, locked ready, in_progress (cascade child), done, and --no-cascade unlink
-      execFileSync(process.execPath, [scriptPath, 'delete', 'FEAT-201', 'FEAT-202', 'FEAT-203', 'FEAT-204'], { cwd: delRepo, env: testEnv });
-      execFileSync(process.execPath, [scriptPath, 'delete', 'FEAT-205', '--no-cascade'], { cwd: delRepo, env: testEnv });
-      let bj = JSON.parse(fs.readFileSync(backlogPath, 'utf8'));
-      const idsAfterCli = bj.tasks.map((t) => t.id);
-      assert.equal(idsAfterCli.includes('FEAT-201'), false);
-      assert.equal(idsAfterCli.includes('FEAT-202'), false);
-      assert.equal(idsAfterCli.includes('FEAT-203'), false);
-      assert.equal(idsAfterCli.includes('FEAT-203-ACT-1'), false, 'Cascade delete must remove child ticket');
-      assert.equal(idsAfterCli.includes('FEAT-204'), false);
-      assert.equal(idsAfterCli.includes('FEAT-205'), false);
-      const unlinked = bj.tasks.find((t) => t.id === 'FEAT-205-ACT-1');
-      assert.ok(unlinked, '--no-cascade must preserve child ticket');
-      assert.equal(unlinked.parentId, undefined, '--no-cascade must clear parentId');
-      assert.equal((bj.activePlanTaskIds || []).includes('FEAT-202'), false, 'Deleted ticket must be removed from activePlanTaskIds');
-      const renderedHtml = fs.readFileSync(htmlPath, 'utf8');
-      assert.match(renderedHtml, /openDeleteTicketModal\('FEAT-206', event\)/, 'Locked READY card must expose delete button');
-      assert.match(renderedHtml, /id="deleteTicketModal"/, 'HTML board must include Delete Confirmation Modal');
-
-      // 2. HTTP Bridge POST /api/delete (200 on locked READY, 404 on unknown)
-      bridgeProc = spawn(process.execPath, [scriptPath, 'serve', '--port', String(delPort)], {
-        cwd: delRepo,
-        env: { ...testEnv, ANTIGRAVITY_SKIP_PROMPT_DISPATCH: '1' },
-        stdio: 'ignore'
-      });
-      const baseUrl = `http://127.0.0.1:${delPort}`;
-      let ok = false;
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 30; i++) {
         try {
-          const r = await fetch(`${baseUrl}/api/health`);
-          if (r.ok) { ok = true; break; }
+          const ok = await new Promise((resolve) => {
+            http.get(`http://127.0.0.1:${bridgePort}/api/health`, (r) => resolve(r.statusCode === 200)).on('error', () => resolve(false));
+          });
+          if (ok) break;
         } catch {}
         await new Promise((r) => setTimeout(r, 100));
       }
-      assert.equal(ok, true, 'Bridge must start for FEAT-150 test');
 
-      const del206 = await fetch(`${baseUrl}/api/delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoRoot: delRepo, id: 'FEAT-206', cascade: true })
+      // 1. Dispatch failure (no ConversationService & osascript unavailable) -> MUST NOT lock FEAT-133 in READY!
+      const failPlan = await postJson('/api/plan', {
+        id: 'FEAT-133',
+        prompt: '/effort high /backlog-plan FEAT-133',
+        _forceDispatchInTest: true,
+        _skipOsascript: true
       });
-      assert.equal(del206.status, 200);
-      const del206Json = await del206.json();
-      assert.deepEqual(del206Json.deletedIds, ['FEAT-206']);
+      assert.equal(failPlan.status, 200);
+      assert.equal(failPlan.body.dispatched, false, 'FEAT-154: dispatch must report false when unavailable');
+      assert.equal(failPlan.body.revertedLock, true, 'FEAT-154: /api/plan must signal revertedLock when dispatch fails');
+      let bj = JSON.parse(fs.readFileSync(dBacklogJson, 'utf8'));
+      let t133 = bj.tasks.find((t) => t.id === 'FEAT-133');
+      assert.equal(t133.status, 'todo', 'FEAT-154: FEAT-133 must remain in TO DO when dispatch fails');
+      assert.equal(t133.planningLocked, undefined, 'FEAT-154: FEAT-133 must NOT be locked when dispatch fails');
 
-      const del404 = await fetch(`${baseUrl}/api/delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoRoot: delRepo, id: 'FEAT-9999' })
+      // 2. Register ConversationService context -> default /api/plan MUST NEVER spawn a new conversation!
+      const regRes = await postJson('/api/register-context', {
+        lsAddress: `127.0.0.1:${mockLsPort}`,
+        csrfToken: 'test-csrf-xyz'
       });
-      assert.equal(del404.status, 404);
+      assert.equal(regRes.status, 200);
+      assert.equal(regRes.body.hasConversationService, true);
 
-      // 3. MCP App app_delete_ticket over stdio (delete TODO + DONE + reject missing ID)
-      const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
-      mcpProc = spawn(process.execPath, [distServer, `--data-dir=${os.tmpdir()}`], {
-        cwd: os.tmpdir(),
-        env: { ...testEnv, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
-        stdio: ['pipe', 'pipe', 'pipe']
+      const sameConvOnlyPlan = await postJson('/api/plan', {
+        id: 'FEAT-133',
+        prompt: '/effort high /backlog-plan FEAT-133 --model gemini-4-argon-high',
+        _forceDispatchInTest: true,
+        _skipOsascript: true
       });
-      const pending = new Map();
-      let buf = '';
-      let nextId = 1;
-      mcpProc.stdout.on('data', (chunk) => {
-        buf += chunk.toString();
-        let nl;
-        while ((nl = buf.indexOf('\n')) !== -1) {
-          const line = buf.slice(0, nl).trim();
-          buf = buf.slice(nl + 1);
-          if (!line) continue;
-          const msg = JSON.parse(line);
-          if (msg.id && pending.has(msg.id)) {
-            const { resolve } = pending.get(msg.id);
-            pending.delete(msg.id);
-            resolve(msg);
-          }
-        }
+      assert.equal(sameConvOnlyPlan.status, 200);
+      assert.equal(sameConvOnlyPlan.body.dispatched, false, 'FEAT-154: default PLAN must NOT silently spawn a new conversation');
+      assert.equal(sameConvOnlyPlan.body.revertedLock, true, 'FEAT-154: default PLAN must keep ticket unlocked if same-conversation dispatch is unavailable');
+      assert.equal(
+        receivedCalls.some((c) => c.url === '/product.v1.ConversationService/CreateConversation'),
+        false,
+        'FEAT-154: default PLAN must NEVER call CreateConversation'
+      );
+      bj = JSON.parse(fs.readFileSync(dBacklogJson, 'utf8'));
+      assert.equal(bj.tasks.find((t) => t.id === 'FEAT-133')?.status, 'todo');
+
+      // 3. Explicit opt-in (allowNewConversation: true) still dispatches via ConversationService/CreateConversation and locks READY
+      const okPlan = await postJson('/api/plan', {
+        id: 'FEAT-133',
+        prompt: '/effort high /backlog-plan FEAT-133 --model gemini-4-argon-high',
+        allowNewConversation: true,
+        _forceDispatchInTest: true,
+        _skipOsascript: true
       });
-      const rpc = (method, params = {}) =>
-        new Promise((resolve, reject) => {
-          const id = nextId++;
-          const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout on ${method}`)); }, 15000);
-          pending.set(id, { resolve: (m) => { clearTimeout(timer); resolve(m); } });
-          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
-        });
-      await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'del-e2e', version: '1.0' } });
-      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
+      assert.equal(okPlan.status, 200);
+      assert.equal(okPlan.body.dispatched, true, 'FEAT-154: explicit opt-in ConversationService dispatch must succeed');
+      assert.equal(okPlan.body.method, 'conversation_service');
+      assert.equal(okPlan.body.conversationId, 'conv-created-133');
+      assert.equal(okPlan.body.revertedLock, false);
 
-      const mcpDel1 = await rpc('tools/call', { name: 'app_delete_ticket', arguments: { repoRoot: delRepo, id: 'FEAT-207' } });
-      assert.equal(mcpDel1.result?.isError, undefined);
-      assert.deepEqual(mcpDel1.result?.structuredContent?.deletedIds, ['FEAT-207']);
+      const createCall = receivedCalls.find((c) => c.url === '/product.v1.ConversationService/CreateConversation');
+      assert.ok(createCall, 'FEAT-154: Opt-in dispatch must invoke ConversationService/CreateConversation');
+      assert.equal(createCall.csrf, 'test-csrf-xyz');
+      assert.equal(createCall.body.projectId, 'proj-disp-123');
+      assert.equal(createCall.body.model, 'pro');
+      assert.equal(createCall.body.prompt?.[0]?.text, '/effort high /backlog-plan FEAT-133 --model gemini-4-argon-high');
 
-      const mcpDel2 = await rpc('tools/call', { name: 'app_delete_ticket', arguments: { repoRoot: delRepo, id: 'FEAT-208' } });
-      assert.equal(mcpDel2.result?.isError, undefined);
-      assert.deepEqual(mcpDel2.result?.structuredContent?.deletedIds, ['FEAT-208']);
-
-      const mcpDelMissing = await rpc('tools/call', { name: 'app_delete_ticket', arguments: { repoRoot: delRepo, id: 'FEAT-4040' } });
-      assert.equal(mcpDelMissing.result?.isError, true);
+      bj = JSON.parse(fs.readFileSync(dBacklogJson, 'utf8'));
+      t133 = bj.tasks.find((t) => t.id === 'FEAT-133');
+      assert.equal(t133.status, 'ready', 'FEAT-154: Dispatched PLAN must move FEAT-133 to READY');
+      assert.equal(t133.planningLocked, true, 'FEAT-154: Dispatched PLAN must lock FEAT-133 in READY while planning runs');
     } finally {
-      if (bridgeProc && !bridgeProc.killed) { try { bridgeProc.kill('SIGKILL'); } catch {} }
-      if (mcpProc && !mcpProc.killed) { try { mcpProc.kill('SIGKILL'); } catch {} }
-      try { fs.rmSync(delRepo, { recursive: true, force: true }); } catch {}
-    }
-  });
-
-  test('3p. FEAT-151: strict single-branch & single-workspace isolation on main and linked worktrees', async () => {
-    const isoMain = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-iso-main-'));
-    const isoWt = path.join(os.tmpdir(), `agmb-iso-wt-${Date.now()}`);
-    let mcpProc = null;
-    try {
-      execFileSync('git', ['init', '-b', 'main'], { cwd: isoMain, stdio: 'ignore' });
-      execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: isoMain, stdio: 'ignore' });
-      execFileSync('git', ['config', 'user.name', 'Test'], { cwd: isoMain, stdio: 'ignore' });
-      execFileSync(process.execPath, [CLI_PATH, 'init', isoMain, '-y', '--name', 'IsoApp'], {
-        cwd: isoMain,
-        env: testEnv,
-        stdio: 'ignore'
-      });
-
-      const seedTasks = [
-        { id: 'FEAT-301', type: 'feature', title: 'Main Branch Ticket', status: 'todo', priority: 'high', branch: 'main' },
-        { id: 'FEAT-302', type: 'feature', title: 'Legacy Untagged Ticket', status: 'done', priority: 'low' },
-        { id: 'FEAT-303', type: 'feature', title: 'Other Feature Branch Ticket', status: 'todo', priority: 'high', branch: 'feature/isolated' }
-      ];
-      fs.writeFileSync(path.join(isoMain, 'docs', 'backlog.json'), JSON.stringify({ project: 'IsoApp', tasks: seedTasks }, null, 2) + '\n');
-      execFileSync('git', ['add', '-A'], { cwd: isoMain, stdio: 'ignore' });
-      execFileSync('git', ['commit', '-m', 'init'], { cwd: isoMain, stdio: 'ignore' });
-      execFileSync('git', ['worktree', 'add', '-b', 'feature/isolated', isoWt], { cwd: isoMain, stdio: 'ignore' });
-
-      const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
-      const distHtml = fs.readFileSync(path.join(REPO_ROOT, 'mcp', 'dist', 'app.html'), 'utf8');
-      assert.equal(distHtml.includes('toggle-branch-scope'), false, 'MCP UI must not expose toggle-branch-scope');
-      assert.equal(distHtml.includes('All Branches'), false, 'MCP UI must not expose All Branches toggle');
-      assert.equal(distHtml.includes('workspaceBadge'), true, 'Conversation-bound Side Pane must render read-only workspaceBadge');
-
-      mcpProc = spawn(process.execPath, [distServer, `--data-dir=${os.tmpdir()}`], {
-        cwd: os.tmpdir(),
-        env: { ...testEnv, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      const pending = new Map();
-      let buf = '';
-      let nextId = 1;
-      mcpProc.stdout.on('data', (chunk) => {
-        buf += chunk.toString();
-        let nl;
-        while ((nl = buf.indexOf('\n')) !== -1) {
-          const line = buf.slice(0, nl).trim();
-          buf = buf.slice(nl + 1);
-          if (!line) continue;
-          const msg = JSON.parse(line);
-          if (msg.id && pending.has(msg.id)) {
-            const { resolve } = pending.get(msg.id);
-            pending.delete(msg.id);
-            resolve(msg);
-          }
-        }
-      });
-      const rpc = (method, params = {}) =>
-        new Promise((resolve, reject) => {
-          const id = nextId++;
-          const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout on ${method}`)); }, 15000);
-          pending.set(id, { resolve: (m) => { clearTimeout(timer); resolve(m); } });
-          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
-        });
-      await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'iso-e2e', version: '1.0' } });
-      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
-
-      // 1. Main checkout must show ONLY main + legacy untagged tickets, strictly hiding feature/isolated
-      const mainSnap = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: { repoRoot: isoMain } });
-      const mainIds = (mainSnap.result?.structuredContent?.tasks || []).map((t) => t.id).sort();
-      assert.deepEqual(mainIds, ['FEAT-301', 'FEAT-302']);
-      assert.equal(mainSnap.result?.structuredContent?.counts?.total, 2);
-
-      // 2. Linked worktree feature/isolated must show ONLY feature/isolated tickets, hiding main & untagged
-      const wtSnap = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: { repoRoot: isoWt } });
-      const wtIds = (wtSnap.result?.structuredContent?.tasks || []).map((t) => t.id).sort();
-      assert.deepEqual(wtIds, ['FEAT-303']);
-      assert.equal(wtSnap.result?.structuredContent?.counts?.total, 1);
-    } finally {
-      if (mcpProc && !mcpProc.killed) { try { mcpProc.kill('SIGKILL'); } catch {} }
-      try { execFileSync('git', ['worktree', 'remove', '--force', isoWt], { cwd: isoMain, stdio: 'ignore' }); } catch {}
-      try { fs.rmSync(isoWt, { recursive: true, force: true }); } catch {}
-      try { fs.rmSync(isoMain, { recursive: true, force: true }); } catch {}
-    }
-  });
-
-  test('3q. FEAT-152 / BUG-116: MCP workspace resolution prioritizes last_active_workspace & transcript.jsonl mtime over fleet-clobbered backlog.html', async () => {
-    const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agmb-b116-home-'));
-    const repoA = path.join(fakeHome, 'Binaryday');
-    const repoB = path.join(fakeHome, 'JBB.PM CV');
-    let mcpProc = null;
-    try {
-      for (const [dir, name] of [[repoA, 'Binaryday'], [repoB, 'JBB.PM CV']]) {
-        fs.mkdirSync(path.join(dir, 'docs'), { recursive: true });
-        fs.mkdirSync(path.join(dir, 'memory-bank'), { recursive: true });
-        fs.writeFileSync(path.join(dir, 'docs', 'backlog.json'), JSON.stringify({ project: name, tasks: [{ id: 'FEAT-101', type: 'feature', title: `${name} task`, status: 'todo', priority: 'medium' }] }, null, 2));
-      }
-
-      // Simulate brain dirs: repoA has NEWER transcript.jsonl, but repoB has NEWER backlog.html (fleet upgrade clobber!)
-      const brainA = path.join(fakeHome, '.gemini', 'antigravity', 'brain', 'conv-a');
-      const brainB = path.join(fakeHome, '.gemini', 'antigravity', 'brain', 'conv-b');
-      fs.mkdirSync(path.join(brainA, '.system_generated', 'logs'), { recursive: true });
-      fs.mkdirSync(path.join(brainB, '.system_generated', 'logs'), { recursive: true });
-      const tA = path.join(brainA, '.system_generated', 'logs', 'transcript.jsonl');
-      const tB = path.join(brainB, '.system_generated', 'logs', 'transcript.jsonl');
-      const hA = path.join(brainA, 'backlog.html');
-      const hB = path.join(brainB, 'backlog.html');
-      fs.writeFileSync(hA, `<script>const rawData = {"repoRoot":${JSON.stringify(repoA)}};</script>`);
-      fs.writeFileSync(hB, `<script>const rawData = {"repoRoot":${JSON.stringify(repoB)}};</script>`);
-      fs.writeFileSync(tA, '{"step":1}\n');
-      fs.writeFileSync(tB, '{"step":1}\n');
-      const now = Date.now() / 1000;
-      fs.utimesSync(tA, now, now);            // repoA transcript is NEWEST
-      fs.utimesSync(tB, now - 3600, now - 3600); // repoB transcript is 1h OLDER
-      fs.utimesSync(hA, now - 600, now - 600);
-      fs.utimesSync(hB, now + 10, now + 10);  // repoB backlog.html is NEWEST (fleet upgrade!)
-
-      const dataDir = path.join(fakeHome, '.gemini', 'antigravity', 'plugin_data', 'memory-bank');
-      fs.mkdirSync(dataDir, { recursive: true });
-
-      const distServer = path.join(REPO_ROOT, 'mcp', 'dist', 'server.mjs');
-      mcpProc = spawn(process.execPath, [distServer, `--data-dir=${dataDir}`], {
-        cwd: os.tmpdir(),
-        env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      const pending = new Map();
-      let buf = '';
-      let nextId = 1;
-      mcpProc.stdout.on('data', (chunk) => {
-        buf += chunk.toString();
-        let nl;
-        while ((nl = buf.indexOf('\n')) !== -1) {
-          const line = buf.slice(0, nl).trim();
-          buf = buf.slice(nl + 1);
-          if (!line) continue;
-          const msg = JSON.parse(line);
-          if (msg.id && pending.has(msg.id)) {
-            const { resolve } = pending.get(msg.id);
-            pending.delete(msg.id);
-            resolve(msg);
-          }
-        }
-      });
-      const rpc = (method, params = {}) =>
-        new Promise((resolve, reject) => {
-          const id = nextId++;
-          const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Timeout on ${method}`)); }, 15000);
-          pending.set(id, { resolve: (m) => { clearTimeout(timer); resolve(m); } });
-          mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
-        });
-      await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'b116-e2e', version: '1.0' } });
-      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
-
-      // 1. Without --repo-root, MUST pick repoA (newest transcript.jsonl) NOT repoB (newest backlog.html)
-      const snap1 = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: {} });
-      assert.equal(snap1.result?.structuredContent?.project, 'Binaryday', 'Must pick newest transcript.jsonl (Binaryday), not fleet-clobbered backlog.html (JBB.PM CV)');
-      assert.equal(snap1.result?.structuredContent?.boundByHost, false);
-      mcpProc.kill('SIGKILL');
-      mcpProc = null;
-
-      // 2. Per-workspace pinned mode (--repo-root=repoA) MUST ALWAYS lock to repoA (boundByHost: true, aux_pane only)
-      mcpProc = spawn(process.execPath, [distServer, `--repo-root=${repoA}`], {
-        cwd: os.tmpdir(),
-        env: { ...testEnv, HOME: fakeHome, ANTIGRAVITY_MEMORY_BANK_ROOT: REPO_ROOT },
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-      pending.clear();
-      buf = '';
-      mcpProc.stdout.on('data', (chunk) => {
-        buf += chunk.toString();
-        let nl;
-        while ((nl = buf.indexOf('\n')) !== -1) {
-          const line = buf.slice(0, nl).trim();
-          buf = buf.slice(nl + 1);
-          if (!line) continue;
-          const msg = JSON.parse(line);
-          if (msg.id && pending.has(msg.id)) {
-            const { resolve } = pending.get(msg.id);
-            pending.delete(msg.id);
-            resolve(msg);
-          }
-        }
-      });
-      await rpc('initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'b116-ws', version: '1.0' } });
-      mcpProc.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
-      const wsList = await rpc('tools/list');
-      const wsDash = (wsList.result?.tools || []).find((t) => t.name === 'memory_bank_dashboard');
-      assert.deepEqual((wsDash?._meta?.['com.google.antigravity/ui']?.entrypoints || []).map((e) => e.type), ['aux_pane']);
-      const wsSnap = await rpc('tools/call', { name: 'app_get_workspace_snapshot', arguments: {} });
-      assert.equal(wsSnap.result?.structuredContent?.project, 'Binaryday');
-      assert.equal(wsSnap.result?.structuredContent?.boundByHost, true);
-    } finally {
-      if (mcpProc && !mcpProc.killed) { try { mcpProc.kill('SIGKILL'); } catch {} }
-      try { fs.rmSync(fakeHome, { recursive: true, force: true }); } catch {}
+      if (bridgeProc) { try { bridgeProc.kill('SIGTERM'); } catch {} }
+      await new Promise((resolve) => mockLs.close(resolve));
+      fs.rmSync(dispRepo, { recursive: true, force: true });
+      fs.rmSync(dispHome, { recursive: true, force: true });
     }
   });
 

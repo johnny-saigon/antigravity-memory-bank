@@ -7,7 +7,7 @@
 ## 1. Executive Summary & Sprint Status
 - **Project**: **Antigravity Memory Bank** (Production-tested Three-Tier Memory Bank brick, Zero-Token Backlog Engine, and Antigravity Plugin for autonomous AI pair programming.)
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
-- **Backlog Completion**: **74 / 74** tickets verified `DONE` (0 in progress, 0 queued).
+- **Backlog Completion**: **76 / 76** tickets verified `DONE` (0 in progress, 0 queued).
 
 ## 2. Recent Architectural Accomplishments
 - **feat(docs): unify `FEAT-121` Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/design/DESIGN.md`, `scripts/sync-living-docs.mjs`, `templates/scripts/sync-living-docs.mjs`, `.agents/rules/docs-living-specs.md`, `README.md`) and roll out `upgrade` across `SnapCal`, `BinaryDay`, `RemoveBackGround`, and `wiro` (`10/10` canonical docs active, custom/nested docs classified & archived with repo-wide link rewriting, `10/10` ingestion checklist passed)**
@@ -17,6 +17,18 @@
 - **feat(organize): implement `FEAT-117` AI-native repository & root reorganization engine (`lib/repo-organizer.mjs`, `npx antigravity-memory-bank organize`)**
 
 ## 3. Completed & Verified Backlog Tickets (`DONE`)
+### ✅ [FEAT-154]: Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails *(Verified 2026-11-25)*
+- **Summary**: Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via native Antigravity ConversationService/CreateConversation (with automatic projectId discovery and /api/register-context) and revert/skip locking whenever prompt dispatch fails.
+- **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs), [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs)
+- **Verified Criterion**: ✓ Implement and verify Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails across scripts/backlog.mjs, templates/scripts/backlog.mjs, tests/cli-e2e.test.mjs
+- **Verified Criterion**: ✓ Add both a non-regression unit/component test and an E2E test verifying the fix
+
+### ✅ [FEAT-153]: Fix ticket staying locked in READY column after planning completes *(Verified 2026-11-25)*
+- **Summary**: Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPlanTicketsIntoBacklog used idx === 0 instead of first valid non-skipped plan, (2) sync-memory-context.mjs fallback brain scan required literal rootDir string even for relative-path plans referencing the locked ticket ID, (3) Stop/PostToolUse hooks invoked bare node instead of process.execPath and skipped re-render when wsPlan was already mirrored, and (4) selfHeal needed to unlock locked tickets referencing the finalized plan.
+- **Verified Components**: [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/backlog.mjs), [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs), [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/templates/scripts/sync-memory-context.mjs), [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs)
+- **Verified Criterion**: ✓ Implement and verify Fix ticket staying locked in READY column after planning completes across scripts/backlog.mjs, templates/scripts/backlog.mjs, scripts/sync-memory-context.mjs, templates/scripts/sync-memory-context.mjs, tests/cli-e2e.test.mjs
+- **Verified Criterion**: ✓ Add both a non-regression unit/component test and an E2E test verifying the fix
+
 ### ✅ [FEAT-152]: Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) *(Verified 2026-11-24)*
 - **Verified Components**: [server.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/mcp/src/server.mjs), [app.ts](file:///Users/jbb/Documents/antigravity-memory-bank/mcp/src/ui/app.ts), [types.ts](file:///Users/jbb/Documents/antigravity-memory-bank/mcp/src/ui/types.ts), [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs), [cli.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/bin/cli.mjs), [cli-e2e.test.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/tests/cli-e2e.test.mjs)
 - **Verified Criterion**: ✓ Implement and verify Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) across mcp/src/server.mjs, mcp/src/ui/app.ts, mcp/src/ui/types.ts, scripts/backlog.mjs, bin/cli.mjs, tests/cli-e2e.test.mjs
@@ -433,7 +445,7 @@
 | :--- | :--- | :--- |
 | **Memory Bank Line Budget (`< 150 lines`)** | `npm run lint:memory` | ✅ Verified (`0` violations) |
 | **10-Point Baseline Ingestion Checklist** | `npx antigravity-memory-bank upgrade` | ✅ `10/10` Passed |
-| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (74/74 Done) |
+| **3-Artifact Planning Correlation** | `docs/planning/{task,implementation_plan,walkthrough}.md` | ✅ Synchronized (76/76 Done) |
 | **Automated Verification Command** | `npm run lint:memory` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm test` | ✅ Configured & Active |
 | **Automated Verification Command** | `npm run test:e2e` | ✅ Configured & Active |
