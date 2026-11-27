@@ -1,43 +1,20 @@
 # antigravity-memory-bank — Repo Paths, API Keys, MCP Auth & Customizations
 
-> **Pre-Authenticated Access & Zero-Prompt Directive**: All MCP servers (`18/18` marked `✅ AUTHENTICATED`), host credential stores, CLI sessions, and customizations below are **already authenticated, active, and pre-authorized** (`AGENT_PERMISSION_PRESET_TURBO`). **NEVER redundantly ask the user for API keys, tokens, logins, or permission, and NEVER pause waiting for access—invoke `call_mcp_tool` or read the indexed credential paths directly.**
+> **Pre-Authenticated Access & Zero-Prompt Directive**: All MCP servers (`0/0` marked `✅ AUTHENTICATED`), host credential stores, CLI sessions, and customizations below are **already authenticated, active, and pre-authorized** (`AGENT_PERMISSION_PRESET_TURBO`). **NEVER redundantly ask the user for API keys, tokens, logins, or permission, and NEVER pause waiting for access—invoke `call_mcp_tool` or read the indexed credential paths directly.**
 
 ## 1. Repository Paths & Workspace Topology
-- **Workspace Root**: `~/Documents/antigravity-memory-bank` · **Git Remote**: `https://github.com/johnny-saigon/antigravity-memory-bank.git` (`main`)
+- **Workspace Root**: `~/work/antigravity-memory-bank/antigravity-memory-bank` · **Git Remote**: `https://github.com/johnny-saigon/antigravity-memory-bank` (`main`)
 - **Directory Layout**: `lib/`, `bin/`, `scripts/`, `docs/`, `templates/`, `memory-bank/`, `.agents/`
-- **Git Worktree Installations (3: 1 Main + 2 Linked)**: Main `[main]` (`~/Documents/antigravity-memory-bank`) · Worktree `[memory_bank_skills]` (`~/.gemini/antigravity/worktrees/antigravity-memory-bank/memory_bank_skills`) · Worktree `[memory_bank_video_plan]` (`~/.gemini/antigravity/worktrees/antigravity-memory-bank/memory_bank_video_plan`)
 
 ## 2. Environment Files, API Keys & Host Auth Stores
-- **Pre-Authenticated Host Token & CLI Stores**: `~/.github_token` (GitHub PAT ✅) · `~/.stripe_token` (Stripe API ✅) · `~/.stitch_token` (Google Stitch ✅) · `~/.ovh_credentials.json` (OVHcloud API ✅) · `~/.meta_credentials.json` (Meta Graph & App ✅) · `~/.meta_token` (Meta Business Token ✅) · `~/.azure/azureProfile.json` (Azure & Entra CLI ✅) · `~/.linkedin_mcp/account_identity.json` (LinkedIn Session ✅) · `~/Library/Application Support/mj/config.json` (Midjourney Profile ✅) · `~/.mcp-auth/mcp-remote-v1` (MCP OAuth2 Cache ✅)
 - **Workspace `.env` Files**: None detected (uses pre-authenticated host stores & `~/.gemini/config/mcp_config.json`).
 
 ## 3. Pre-Authenticated MCP Servers (`~/.gemini/config/mcp_config.json`)
-| MCP Server | Bridge / Package | Tools | Live Authentication Status & Identity (Pre-Authorized) |
-| :--- | :--- | :---: | :--- |
-| **`apple`** | `~/.gemini/antigravity/bin/apple_mcp.cjs` | 13 | ✅ AUTHENTICATED (Key `Y9V6TK5R8A` · Issuer `c06bde3f...` · `credentials/AuthKey.p8` verified) |
-| **`apple-mail`** | `~/.local/bin/apple-mail-mcp` | 8 | ✅ AUTHENTICATED (Local stdio / CLI session ready) |
-| **`azure-mcp`** | `npx @azure/mcp@latest` | 74 | ✅ AUTHENTICATED (`~/.azure` CLI session · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
-| **`cloudflare`** | `npx @cloudflare/mcp-server-cloudflare` (acct `aae01ca564...`) | 89 | ✅ AUTHENTICATED (`CLOUDFLARE_API_TOKEN` (configured (secret)) ready) |
-| **`entra`** | `~/.gemini/antigravity/bin/entra_mcp.cjs` | 4 | ✅ AUTHENTICATED (`az` Graph session `~/.azure` · `snapcal.oauth@hotmail.com` · Tenant `3f3f912a...` ready) |
-| **`github`** | `@modelcontextprotocol/server-github` | 26 | ✅ AUTHENTICATED (`~/.github_token` PAT verified) |
-| **`linkedin`** | `~/.local/bin/linkedin-mcp` | 29 | ✅ AUTHENTICATED (`~/.linkedin_mcp` · `jean-baptiste-bouquet` · browser session ready) |
-| **`lucid`** | `npx mcp-remote` (`https://mcp.lucid.app/mcp`) | 38 | ✅ AUTHENTICATED (OAuth2 token cached in `~/.mcp-auth/mcp-remote-v1` ready) |
-| **`meta`** | `~/.gemini/antigravity/bin/meta_mcp.cjs` | 7 | ✅ AUTHENTICATED (`~/.meta_credentials.json` · App `2199060924286885` (BinaryDay) ready) |
-| **`meta_business`** | `~/.gemini/antigravity/bin/meta_business_mcp.cjs` | 20 | ✅ AUTHENTICATED (`~/.meta_token` & `~/.meta_credentials.json` · Biz `1277193594593819` (Design Engineering) ready) |
-| **`midjourney`** | `~/.gemini/antigravity/bin/midjourney_mcp.sh` | 25 | ✅ AUTHENTICATED (`~/Library/Application Support/mj` · Camoufox profile & `user_id` ready) |
-| **`ovh`** | `~/.gemini/antigravity/bin/ovh_mcp.py` | 8 | ✅ AUTHENTICATED (`~/.ovh_credentials.json` · endpoint `ovh-eu` ready) |
-| **`resend`** | `npx resend-mcp` | 138 | ✅ AUTHENTICATED (`RESEND_API_KEY` (`re_***` (configured)) ready) |
-| **`stitch (jbb@avilo.capital)`** | `https://stitch.googleapis.com/mcp` | 18 | ✅ AUTHENTICATED (Local stdio / CLI session ready) |
-| **`stitch (jbb@designengineering.io)`** | `https://stitch.googleapis.com/mcp` | 18 | ✅ AUTHENTICATED (Local stdio / CLI session ready) |
-| **`stitch (jbouquet@gmail.com)`** | `https://stitch.googleapis.com/mcp` | 18 | ✅ AUTHENTICATED (Local stdio / CLI session ready) |
-| **`stripe`** | `~/.gemini/antigravity/bin/stripe_mcp_bridge.cjs` | 9 | ✅ AUTHENTICATED (`~/.stripe_token` API key verified) |
-| **`notebooklm`** | `~/.local/bin/notebooklm-mcp` | 55 | ✅ AUTHENTICATED (`~/.notebooklm-mcp-cli/profiles/designengineering` · `jbb@designengineering.io` · `notebooklm-mcp-cli` ready) |
+- No MCP servers detected in `~/.gemini/config/mcp_config.json` or `.mcp.json`.
 
 ## 4. Antigravity Customizations, Permissions & Lifecycle Hooks
 - **Tier 1 Global Rules**: `~/.gemini/GEMINI.md`
-- **Global Agent Policy (`~/.gemini/config/config.json`)**: Preset: `AGENT_PERMISSION_PRESET_AUTO` · Execution: `CASCADE_COMMANDS_AUTO_EXECUTION_AUTO` (✅ Pre-Authorized — Do Not Prompt User)
-- **On-the-Fly Lifecycle Hooks**: Workspace `.agents/hooks.json`: `antigravity-memory-bank` (enabled: SessionStart, PostToolUse, Stop) · Git `.git/hooks/post-commit`: auto-sync enabled
-- **Built-in Antigravity Skills (`~/.gemini/antigravity/builtin/skills/`)**: `agy-customizations`, `antigravity_guide`, `automation`, `conversations`, `generative_ui`, `mcp-app-development`, `migrate-agent-settings`, `migrate-workflows`, `native_swarm`, `permissioned-github`, `plugin`, `run-workflow`, `swarm_monitor`, `swarm_narrator`, `swarm_pane`, `ui-plugin-navigation` · **Plugins**: `invideo`, `kling-ai`
+- **On-the-Fly Lifecycle Hooks**: Workspace `.agents/hooks.json`: `antigravity-memory-bank` (enabled: SessionStart, PostToolUse, Stop)
 - **Workspace Rules (7)**:
   - `.agents/rules/brick-governance.md`: Apply whenever creating, installing, upgrading, or customizing Hexagonal Bricks in bricks/* or src/adapters/* 
   - `.agents/rules/docs-living-specs.md`: Apply whenever designing architecture, inspecting database/API schemas, implementing UI/UX screens or brand to

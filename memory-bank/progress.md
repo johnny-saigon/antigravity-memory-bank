@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(backlog): preserve completed plan IDs in activePlanTaskIds and block quiet auto-proceed after subset completion or in multi-ticket plans (BUG-155)** (`ea21d7a`)
 - [x] **fix(backlog): preserve completed plan IDs in activePlanTaskIds and block quiet auto-proceed after subset completion or in multi-ticket plans (BUG-155)** (`a6ebfb8`)
 - [x] **fix(sync): trickle-up SaigonSystems fixes — guard partial multi-ticket auto-proceed (BUG-155) and verify NotebookLM MCP auth** (`9b3a411`)
 - [x] **fix(backlog): auto-unlock completed READY plans (FEAT-153) and same-conversation Swift AX dispatch (FEAT-154)** (`8575a0d`)
