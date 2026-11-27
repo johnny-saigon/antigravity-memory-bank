@@ -9,12 +9,9 @@
     "agy-memory": "./bin/cli.mjs"
   },
   "files": [
-    "assets/",
     "bin/",
     "bricks/",
     "lib/",
-    "mcp/dist/",
-    "mcp_config.json",
     "rules/",
     "scripts/",
     "skills/",
@@ -23,8 +20,6 @@
     "install.sh"
   ],
   "scripts": {
-    "build:mcp": "node scripts/build-mcp-plugin.mjs",
-    "plugin:install": "node bin/cli.mjs plugin install",
     "lint:memory": "node scripts/lint-memory.mjs",
     "test:e2e": "node --test tests/cli-e2e.test.mjs",
     "test:bricks": "node --test bricks/user-profile/testing/contract.spec.ts",

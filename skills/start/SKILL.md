@@ -16,9 +16,7 @@ Whenever `/start` is executed or a new session begins, **always execute `/clear`
    - If `lint-memory.mjs --clear` reports accumulated uncompacted conversation history (`> 25k tokens/turn`), immediately flag **`⚠️ Thread History Detected — Run /compact now (or Cmd/Ctrl+N -> /start)`** at the top of your response (since `/compact` is a native Antigravity chat UI command).
 1. **Batch-Read Memory Bank (`1` Turn)**: Batch-read `memory-bank/activeContext.md`, `memory-bank/progress.md`, `memory-bank/integrationsAndCustomizations.md`, `memory-bank/systemPatterns.md`, `memory-bank/infrastructureInvariants.md`, `memory-bank/projectbrief.md`, and `memory-bank/productContext.md` in a single turn (note: in normal turns, these files are progressively disclosed via `.agents/rules/memory-*.md` with `trigger: model_decision` so root `AGENTS.md` stays `< 50 lines`).
 2. **Inspect Active Backlog**: Review `docs/backlog.json` to identify `in_progress` tickets, pending Action Items (`waitingOn`), and top `todo` priorities.
-3. **Live Health Probe & Bind Native Memory Bank Side Pane**:
-   - If configured, run a non-invasive live health probe against the target service.
-   - If the `memory-bank_memory-bank` MCP server is available, call `call_mcp_tool` on `memory-bank_memory-bank` → `memory_bank_dashboard` with `{ "repoRoot": "<absolute current workspace root>", "tab": "kanban" }` (in parallel with Step 1 reads) so this conversation's **Memory Bank** Side Pane is strictly locked to the current project & branch (`boundByHost: true`) even when multiple Antigravity projects are running `/start` concurrently.
+3. **Live Health Probe**: If configured, run a non-invasive live health probe against the target service.
 4. **Output Concise Status Summary**:
    - **Pre-Start `/clear` & `/compact` Status** (confirm disk state synced, 100% of session archive preserved on disk, and active post-reset delta watermark at `0 KB`)
    - **Current Phase**
