@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(backlog): auto-unlock completed READY plans (FEAT-153) and same-conversation Swift AX dispatch (FEAT-154)** (`8575a0d`)
 <<<<<<< HEAD
 - [x] **feat(rules): mandate root viewport and compiled bundle proof for UI layout fixes** (`6616ec1`)
 =======
