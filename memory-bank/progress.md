@@ -1,6 +1,7 @@
 # antigravity-memory-bank — Progress Tracker & Acceptance Matrix
 
 ## 1. High-Level Milestone Tracking
+- [x] **fix(sync): trickle-up SaigonSystems fixes — guard partial multi-ticket auto-proceed (BUG-155) and verify NotebookLM MCP auth** (`9b3a411`)
 - [x] **fix(backlog): auto-unlock completed READY plans (FEAT-153) and same-conversation Swift AX dispatch (FEAT-154)** (`8575a0d`)
 - [x] **feat(rules): mandate root viewport and compiled bundle proof for UI layout fixes** (`6616ec1`)
 - [x] **fix(mcp-app): split global Fleet vs per-workspace --repo-root board plugin for 100% deterministic multi-project isolation** (`97b891c`)
