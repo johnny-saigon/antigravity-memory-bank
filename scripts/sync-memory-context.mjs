@@ -825,7 +825,14 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
                   .filter(Boolean);
                 const isStillPlanning = activeTasks.some(t => t.liveActivity === 'planning' || t.planningLocked === true);
                 const hasInProgressActivePlan = activeTasks.some(t => t.status === 'in_progress' || t.status === 'testing');
-                const hasReadyActivePlan = !isStillPlanning && !hasInProgressActivePlan && activeTasks.some(t => t.status === 'ready');
+                const hasCompletedActivePlan = activeTasks.some(t => t.status === 'done');
+                const readyActiveTasks = activeTasks.filter(t => t.status === 'ready');
+                const hasReadyActivePlan =
+                  !isStillPlanning &&
+                  !hasInProgressActivePlan &&
+                  !hasCompletedActivePlan &&
+                  activeTasks.length === 1 &&
+                  readyActiveTasks.length === 1;
                 if (hasReadyActivePlan) {
                   execSync(`"${process.execPath}" scripts/backlog.mjs proceed --quiet`, { cwd: rootDir, stdio: 'ignore' });
                 }
@@ -935,8 +942,15 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
             .filter(Boolean);
           const isStillPlanning = activeTasks.some(t => t.liveActivity === 'planning' || t.planningLocked === true);
           const hasInProgressActivePlan = activeTasks.some(t => t.status === 'in_progress' || t.status === 'testing');
+          const hasCompletedActivePlan = activeTasks.some(t => t.status === 'done');
           const readyActiveTasks = activeTasks.filter(t => t.status === 'ready');
-          if (!isStillPlanning && !hasInProgressActivePlan && readyActiveTasks.length > 0) {
+          if (
+            !isStillPlanning &&
+            !hasInProgressActivePlan &&
+            !hasCompletedActivePlan &&
+            activeTasks.length === 1 &&
+            readyActiveTasks.length === 1
+          ) {
             const wsPlanPath = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
             const wsPlanMs = fsSync.existsSync(wsPlanPath) ? fsSync.statSync(wsPlanPath).mtimeMs : 0;
             const maxPlannedMs = readyActiveTasks.reduce((m, t) => {

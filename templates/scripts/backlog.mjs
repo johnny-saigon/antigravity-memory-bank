@@ -1393,7 +1393,7 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             stampTaskBranch(existing, rootDir);
             addedOrHealed++;
           }
-          if (isPrimaryActivePlan && existing.status !== 'done' && !activePlanIds.includes(existing.id)) {
+          if (isPrimaryActivePlan && !activePlanIds.includes(existing.id)) {
             activePlanIds.push(existing.id);
           }
         }
@@ -1404,9 +1404,17 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
           (Array.isArray(data.activePlanTaskIds) ? data.activePlanTaskIds : []).map(id => String(id).toUpperCase())
         );
         for (const activeTask of data.tasks) {
-          if (!activeTask || activeTask.status === 'done') continue;
+          if (!activeTask) continue;
           const upperId = String(activeTask.id || '').toUpperCase();
           const isInActiveIds = activeIdSet.has(upperId);
+          if (activeTask.status === 'done') {
+            const escapedDoneId = upperId.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const rawMentionsDoneId = Boolean(upperId && new RegExp(`\\b${escapedDoneId}\\b`, 'i').test(raw));
+            if (isInActiveIds && !activePlanIds.includes(activeTask.id) && (extracted.length === 0 || rawMentionsDoneId)) {
+              activePlanIds.push(activeTask.id);
+            }
+            continue;
+          }
           const isPlanningLocked = Boolean(activeTask.planningLocked || activeTask.liveActivity === 'planning');
           if (!isInActiveIds && !isPlanningLocked) continue;
           const escapedId = upperId.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -7963,10 +7971,14 @@ function main() {
       process.exit(1);
     }
 
-    if (Array.isArray(data.activePlanTaskIds)) {
-      data.activePlanTaskIds = data.activePlanTaskIds.filter(
-        activeId => !matchedTasks.some(t => t.status === 'done' && t.id.toLowerCase() === String(activeId).toLowerCase())
-      );
+    if (Array.isArray(data.activePlanTaskIds) && data.activePlanTaskIds.length > 0) {
+      const allActivePlanDone = data.activePlanTaskIds.every(activeId => {
+        const t = data.tasks.find(x => String(x.id).toLowerCase() === String(activeId).toLowerCase());
+        return !t || t.status === 'done';
+      });
+      if (allActivePlanDone) {
+        data.activePlanTaskIds = [];
+      }
     }
 
     saveBacklog(data);
@@ -8534,12 +8546,21 @@ function main() {
         .map(id => data.tasks.find(task => String(task.id).toUpperCase() === String(id).toUpperCase()))
         .filter(Boolean);
       const hasInProgressSubset = activePlanTasks.some(t => t.status === 'in_progress' || t.status === 'testing');
-      if (quietMode && hasInProgressSubset) {
+      const hasCompletedSubset = activePlanTasks.some(t => t.status === 'done');
+      const readyPlanTasks = activePlanTasks.filter(
+        t => (t.status === 'ready' || t.status === 'todo') && !t.planningLocked && t.liveActivity !== 'planning'
+      );
+      // BUG-155 Permanent Guard:
+      // If ANY ticket in the plan is already in_progress, testing, or done (e.g. post-completion ad-hoc edits after
+      // finishing a wave), OR if the plan contains multiple tickets (>1), background `--quiet` auto-proceed must
+      // NEVER bulk-promote remaining READY sibling tickets into IN PROGRESS.
+      if (
+        quietMode &&
+        (hasInProgressSubset || hasCompletedSubset || activePlanTasks.length > 1 || readyPlanTasks.length > 1)
+      ) {
         return;
       }
-      targetIds = activePlanTasks
-        .filter(t => (t.status === 'ready' || t.status === 'todo') && !t.planningLocked && t.liveActivity !== 'planning')
-        .map(t => String(t.id).toUpperCase());
+      targetIds = readyPlanTasks.map(t => String(t.id).toUpperCase());
     }
 
     if (targetIds.length === 0 && !quietMode) {

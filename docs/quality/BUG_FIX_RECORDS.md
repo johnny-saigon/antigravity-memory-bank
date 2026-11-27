@@ -27,12 +27,12 @@
 | **`FEAT-153`** | Fix ticket staying locked in READY column after planning completes — Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPl | DONE | `scripts/backlog.mjs, templates/scripts/backlog.mjs, scripts/sync-memory-context.mjs, templates/scripts/sync-memory-context.mjs, tests/cli-e2e.test.mjs` |
 | **`FEAT-154`** | Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails — Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via na | DONE | `scripts/backlog.mjs, templates/scripts/backlog.mjs, tests/cli-e2e.test.mjs` |
 | **`BUG-155`** | Fix auto-proceed hook promoting all sibling READY tickets in multi-ticket plans when a subset is already IN PROGRESS — When implementation_plan.md plans multiple tickets (e.g. FEAT-119..126 in SaigonSystems) and the user runs /backlog-start on a subset (FEAT- | DONE | `scripts/sync-memory-context.mjs, scripts/backlog.mjs` |
+| **`COMMIT-a6ebfb8`** | fix(backlog): preserve completed plan IDs in activePlanTaskIds and block quiet auto-proceed after subset completion or in multi-ticket plans (BUG-155) — Git fix commit `a6ebfb8` | DONE | `git history` |
+| **`COMMIT-9b3a411`** | fix(sync): trickle-up SaigonSystems fixes — guard partial multi-ticket auto-proceed (BUG-155) and verify NotebookLM MCP auth — Git fix commit `9b3a411` | DONE | `git history` |
 | **`COMMIT-8575a0d`** | fix(backlog): auto-unlock completed READY plans (FEAT-153) and same-conversation Swift AX dispatch (FEAT-154) — Git fix commit `8575a0d` | DONE | `git history` |
 | **`COMMIT-97b891c`** | fix(mcp-app): split global Fleet vs per-workspace --repo-root board plugin for 100% deterministic multi-project isolation — Git fix commit `97b891c` | DONE | `git history` |
 | **`COMMIT-1ccd2dc`** | fix(mcp-app): preserve unbound hostBound state for Switch Project button and auto-bind Side Pane in /start — Git fix commit `1ccd2dc` | DONE | `git history` |
 | **`COMMIT-74511da`** | fix(mcp-app): prevent fleet upgrade backlog.html mtime clobber and bind Side Pane to active workspace (FEAT-152) — Git fix commit `74511da` | DONE | `git history` |
-| **`COMMIT-6884f9d`** | fix(mcp-app): gracefully fall back to git HEAD when docs/backlog.json has conflict markers — Git fix commit `6884f9d` | DONE | `git history` |
-| **`COMMIT-8216efd`** | fix(backlog): auto-execute PLAN/CODE in Prompt Window & enforce TO DO return for IN PROGRESS/DONE re-plan (BUG-115) — Git fix commit `8216efd` | DONE | `git history` |
 <!-- ag-section:bug-records:end -->
 
 ---

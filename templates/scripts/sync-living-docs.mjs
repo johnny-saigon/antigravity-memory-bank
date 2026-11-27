@@ -1366,6 +1366,8 @@ export async function synthesizeLivingDocs(targetDir, opts = {}) {
           relInsideDocs.startsWith('archive/') ||
           relInsideDocs.startsWith('planning/') ||
           relInsideDocs.startsWith('attachments/') ||
+          relInsideDocs.startsWith('notebooklm/') ||
+          relInsideDocs.startsWith('wix-export/') ||
           relInsideDocs.startsWith('architecture/') ||
           relInsideDocs.startsWith('design/') ||
           relInsideDocs.startsWith('quality/') ||

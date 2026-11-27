@@ -1833,8 +1833,13 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     const syncSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'sync-memory-context.mjs'), 'utf8');
     const backlogSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'backlog.mjs'), 'utf8');
     assert.match(syncSrc, /const hasInProgressActivePlan = activeTasks\.some\(/, 'BUG-155: sync-memory-context.mjs must guard auto-proceed when subset is already IN PROGRESS');
+    assert.match(syncSrc, /const hasCompletedActivePlan = activeTasks\.some\(t => t\.status === 'done'\);/, 'BUG-155: sync-memory-context.mjs must guard auto-proceed after a subset ticket is DONE');
     assert.match(syncSrc, /if \(nameLower === 'notebooklm'\)/, 'Trickle-up: sync-memory-context.mjs must verify notebooklm profile credentials');
-    assert.match(backlogSrc, /if \(quietMode && hasInProgressSubset\) \{\s*return;\s*\}/, 'BUG-155: quiet proceed must not drag unstarted sibling READY tickets when subset is IN PROGRESS');
+    assert.match(
+      backlogSrc,
+      /hasInProgressSubset \|\| hasCompletedSubset \|\| activePlanTasks\.length > 1/,
+      'BUG-155: quiet proceed must not drag unstarted sibling READY tickets when subset is IN PROGRESS/DONE or plan has multiple tickets'
+    );
 
     // 2. Integrated E2E flow: 3 planned READY tickets -> explicitly start FEAT-950 -> workspace edits + PostToolUse + git-status hook MUST keep FEAT-951 & FEAT-952 in READY
     const pRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-mb-bug155-e2e-'));
@@ -1888,6 +1893,23 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
       assert.equal(bj.tasks.find((t) => t.id === 'FEAT-950')?.status, 'in_progress', 'BUG-155: explicitly started FEAT-950 must stay in_progress');
       assert.equal(bj.tasks.find((t) => t.id === 'FEAT-951')?.status, 'ready', 'BUG-155: unstarted sibling FEAT-951 must remain in READY');
       assert.equal(bj.tasks.find((t) => t.id === 'FEAT-952')?.status, 'ready', 'BUG-155: unstarted sibling FEAT-952 must remain in READY');
+
+      // Step 2 (Post-DONE Ad-Hoc Edit Regression): Mark FEAT-950 DONE (so 0 tickets are currently in_progress),
+      // then perform an ad-hoc file edit (like replacing a photo) -> FEAT-951 & FEAT-952 MUST STILL stay in READY!
+      execFileSync(process.execPath, [pBacklog, 'done', 'FEAT-950', '--force'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+      fs.writeFileSync(editedFile, 'export const a = 2;\n', 'utf8');
+      execFileSync(process.execPath, [pSync, '--quiet', '--hook', 'PostToolUse'], {
+        cwd: pRepo,
+        env: pEnv,
+        input: JSON.stringify({ tool_name: 'edit_file', tool_input: { Path: editedFile } }),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      execFileSync(process.execPath, [pBacklog, 'proceed', '--quiet'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+
+      const bjAfterDone = JSON.parse(fs.readFileSync(pJson, 'utf8'));
+      assert.equal(bjAfterDone.tasks.find((t) => t.id === 'FEAT-950')?.status, 'done', 'BUG-155: FEAT-950 must be done');
+      assert.equal(bjAfterDone.tasks.find((t) => t.id === 'FEAT-951')?.status, 'ready', 'BUG-155: post-done ad-hoc edit must NEVER auto-promote sibling FEAT-951 to in_progress');
+      assert.equal(bjAfterDone.tasks.find((t) => t.id === 'FEAT-952')?.status, 'ready', 'BUG-155: post-done ad-hoc edit must NEVER auto-promote sibling FEAT-952 to in_progress');
 
       // Explicit proceed <ID> must still promote ONLY the explicitly requested sibling
       execFileSync(process.execPath, [pBacklog, 'proceed', 'FEAT-951'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
