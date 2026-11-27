@@ -865,6 +865,20 @@ This board tracks active development tickets, feature backlogs, architecture ini
 
 ---
 
+### BUG-155: Fix auto-proceed hook promoting all sibling READY tickets in multi-ticket plans when a subset is already IN PROGRESS
+- **Status:** Completed (`DONE`)
+- **Priority:** High
+- **Components:** `scripts/sync-memory-context.mjs`, `scripts/backlog.mjs`
+- **Description:** When implementation_plan.md plans multiple tickets (e.g. FEAT-119..126 in SaigonSystems) and the user runs /backlog-start on a subset (FEAT-119, FEAT-120), PostToolUse and the git-status safety net in scripts/sync-memory-context.mjs (lines ~805-814 & ~914-939) still see remaining READY tickets in activePlanTaskIds and run `scripts/backlog.mjs proceed --quiet`, dragging all unstarted sibling READY tickets into IN PROGRESS. Fix: skip auto-proceed whenever any active ticket is already in_progress/testing, keep explicit start/proceed scoped to requested IDs, and add unit + E2E non-regression tests.
+- **Technical Specification:**
+  When implementation_plan.md plans multiple tickets (e.g. FEAT-119..126 in SaigonSystems) and the user runs /backlog-start on a subset (FEAT-119, FEAT-120), PostToolUse and the git-status safety net in scripts/sync-memory-context.mjs (lines ~805-814 & ~914-939) still see remaining READY tickets in activePlanTaskIds and run `scripts/backlog.mjs proceed --quiet`, dragging all unstarted sibling READY tickets into IN PROGRESS. Fix: skip auto-proceed whenever any active ticket is already in_progress/testing, keep explicit start/proceed scoped to requested IDs, and add unit + E2E non-regression tests.
+- **Acceptance Criteria:**
+  - [x] Guard both PostToolUse and git-status auto-proceed paths in scripts/sync-memory-context.mjs to skip `proceed --quiet` whenever any ticket in activePlanTaskIds is already in_progress/testing
+  - [x] Ensure explicit `backlog.mjs start <ID>` / `proceed <IDs>` does not drag unstarted sibling READY tickets into IN PROGRESS
+  - [x] Add dedicated unit/component non-regression test and E2E test verifying multi-ticket plan partial start behavior
+
+---
+
 ## 2. Active Quality Assurance & Release Validation
 
 ### FEAT-111: Automated Zero-Dependency E2E CLI Test Suite (init, upgrade, sync, export, uninstall)

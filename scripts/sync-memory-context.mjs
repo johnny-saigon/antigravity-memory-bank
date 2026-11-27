@@ -259,6 +259,23 @@ function resolveMcpAuthVerification(serverName, spec, args, resolvedRoot, homeDi
       return { authenticated: true, summary: `✅ AUTHENTICATED (\`~/Library/Application Support/mj\` · Camoufox profile & \`user_id\` ready)` };
     }
   }
+  if (nameLower === 'notebooklm') {
+    const prof = env.NLM_PROFILE || 'default';
+    const profDir = path.join(homeDir, '.notebooklm-mcp-cli', 'profiles', prof);
+    const hasCreds = fsSync.existsSync(path.join(profDir, 'cookies.json')) || fsSync.existsSync(path.join(profDir, 'credentials.enc'));
+    let emailPart = '';
+    const metaFile = path.join(profDir, 'metadata.json');
+    if (fsSync.existsSync(metaFile)) {
+      try {
+        const m = JSON.parse(fsSync.readFileSync(metaFile, 'utf8'));
+        if (m.email) emailPart = ` · \`${m.email}\``;
+      } catch {}
+    }
+    if (hasCreds) {
+      return { authenticated: true, summary: `✅ AUTHENTICATED (\`~/.notebooklm-mcp-cli/profiles/${prof}\`${emailPart} · \`notebooklm-mcp-cli\` ready)` };
+    }
+    return { authenticated: false, summary: `⏳ PENDING LOGIN (\`~/.notebooklm-mcp-cli/profiles/${prof}\` · run \`notebooklm-mcp-cli\` login)` };
+  }
 
   const hasRemoteArg = (args || []).some(a => String(a).includes('mcp-remote') || String(a).startsWith('http'));
   for (const a of args || []) {
@@ -807,7 +824,8 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
                   .map(id => (bj.tasks || []).find(t => String(t.id).toUpperCase() === String(id).toUpperCase()))
                   .filter(Boolean);
                 const isStillPlanning = activeTasks.some(t => t.liveActivity === 'planning' || t.planningLocked === true);
-                const hasReadyActivePlan = !isStillPlanning && activeTasks.some(t => t.status === 'ready');
+                const hasInProgressActivePlan = activeTasks.some(t => t.status === 'in_progress' || t.status === 'testing');
+                const hasReadyActivePlan = !isStillPlanning && !hasInProgressActivePlan && activeTasks.some(t => t.status === 'ready');
                 if (hasReadyActivePlan) {
                   execSync(`"${process.execPath}" scripts/backlog.mjs proceed --quiet`, { cwd: rootDir, stdio: 'ignore' });
                 }
@@ -888,7 +906,7 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
     }
   } catch {}
   try {
-    const statusOut = execSync('git status --porcelain', { cwd: rootDir, stdio: 'pipe' }).toString().trim();
+    const statusOut = execSync('git status --porcelain -uall', { cwd: rootDir, stdio: 'pipe' }).toString().trim();
     if (statusOut) {
       const dirtyCodeFiles = [];
       for (const line of statusOut.split('\n')) {
@@ -916,8 +934,9 @@ function distillRecentWorkspaceActivity(rootDir, hookPayload) {
             .map(id => (bj.tasks || []).find(t => String(t.id).toUpperCase() === String(id).toUpperCase()))
             .filter(Boolean);
           const isStillPlanning = activeTasks.some(t => t.liveActivity === 'planning' || t.planningLocked === true);
+          const hasInProgressActivePlan = activeTasks.some(t => t.status === 'in_progress' || t.status === 'testing');
           const readyActiveTasks = activeTasks.filter(t => t.status === 'ready');
-          if (!isStillPlanning && readyActiveTasks.length > 0) {
+          if (!isStillPlanning && !hasInProgressActivePlan && readyActiveTasks.length > 0) {
             const wsPlanPath = path.join(rootDir, 'docs', 'planning', 'implementation_plan.md');
             const wsPlanMs = fsSync.existsSync(wsPlanPath) ? fsSync.statSync(wsPlanPath).mtimeMs : 0;
             const maxPlannedMs = readyActiveTasks.reduce((m, t) => {

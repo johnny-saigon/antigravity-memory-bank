@@ -1421,7 +1421,9 @@ function selfHealPlanTicketsIntoBacklog(data, rootDir = REPO_ROOT) {
             addedOrHealed++;
           }
           if (isInActiveIds && !activePlanIds.includes(activeTask.id)) {
-            activePlanIds.push(activeTask.id);
+            if (extracted.length === 0 || rawMentionsTaskId || isPlanningLocked) {
+              activePlanIds.push(activeTask.id);
+            }
           }
         }
       }
@@ -8528,12 +8530,16 @@ function main() {
     let targetIds = rawPositional.map(id => id.toUpperCase());
 
     if (targetIds.length === 0 && Array.isArray(data.activePlanTaskIds) && data.activePlanTaskIds.length > 0) {
-      targetIds = data.activePlanTaskIds
-        .map(id => String(id).toUpperCase())
-        .filter(id => {
-          const t = data.tasks.find(task => String(task.id).toUpperCase() === id);
-          return t && (t.status === 'ready' || t.status === 'todo') && !t.planningLocked && t.liveActivity !== 'planning';
-        });
+      const activePlanTasks = data.activePlanTaskIds
+        .map(id => data.tasks.find(task => String(task.id).toUpperCase() === String(id).toUpperCase()))
+        .filter(Boolean);
+      const hasInProgressSubset = activePlanTasks.some(t => t.status === 'in_progress' || t.status === 'testing');
+      if (quietMode && hasInProgressSubset) {
+        return;
+      }
+      targetIds = activePlanTasks
+        .filter(t => (t.status === 'ready' || t.status === 'todo') && !t.planningLocked && t.liveActivity !== 'planning')
+        .map(t => String(t.id).toUpperCase());
     }
 
     if (targetIds.length === 0 && !quietMode) {

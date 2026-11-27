@@ -1828,6 +1828,78 @@ describe('FEAT-111: Zero-Dependency E2E CLI Lifecycle (init, upgrade, sync, expo
     }
   });
 
+  test('3p. BUG-155 & NotebookLM trickle-up: partial multi-ticket start keeps sibling READY tickets untouched & verifies notebooklm profile auth', () => {
+    // 1. Unit/component checks
+    const syncSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'sync-memory-context.mjs'), 'utf8');
+    const backlogSrc = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'backlog.mjs'), 'utf8');
+    assert.match(syncSrc, /const hasInProgressActivePlan = activeTasks\.some\(/, 'BUG-155: sync-memory-context.mjs must guard auto-proceed when subset is already IN PROGRESS');
+    assert.match(syncSrc, /if \(nameLower === 'notebooklm'\)/, 'Trickle-up: sync-memory-context.mjs must verify notebooklm profile credentials');
+    assert.match(backlogSrc, /if \(quietMode && hasInProgressSubset\) \{\s*return;\s*\}/, 'BUG-155: quiet proceed must not drag unstarted sibling READY tickets when subset is IN PROGRESS');
+
+    // 2. Integrated E2E flow: 3 planned READY tickets -> explicitly start FEAT-950 -> workspace edits + PostToolUse + git-status hook MUST keep FEAT-951 & FEAT-952 in READY
+    const pRepo = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-mb-bug155-e2e-'));
+    const pHome = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-mb-bug155-home-'));
+    const pEnv = { ...process.env, HOME: pHome, USERPROFILE: pHome, ANTIGRAVITY_NO_DAEMON: '1' };
+    try {
+      execFileSync('git', ['init', '-b', 'main'], { cwd: pRepo, stdio: 'pipe' });
+      execFileSync('git', ['config', 'user.email', 'ci@test.local'], { cwd: pRepo, stdio: 'pipe' });
+      execFileSync('git', ['config', 'user.name', 'CI'], { cwd: pRepo, stdio: 'pipe' });
+      fs.writeFileSync(path.join(pRepo, 'package.json'), JSON.stringify({ name: 'bug155-test', version: '1.0.0' }, null, 2));
+      execFileSync('git', ['add', '.'], { cwd: pRepo, stdio: 'pipe' });
+      execFileSync('git', ['commit', '-m', 'chore: init bug155-test'], { cwd: pRepo, stdio: 'pipe' });
+
+      execFileSync(process.execPath, [CLI_PATH, 'init', pRepo, '-y', '--no-install-plugin'], {
+        cwd: pRepo,
+        env: pEnv,
+        stdio: 'pipe'
+      });
+
+      const pBacklog = path.join(pRepo, 'scripts', 'backlog.mjs');
+      const pSync = path.join(pRepo, 'scripts', 'sync-memory-context.mjs');
+      const pJson = path.join(pRepo, 'docs', 'backlog.json');
+      const pPlan = path.join(pRepo, 'docs', 'planning', 'implementation_plan.md');
+
+      // Plan 3 sibling tickets together into READY
+      execFileSync(process.execPath, [pBacklog, 'add', 'Sibling Task A', '--id', 'FEAT-950'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [pBacklog, 'add', 'Sibling Task B', '--id', 'FEAT-951'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [pBacklog, 'add', 'Sibling Task C', '--id', 'FEAT-952'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+      execFileSync(process.execPath, [pBacklog, 'plan', 'FEAT-950', 'FEAT-951', 'FEAT-952'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+      fs.mkdirSync(path.dirname(pPlan), { recursive: true });
+      fs.writeFileSync(pPlan, `# Plan\n\n### [FEAT-950] Sibling Task A\n### [FEAT-951] Sibling Task B\n### [FEAT-952] Sibling Task C\n`, 'utf8');
+      const pastTs = new Date(Date.now() - 5000);
+      fs.utimesSync(pPlan, pastTs, pastTs);
+
+      // Explicitly start ONLY FEAT-950 (subset)
+      execFileSync(process.execPath, [pBacklog, 'start', 'FEAT-950'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+
+      // Edit a workspace code file (mtime > plan + 2s) and trigger BOTH PostToolUse AND git-status safety net AND quiet proceed
+      fs.mkdirSync(path.join(pRepo, 'src'), { recursive: true });
+      const editedFile = path.join(pRepo, 'src', 'featureA.js');
+      fs.writeFileSync(editedFile, 'export const a = 1;\n', 'utf8');
+      execFileSync(process.execPath, [pSync, '--quiet', '--hook', 'PostToolUse'], {
+        cwd: pRepo,
+        env: pEnv,
+        input: JSON.stringify({ tool_name: 'write_file', tool_input: { Path: editedFile } }),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      execFileSync(process.execPath, [pBacklog, 'proceed', '--quiet'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+
+      const bj = JSON.parse(fs.readFileSync(pJson, 'utf8'));
+      assert.equal(bj.tasks.find((t) => t.id === 'FEAT-950')?.status, 'in_progress', 'BUG-155: explicitly started FEAT-950 must stay in_progress');
+      assert.equal(bj.tasks.find((t) => t.id === 'FEAT-951')?.status, 'ready', 'BUG-155: unstarted sibling FEAT-951 must remain in READY');
+      assert.equal(bj.tasks.find((t) => t.id === 'FEAT-952')?.status, 'ready', 'BUG-155: unstarted sibling FEAT-952 must remain in READY');
+
+      // Explicit proceed <ID> must still promote ONLY the explicitly requested sibling
+      execFileSync(process.execPath, [pBacklog, 'proceed', 'FEAT-951'], { cwd: pRepo, env: pEnv, stdio: 'pipe' });
+      const bj2 = JSON.parse(fs.readFileSync(pJson, 'utf8'));
+      assert.equal(bj2.tasks.find((t) => t.id === 'FEAT-951')?.status, 'in_progress', 'BUG-155: explicit proceed FEAT-951 must move FEAT-951 to in_progress');
+      assert.equal(bj2.tasks.find((t) => t.id === 'FEAT-952')?.status, 'ready', 'BUG-155: explicit proceed FEAT-951 must NOT drag FEAT-952');
+    } finally {
+      fs.rmSync(pRepo, { recursive: true, force: true });
+      fs.rmSync(pHome, { recursive: true, force: true });
+    }
+  });
+
   test('4. export & uninstall: archives consolidated memory backup and cleanly removes Memory Bank files', () => {
     const exportOut = execFileSync(process.execPath, [CLI_PATH, 'export', tmpRepo], {
       cwd: tmpRepo,

@@ -6,10 +6,10 @@
 - **Current Phase**: v1.5 Unified Canonical Living Documentation Hierarchy & Deep Universal Harvester (`FEAT-121`), Hexagonal `user-profile` Brick (`FEAT-120`), & Correlated 3-Artifact Planning Mode (`22/22` backlog tickets `DONE`).
 - **Sprint Objective**: Dogfood the Three-Tier Memory Bank, Canonical Living Documentation Hierarchy & Deep Universal Harvester (`docs/INDEX.md` + 4 Pillars), Pluggable Hexagonal Bricks (`bricks/user-profile`), and Decoupled Zero-Token Backlog Engine while keeping upstream templates 100% byte-identical and synchronized across all 5 repositories (`antigravity-memory-bank`, `SnapCal`, `BinaryDay`, `RemoveBackGround`, `wiro`).
 - **Planning Scope (`BASELINE`)**:
+  - **[BUG-155] Fix auto-proceed hook promoting all sibling READY tickets in multi-ticket plans when a subset is already IN PROGRESS** (`HIGH` · Status: `done`): When implementation_plan.md plans multiple tickets (e.g. FEAT-119..126 in SaigonSystems) and the user runs /backlog-start on a subset (FEAT-119, FEAT-120), PostToolUse and the git-status safety net in scripts/sync-memory-context.mjs (lines ~805-814 & ~914-939) still see remaining READY tickets in activePlanTaskIds and run `scripts/backlog.mjs proceed --quiet`, dragging all unstarted sibling READY tickets into IN PROGRESS. Fix: skip auto-proceed whenever any active ticket is already in_progress/testing, keep explicit start/proceed scoped to requested IDs, and add unit + E2E non-regression tests.
   - **[FEAT-154] Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails** (`HIGH` · Status: `done`): Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via native Antigravity ConversationService/CreateConversation (with automatic projectId discovery and /api/register-context) and revert/skip locking whenever prompt dispatch fails.
   - **[FEAT-153] Fix ticket staying locked in READY column after planning completes** (`HIGH` · Status: `done`): Tickets staged via stage-plan remain stuck in PLANNING... (LOCKED) in READY after implementation_plan.md is finalized because (1) selfHealPlanTicketsIntoBacklog used idx === 0 instead of first valid non-skipped plan, (2) sync-memory-context.mjs fallback brain scan required literal rootDir string even for relative-path plans referencing the locked ticket ID, (3) Stop/PostToolUse hooks invoked bare node instead of process.execPath and skipped re-render when wsPlan was already mirrored, and (4) selfHeal needed to unlock locked tickets referencing the finalized plan.
   - **[FEAT-152] Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber)** (`HIGH` · Status: `done`): Implement and verify according to project architecture invariants.
-  - **[FEAT-151-ACT-3] 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout** (`MEDIUM` · Status: `done`): 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
 
 ## 2. User Review Required
 > [!IMPORTANT]
@@ -21,6 +21,16 @@
 > - **Package Whitelist (`"files"`)**: `package.json` strictly restricts published package contents to `bin/`, `lib/`, `rules/`, `scripts/`, `skills/`, `templates/`, `plugin.json`, and `install.sh`, excluding dogfood files (`memory-bank/`, `docs/`, `.agents/`, `AGENTS.md`).
 
 ## 3. Proposed Changes
+### [BUG-155] Fix auto-proceed hook promoting all sibling READY tickets in multi-ticket plans when a subset is already IN PROGRESS *(Completed & Verified Baseline)*
+- **Specification**: When implementation_plan.md plans multiple tickets (e.g. FEAT-119..126 in SaigonSystems) and the user runs /backlog-start on a subset (FEAT-119, FEAT-120), PostToolUse and the git-status safety net in scripts/sync-memory-context.mjs (lines ~805-814 & ~914-939) still see remaining READY tickets in activePlanTaskIds and run `scripts/backlog.mjs proceed --quiet`, dragging all unstarted sibling READY tickets into IN PROGRESS. Fix: skip auto-proceed whenever any active ticket is already in_progress/testing, keep explicit start/proceed scoped to requested IDs, and add unit + E2E non-regression tests.
+- **Component Modifications (Dependencies First)**:
+  - `[VERIFIED]` [sync-memory-context.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/sync-memory-context.mjs) (`scripts/sync-memory-context.mjs`)
+  - `[VERIFIED]` [backlog.mjs](file:///Users/jbb/Documents/antigravity-memory-bank/scripts/backlog.mjs) (`scripts/backlog.mjs`)
+- **Acceptance Criteria**:
+  - Guard both PostToolUse and git-status auto-proceed paths in scripts/sync-memory-context.mjs to skip `proceed --quiet` whenever any ticket in activePlanTaskIds is already in_progress/testing
+  - Ensure explicit `backlog.mjs start <ID>` / `proceed <IDs>` does not drag unstarted sibling READY tickets into IN PROGRESS
+  - Add dedicated unit/component non-regression test and E2E test verifying multi-ticket plan partial start behavior
+
 ### [FEAT-154] Fix PLAN/CODE dispatch via Antigravity ConversationService and never lock READY ticket when dispatch fails *(Completed & Verified Baseline)*
 - **Specification**: Clicking PLAN on a TO DO ticket failed osascript with -25211 (assistive access denied) yet still locked the ticket in READY. Dispatch via native Antigravity ConversationService/CreateConversation (with automatic projectId discovery and /api/register-context) and revert/skip locking whenever prompt dispatch fails.
 - **Component Modifications (Dependencies First)**:
@@ -54,14 +64,6 @@
 - **Acceptance Criteria**:
   - Implement and verify Fix wrong workspace displayed in Memory Bank Side Pane (fleet upgrade backlog.html mtime clobber) across mcp/src/server.mjs, mcp/src/ui/app.ts, mcp/src/ui/types.ts, scripts/backlog.mjs, bin/cli.mjs, tests/cli-e2e.test.mjs
   - Add both a non-regression unit/component test and an E2E test verifying the fix
-
-### [FEAT-151-ACT-3] 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout *(Completed & Verified Baseline)*
-- **Specification**: 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
-- **Component Modifications (Dependencies First)**:
-  - `[VERIFIED]` [TEST_PLAN_AND_SUITES.md](file:///Users/jbb/Documents/antigravity-memory-bank/docs/quality/TEST_PLAN_AND_SUITES.md) (`docs/quality/TEST_PLAN_AND_SUITES.md`)
-- **Acceptance Criteria**:
-  - Complete implementation and verification for 3. [FEAT-151-ACT-3] Bundle Rebuild, E2E Test (3p. FEAT-151) & Rollout
-  - Verify deterministic tests and lint checks for [FEAT-151-ACT-3]
 
 ## 4. Verification Plan
 ### Automated & Deterministic Terminal Verification
